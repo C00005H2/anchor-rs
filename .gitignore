@@ -1,5 +1,9 @@
 .idea
-data/*
+data/dialogue
+data/hero
+data/hero_biography
+data/login
+data/shop
 tcpserver/src/packet-old.rs
 tcpserver/src/main.rs.old
 target
