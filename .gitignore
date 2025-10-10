@@ -1,0 +1,5 @@
+.idea
+data/*
+tcpserver/src/packet-old.rs
+tcpserver/src/main.rs.old
+target
