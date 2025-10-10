@@ -1,0 +1,16 @@
+[package]
+name = "Httpserver"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+actix-web = { version = "4.0", features = ["rustls-0_22"] }
+common = {path = "../common"}
+serde_json = "1.0.144"
+serde = { version = "1.0.220", features = ["derive"] }
+md5 = "0.8.0"
+url = "2.5.7"
+rustls = "0.22"
+rustls-pemfile = "2.2.0"
+tracing = "0.1.41"
+tokio = {version = "1.44.2", features = ["full"]}
