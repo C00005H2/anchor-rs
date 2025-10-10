@@ -4,7 +4,6 @@ use crate::xxtea;
 use crate::rc4::{Rc4Creator, Rc4Transform};
 use base64::{engine::general_purpose, Engine as _};
 
-/// Constants (mirroring C#)
 pub const DES_IV: [u8; 8] = [111, 151, 50, 205, 123, 222, 185, 45];
 pub const AES_KEY: &str = "1234567890123456";
 pub const AES_IV: &[u8; 16] = b"abcdefghijklmnop";
@@ -14,7 +13,7 @@ pub const ENCRYPTION_KEY: &str = "HaoYouFIgFIFkgfg";
 pub struct EncryptUtil;
 
 impl EncryptUtil {
-    // ---- SplitBytes ----
+
     pub fn split_bytes(data: &[u8], once_split_size: usize) -> Vec<Vec<u8>> {
         if data.is_empty() {
             return vec![];
@@ -29,7 +28,7 @@ impl EncryptUtil {
         result
     }
 
-    // ---- DES ----
+
     pub fn des_encrypt_bytes(data: &[u8], key: &str) -> Vec<u8> {
         des::encrypt_bytes(data, key)
     }
@@ -50,8 +49,7 @@ impl EncryptUtil {
         let dec = Self::des_decrypt_bytes(&raw, key);
         String::from_utf8(dec).unwrap()
     }
-
-    // ---- AES ----
+    
     pub fn aes_encrypt_bytes(data: &[u8], key: &str) -> Vec<u8> {
         aes::encrypt_bytes(data, key)
     }
@@ -78,8 +76,7 @@ impl EncryptUtil {
     pub fn aes_decrypt_no_padding(data: &[u8], key: &str) -> Vec<u8> {
         aes::decrypt_no_padding(data, key).unwrap()
     }
-
-    // ---- RC4 ----
+    
     pub fn rc4_encrypt_bytes(data: &[u8], key: &str) -> Vec<u8> {
         if data.is_empty() {
             return vec![];
@@ -98,7 +95,7 @@ impl EncryptUtil {
         transform.transform_final_block(data)
     }
 
-    // ---- XXTEA ----
+
     pub fn xxtea_encrypt_bytes(data: &[u8], key: &str) -> Vec<u8> {
         xxtea::encrypt_bytes(data, key)
     }

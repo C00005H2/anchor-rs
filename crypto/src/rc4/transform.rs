@@ -1,4 +1,4 @@
-/// RC4Transform handles encryption/decryption (like ICryptoTransform).
+
 pub struct Rc4Transform {
     key: Vec<u8>,
     key_len: usize,
@@ -60,7 +60,7 @@ impl Rc4Transform {
             panic!("ObjectDisposedException: Rc4Transform");
         }
         let out = self.transform_block(input);
-        self.init(); // reset like C#
+        self.init(); 
         out
     }
 

@@ -1,7 +1,6 @@
 use md5;
 use std::fmt::Write;
 
-/// Utility for MD5 hashing
 pub struct MD5Util;
 
 impl MD5Util {

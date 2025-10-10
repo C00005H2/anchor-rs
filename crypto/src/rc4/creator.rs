@@ -1,6 +1,5 @@
 use super::Rc4Transform;
 
-/// RC4Creator (factory for Rc4Transform instances).
 pub struct Rc4Creator {
     disposed: bool,
 }

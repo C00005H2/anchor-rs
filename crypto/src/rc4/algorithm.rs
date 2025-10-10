@@ -1,4 +1,5 @@
-/// RC4 algorithm "container" (mimics .NET SymmetricAlgorithm style).
+use rand::Rng;
+
 pub struct Rc4 {
     pub key_size: usize,
     pub block_size: usize,
@@ -23,8 +24,7 @@ impl Rc4 {
     }
 
     pub fn generate_key(&self, size: usize) -> Vec<u8> {
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-        (0..size).map(|_| rng.gen()).collect()
+        let mut rng = rand::rng();
+        (0..size).map(|_| rng.random()).collect()
     }
 }

@@ -9,7 +9,4 @@ pub mod signutil;
 
 pub use signutil::SignUtil;
 
-pub use encrypt_util::EncryptUtil;
-
-// constants are also useful outside
-pub use encrypt_util::{AES_IV, DES_IV, XXTEA_KEY, ENCRYPTION_KEY};
+pub use encrypt_util::{EncryptUtil, AES_IV, DES_IV, XXTEA_KEY, ENCRYPTION_KEY};

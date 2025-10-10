@@ -7,3 +7,4 @@ data/shop
 tcpserver/src/packet-old.rs
 tcpserver/src/main.rs.old
 target
+cert/

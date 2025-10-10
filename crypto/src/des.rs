@@ -8,7 +8,7 @@ use cbc::{Encryptor as CbcEncryptor, Decryptor as CbcDecryptor};
 type DesCbcEnc = CbcEncryptor<Des>;
 type DesCbcDec = CbcDecryptor<Des>;
 
-/// Fixed DES IV (matches C# mDesMKeys)
+
 pub const DES_IV: [u8; 8] = [111, 151, 50, 205, 123, 222, 185, 45];
 
 /// DES/CBC/PKCS7 encrypt
