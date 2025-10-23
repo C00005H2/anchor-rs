@@ -2,7 +2,7 @@
 
 ## How to use
 - install rust
-- run cargo run --release
+- run cargo build --release
 - redirect game to localhost:8702 eg 192.x
 - use Dawn [patch](https://github.com/yoncodes/dawn-patch)
 
