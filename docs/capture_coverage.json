@@ -14,9 +14,9 @@
       "name": "CS_PUBLIC_CHAT_SETTING",
       "calls": 10,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "replay-only",
+      "handler": true,
+      "handler_line": 142,
+      "tier": "implemented",
       "responses": [
         {
           "cmd": 10055,
@@ -34,9 +34,9 @@
       "name": "CS_REQ_MODULE_READ",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "replay-only",
+      "handler": true,
+      "handler_line": 147,
+      "tier": "implemented",
       "responses": [
         {
           "cmd": 10058,
@@ -55,7 +55,7 @@
       "calls": 1,
       "request_decoded": true,
       "handler": true,
-      "handler_line": 136,
+      "handler_line": 152,
       "tier": "implemented",
       "responses": [
         {
@@ -115,7 +115,7 @@
       "calls": 1,
       "request_decoded": true,
       "handler": true,
-      "handler_line": 141,
+      "handler_line": 157,
       "tier": "implemented",
       "responses": []
     },
@@ -125,7 +125,7 @@
       "calls": 1,
       "request_decoded": true,
       "handler": true,
-      "handler_line": 146,
+      "handler_line": 162,
       "tier": "implemented",
       "responses": []
     },
@@ -134,9 +134,9 @@
       "name": "CS_SET_READY",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "state-only (no captured response)",
+      "handler": true,
+      "handler_line": 176,
+      "tier": "implemented",
       "responses": []
     },
     {
@@ -144,9 +144,9 @@
       "name": "CS_CHANGE_HERO",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "state-only (no captured response)",
+      "handler": true,
+      "handler_line": 181,
+      "tier": "implemented",
       "responses": []
     },
     {
@@ -154,9 +154,9 @@
       "name": "CS_CANNOT_DEL_HERO_LIST",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "state-only (no captured response)",
+      "handler": true,
+      "handler_line": 186,
+      "tier": "implemented",
       "responses": []
     },
     {
@@ -164,9 +164,9 @@
       "name": "CS_MAIL_READ",
       "calls": 3,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "replay-only",
+      "handler": true,
+      "handler_line": 191,
+      "tier": "implemented",
       "responses": [
         {
           "cmd": 16006,
@@ -184,9 +184,9 @@
       "name": "CS_MAIL_ENCLOSURE_REC",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "replay-only",
+      "handler": true,
+      "handler_line": 196,
+      "tier": "implemented",
       "responses": [
         {
           "cmd": 10059,
@@ -232,7 +232,7 @@
       "calls": 2,
       "request_decoded": true,
       "handler": true,
-      "handler_line": 160,
+      "handler_line": 201,
       "tier": "implemented",
       "responses": [
         {
@@ -259,7 +259,7 @@
       "calls": 1,
       "request_decoded": true,
       "handler": true,
-      "handler_line": 165,
+      "handler_line": 206,
       "tier": "implemented",
       "responses": [
         {
@@ -1166,9 +1166,9 @@
       "name": "CS_BATTLE_FIELD_ENTER",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "replay-only",
+      "handler": true,
+      "handler_line": 210,
+      "tier": "implemented",
       "responses": [
         {
           "cmd": 13045,
@@ -1213,9 +1213,9 @@
       "name": "CS_BATTLE_START",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "state-only (no captured response)",
+      "handler": true,
+      "handler_line": 215,
+      "tier": "implemented",
       "responses": []
     },
     {
@@ -1223,9 +1223,9 @@
       "name": "CS_BATTLE_VIDEO_END",
       "calls": 14,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "replay-only",
+      "handler": true,
+      "handler_line": 220,
+      "tier": "implemented",
       "responses": [
         {
           "cmd": 10032,
@@ -1431,9 +1431,9 @@
       "name": "CS_BATTLE_AUTO",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "replay-only",
+      "handler": true,
+      "handler_line": 225,
+      "tier": "implemented",
       "responses": [
         {
           "cmd": 10059,
@@ -1489,9 +1489,9 @@
       "name": "CS_GAIN_ACHIEVEMENT_AWARD",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "replay-only",
+      "handler": true,
+      "handler_line": 230,
+      "tier": "implemented",
       "responses": [
         {
           "cmd": 12003,
@@ -1536,9 +1536,9 @@
       "name": "CS_GAIN_SEVEN_DAY_REWARD",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "replay-only",
+      "handler": true,
+      "handler_line": 235,
+      "tier": "implemented",
       "responses": [
         {
           "cmd": 17001,
@@ -1577,7 +1577,7 @@
       "calls": 2,
       "request_decoded": true,
       "handler": true,
-      "handler_line": 169,
+      "handler_line": 240,
       "tier": "implemented",
       "responses": [
         {
@@ -1599,9 +1599,9 @@
       "name": "CS_DIRECT_GIFT_BUY",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "replay-only",
+      "handler": true,
+      "handler_line": 245,
+      "tier": "implemented",
       "responses": [
         {
           "cmd": 12003,
@@ -1640,9 +1640,9 @@
       "name": "CS_NOVICE_TRAINING_PANEL",
       "calls": 2,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "replay-only",
+      "handler": true,
+      "handler_line": 250,
+      "tier": "implemented",
       "responses": [
         {
           "cmd": 12003,
@@ -1698,9 +1698,9 @@
       "name": "CS_NOVICE_TRAINING_RECEIVE_TASK",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "state-only (no captured response)",
+      "handler": true,
+      "handler_line": 255,
+      "tier": "implemented",
       "responses": []
     },
     {
@@ -1708,9 +1708,9 @@
       "name": "CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "replay-only",
+      "handler": true,
+      "handler_line": 260,
+      "tier": "implemented",
       "responses": [
         {
           "cmd": 10059,
@@ -1755,9 +1755,9 @@
       "name": "CS_GAIN_OPEN_SERVER_SIGN_REWARD",
       "calls": 1,
       "request_decoded": true,
-      "handler": false,
-      "handler_line": null,
-      "tier": "replay-only",
+      "handler": true,
+      "handler_line": 265,
+      "tier": "implemented",
       "responses": [
         {
           "cmd": 17001,

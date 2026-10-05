@@ -9,10 +9,15 @@ use tracing::warn;
 
 use crate::{
     capture_replay::{encode_captured_response, CaptureReplay, ReplayLookup},
-    cmd::{account, dialogue, hero, shop, system, world},
+    cmd::{account, activity, battle, dialogue, hero, mail, shop, system, world},
     messages::{
-        CS_ACCOUNT_LOGIN, CS_DIALOGUE_TALK, CS_DIRECT_GIFT_PANEL, CS_ENTER_WORLD, CS_HERO_DETAIL,
-        CS_SHOP_TYPE_DATA, CS_SYS_PING, SC_ACCOUNT_LOGIN,
+        CS_ACCOUNT_LOGIN, CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE, CS_BATTLE_AUTO,
+        CS_BATTLE_FIELD_ENTER, CS_BATTLE_START, CS_BATTLE_VIDEO_END, CS_CANNOT_DEL_HERO_LIST,
+        CS_CHANGE_HERO, CS_DIALOGUE_TALK, CS_DIRECT_GIFT_BUY, CS_DIRECT_GIFT_PANEL,
+        CS_ENTER_WORLD, CS_GAIN_ACHIEVEMENT_AWARD, CS_GAIN_OPEN_SERVER_SIGN_REWARD,
+        CS_GAIN_SEVEN_DAY_REWARD, CS_HERO_DETAIL, CS_MAIL_ENCLOSURE_REC, CS_MAIL_READ,
+        CS_NOVICE_TRAINING_PANEL, CS_NOVICE_TRAINING_RECEIVE_TASK, CS_PUBLIC_CHAT_SETTING,
+        CS_REQ_MODULE_READ, CS_SET_READY, CS_SHOP_TYPE_DATA, CS_SYS_PING, SC_ACCOUNT_LOGIN,
     },
     state::ConnectionContext,
 };
@@ -106,6 +111,7 @@ pub async fn dispatch_packet_with_replay(
                     let response = crate::capture_replay::CapturedResponse {
                         cmd: captured.cmd,
                         decoded,
+                        raw: captured.raw,
                     };
                     match encode_captured_response(&response) {
                         Ok(Some(packet)) => packets.push(packet),
@@ -133,6 +139,16 @@ pub async fn dispatch_packet_with_replay(
             let responses = system::handle_ping(ctx, request).await?;
             send_responses!(writer, responses);
         }
+        10054 => {
+            let request = CS_PUBLIC_CHAT_SETTING::decode(data);
+            let responses = system::handle_public_chat_setting(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        10057 => {
+            let request = CS_REQ_MODULE_READ::decode(data);
+            let responses = system::handle_req_module_read(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
         11000 => {
             let request = CS_ACCOUNT_LOGIN::decode(data);
             let responses = account::handle_account_login(ctx, request).await?;
@@ -157,6 +173,31 @@ pub async fn dispatch_packet_with_replay(
             let responses = hero::handle_hero_detail(ctx, request).await?;
             send_responses!(writer, responses);
         }
+        13044 => {
+            let request = CS_SET_READY::decode(data);
+            let responses = hero::handle_set_ready(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        13046 => {
+            let request = CS_CHANGE_HERO::decode(data);
+            let responses = hero::handle_change_hero(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        13061 => {
+            let request = CS_CANNOT_DEL_HERO_LIST::decode(data);
+            let responses = hero::handle_cannot_del_hero_list(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        16005 => {
+            let request = CS_MAIL_READ::decode(data);
+            let responses = mail::handle_mail_read(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        16007 => {
+            let request = CS_MAIL_ENCLOSURE_REC::decode(data);
+            let responses = mail::handle_mail_enclosure_rec(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
         17009 => {
             let request = CS_SHOP_TYPE_DATA::decode(data);
             let responses = shop::handle_shop_type_data(ctx, request).await?;
@@ -166,9 +207,64 @@ pub async fn dispatch_packet_with_replay(
             let responses = world::handle_hero_biography(ctx).await?;
             send_responses!(writer, responses);
         }
+        20100 => {
+            let request = CS_BATTLE_FIELD_ENTER::decode(data);
+            let responses = battle::handle_battle_field_enter(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        20102 => {
+            let request = CS_BATTLE_START::decode(data);
+            let responses = battle::handle_battle_start(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        20104 => {
+            let request = CS_BATTLE_VIDEO_END::decode(data);
+            let responses = battle::handle_battle_video_end(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        20113 => {
+            let request = CS_BATTLE_AUTO::decode(data);
+            let responses = battle::handle_battle_auto(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        24022 => {
+            let request = CS_GAIN_ACHIEVEMENT_AWARD::decode(data);
+            let responses = activity::handle_gain_achievement_award(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        24065 => {
+            let request = CS_GAIN_SEVEN_DAY_REWARD::decode(data);
+            let responses = activity::handle_gain_seven_day_reward(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
         24096 => {
             let request = CS_DIRECT_GIFT_PANEL::decode(data);
             let responses = shop::handle_direct_gift_panel(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        24098 => {
+            let request = CS_DIRECT_GIFT_BUY::decode(data);
+            let responses = shop::handle_direct_gift_buy(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        24111 => {
+            let request = CS_NOVICE_TRAINING_PANEL::decode(data);
+            let responses = activity::handle_novice_training_panel(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        24113 => {
+            let request = CS_NOVICE_TRAINING_RECEIVE_TASK::decode(data);
+            let responses = activity::handle_novice_training_receive_task(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        24221 => {
+            let request = CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE::decode(data);
+            let responses = activity::handle_novice_recruit_receive(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        24270 => {
+            let request = CS_GAIN_OPEN_SERVER_SIGN_REWARD::decode(data);
+            let responses = activity::handle_gain_open_server_sign_reward(ctx, request).await?;
             send_responses!(writer, responses);
         }
         _ => {

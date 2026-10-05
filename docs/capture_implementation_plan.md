@@ -1,131 +1,90 @@
-# What `requests_20261005_new.jsonl` lets us implement
+# What `requests_20261005_new.jsonl` lets us implement — status
 
-Analysis and implementation plan for the captured session in
-`requests_20261005_new.jsonl` (51 request groups, 24 client commands, 118 server
-message types, 215 response packets).
-
-The machine-readable tables live in [`capture_coverage.md`](capture_coverage.md)
-and [`capture_coverage.json`](capture_coverage.json); regenerate them with:
+Capture: 51 request groups, 24 client commands, 118 server message types, 215
+response packets.  Machine-readable tables: [`capture_coverage.md`](capture_coverage.md),
+[`capture_coverage.json`](capture_coverage.json) — regenerate with:
 
 ```sh
 python3 tools/capture_coverage.py requests_20261005_new.jsonl \
     --markdown docs/capture_coverage.md --json docs/capture_coverage.json
 ```
 
-## 1. Done in this change
+## Implemented
 
-| Change | Files | Why the capture proves it |
-| --- | --- | --- |
-| 9 replay encoders added (`16002`, `16006`, `16008`, `17010`, `17013`, `24023`, `24099`, `24114`, `24222`) | `tcpserver/src/capture_replay.rs` | These 9 message types have a struct in `messages.rs` and decoded JSON in the capture, but no `encode_as!` arm, so `--replay-capture` silently dropped **15 packets** (mail read/enclosure, shop type, prop awards, achievement award, direct-gift buy, novice-training and novice-recruit rewards). |
-| Hero-biography sequence now loads bag types `1..=8` | `tcpserver/src/data_loader.rs` | The captured init sequence sends `SC_BAG_INIT` for types 1-8; the loader only asked for 1-7, so the last bag was never sent to the client. |
-| Proxy records raw bytes of undecodable **server** messages (`payload_hex`, ≤1 KiB, client packets excluded) | `tcpserver/src/proxy.rs` | 4 captured messages (`12106`, `12210`, `12220`, `19910`) have no schema in `messages.rs`; the capture only stored `decoded: null`, so they cannot be reconstructed. A new capture taken with this proxy can be decoded into a schema. |
-| `tools/capture_coverage.py` | new | Cross-references a capture with `handle.rs`, `capture_replay.rs`, `data_loader.rs` and `messages.rs`; validates captured JSON against the generated structs (honouring `#[serde(rename)]`/`default`). |
-| `tools/import_capture_data.py` | new | Materializes `DATA_DIR` files from the capture for the existing normal-mode handlers (86 files here). |
-| `data/` populated from the capture (git-ignored) | new (not committed) | 86 JSON files + 5 synthesized empty panels, plus `data/capture/cmd_<n>.json` response dumps for every captured command. |
+### Replay path (all captured commands)
 
-After these changes the replay path reproduces **211 of 215** captured packets
-byte-for-byte; only the 4 schema-less messages are skipped.
+| Change | Files |
+| --- | --- |
+| 9 replay encoders added (`16002`, `16006`, `16008`, `17010`, `17013`, `24023`, `24099`, `24114`, `24222`) — recovers the 15 packets replay used to drop | `tcpserver/src/capture_replay.rs` |
+| Schema-less responses replay byte-exact when the capture carries `payload_hex` (truncated payloads are skipped) | `tcpserver/src/capture_replay.rs`, `tcpserver/src/proxy.rs` |
+| Captured server timestamps (`time`, `next_refresh_time`) are shifted to "now" using the capture's own `SC_SYS_DATE` | `tcpserver/src/capture_replay.rs` |
+| Proxy records `payload_hex` (≤1 KiB) for undecodable server messages so future captures can decode `12106`, `12210`, `12220`, `19910` | `tcpserver/src/proxy.rs` |
 
-## 2. Implementable next: normal-mode handlers
+`--replay-capture requests_20261005_new.jsonl` reproduces 211 of 215 packets;
+the four schema-less messages stay skipped until a capture with raw bytes
+exists (the bundled capture predates `payload_hex`).
 
-`--replay-capture` already serves the whole session. Implementing the missing
-*normal-mode* handlers makes the emulator independent of the capture file.
-The capture gives the exact response payloads for each of these commands; the
-work is (a) a data file and (b) handler logic.
+### Normal-mode handlers (stateful, not replay)
 
-### Tier 1 - pure data, no state (1-2 h total)
+All 18 previously unhandled captured commands now have handlers.  Claim flows
+are driven by data tables the importer extracts from the capture; claims are
+once per id, bag stacks merge by template id, and attribute rewards are applied
+as **deltas** on the local profile (`attr_delta`) so repeated sessions keep
+accumulating instead of resetting to recorded values.
 
-| cmd | command | response | data file |
+| cmd | command | handler | data read |
 | --- | --- | --- | --- |
-| 10054 | `CS_PUBLIC_CHAT_SETTING` | `SC_PUBLIC_CHAT_SETTING` | `public_chat/setting.json` |
-| 10057 | `CS_REQ_MODULE_READ` | `SC_RES_MODULE_READ` | `module/read.json` |
-| 16005 | `CS_MAIL_READ` | `SC_MAIL_READ` | `mail/read.json` |
+| 10054 | `CS_PUBLIC_CHAT_SETTING` | `system::handle_public_chat_setting` | `chat/public_chat.json` |
+| 10057 | `CS_REQ_MODULE_READ` | `system::handle_req_module_read` | — (echo) |
+| 13044 / 13046 / 13061 | ready / formation / cannot-delete | `cmd/hero.rs` (formation stored for battle entry) | — |
+| 16005 | `CS_MAIL_READ` | `mail::handle_mail_read` | `hero_biography/mail_list.json` |
+| 16007 | `CS_MAIL_ENCLOSURE_REC` | `mail::handle_mail_enclosure_rec` | `hero_biography/mail_list.json`, `mail/enclosure_unread.json` |
+| 20100 | `CS_BATTLE_FIELD_ENTER` | `battle::handle_battle_field_enter` | `battle/enter.json` (formation patched in) |
+| 20102 | `CS_BATTLE_START` | `battle::handle_battle_start` | — (no reply in capture) |
+| 20104 | `CS_BATTLE_VIDEO_END` | `battle::handle_battle_video_end` | `battle/video_end.json` (14 scripted batches) |
+| 20113 | `CS_BATTLE_AUTO` | `battle::handle_battle_auto` | `battle/auto.json` |
+| 24022 | `CS_GAIN_ACHIEVEMENT_AWARD` | `activity::handle_gain_achievement_award` | `progression/achievement.json` |
+| 24065 | `CS_GAIN_SEVEN_DAY_REWARD` | `activity::handle_gain_seven_day_reward` | `progression/seven_day.json` |
+| 24098 | `CS_DIRECT_GIFT_BUY` | `shop::handle_direct_gift_buy` | `progression/direct_gift.json`, `shop/direct_gift_panel.json` |
+| 24111 / 24113 | novice training panel / receive | `cmd/activity.rs` | `progression/novice_training.json` |
+| 24221 | `CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE` | `activity::handle_novice_recruit_receive` | `progression/novice_recruit.json` |
+| 24270 | `CS_GAIN_OPEN_SERVER_SIGN_REWARD` | `activity::handle_gain_open_server_sign_reward` | `progression/open_server_sign.json` |
 
-Pattern: add a `load_packet!` entry in `data_loader.rs`, a `handle.rs` arm, and
-let `tools/import_capture_data.py --all` provide the payload (already dumped in
-`data/capture/cmd_<id>.json`). No new game state needed.
+Battle is a **scripted** flow: the capture's 13 `CS_BATTLE_VIDEO_END` batches
+(42-message finale included) are consumed in order per connection, and the
+attribute updates inside the script are absorbed into the local profile.  This
+reproduces the recorded fight, not arbitrary battle logic.
 
-### Tier 2 - data + state mutation (the bulk of the captured session)
+### Tooling and data
 
-| cmd | command | captured responses | state needed |
-| --- | --- | --- | --- |
-| 16007 | `CS_MAIL_ENCLOSURE_REC` | `10059`, `16002`, `16008`, `17001` | mail read/claimed flags, bag/currency |
-| 24022 | `CS_GAIN_ACHIEVEMENT_AWARD` | `12003`, `24023`, `24024`, `24027` | achievement points/stage |
-| 24065 | `CS_GAIN_SEVEN_DAY_REWARD` | `17001`, `17013`, `24066` | seven-day sign-in day |
-| 24098 | `CS_DIRECT_GIFT_BUY` | `12003`, `24097`, `24099` | titanium balance, purchase count |
-| 24111 | `CS_NOVICE_TRAINING_PANEL` | `12003`, `17001`, `17013`, `24112`, `24114` | training task progress (`SC_NOVICE_TRAINING_PANEL` already exists in `data/hero_biography`) |
-| 24113 | `CS_NOVICE_TRAINING_RECEIVE_TASK` | *(none captured)* | task claim state |
-| 24221 | `CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE` | `10059`, `17001`, `17013`, `24222` | activity claim state |
-| 24270 | `CS_GAIN_OPEN_SERVER_SIGN_REWARD` | `17001`, `17013`, `24271` | sign reward day |
+* `tools/capture_coverage.py` — coverage report: handler/replay/data-file status
+  per captured command, schema validation of captured payloads.
+* `tools/import_capture_data.py` — writes the loader files, the flow tables and
+  (`--all`) response dumps for a capture; `--fill-defaults` adds empty panels.
+* `data/` (git-ignored) is fully generated from this capture: 86 loader files,
+  11 flow tables, 118 response dumps.
 
-Each command is an independent unit: load the response sequence, apply the
-attribute/bag deltas the capture shows (`SC_PLAYER_UPDATE_ATTR_*`,
-`SC_BAG_UPDATE`, `SC_PROP_AWARD_SEND`), and answer. Because the capture contains
-several samples of the same reward flow, the responses can be checked against
-each other (e.g. `24111` appears twice).
+## Known gaps
 
-### Tier 3 - battle flow (largest, needs a small state machine)
-
-* `20100 CS_BATTLE_FIELD_ENTER` → `13045`, `13047`, `13062`, `20101`
-* `20102 CS_BATTLE_START` → nothing captured (client-side start)
-* `20113 CS_BATTLE_AUTO` → `12100`, `10059`, `20103`, `20114`, `20125`
-* `20104 CS_BATTLE_VIDEO_END` (14 calls) → per-call action/result batches
-  (`20103`, `20105`, `20106`, `20125`, plus achievement/task/level updates)
-
-The capture contains 14 complete `CS_BATTLE_VIDEO_END` groups in order, enough
-to replay a full battle with the existing replay path. A normal-mode version
-needs a per-connection battle cursor plus a rule for choosing the next action
-batch (`SC_BATTLE_ACTION`, `SC_BATTLE_ACTION_END`, `SC_BATTLE_RESULT`) - the
-recorded batches can be used as templates.
-
-### Not implementable from this capture
-
-| cmd | payload | note |
+| Gap | Why | Next step |
 | --- | --- | --- |
-| 12106 | 3 B | only appears inside the hero-biography chain |
-| 12210 | 2 B | idem |
-| 12220 | 6 B | idem |
-| 19910 | 2 B | idem |
+| `12106`, `12210`, `12220`, `19910` payloads | this capture has neither schema nor raw bytes | re-run the proxy (it now stores `payload_hex`), then add structs or rely on raw replay |
+| shop types 2–5 data files | never requested in the capture; guessing payloads would be wrong | capture those shop types or hand-write `shop/shop_type_2..5.json` |
+| 5 biography panels (`activity_novice_turntable`, `activity_pay_sign2_panel`, `pack_bag_panel`, `happy_farm_*`) | not present in the capture | empty placeholders were generated (`--fill-defaults`); replace with real data when captured |
+| achievement/mail failure replies | no failure sample in the capture | implemented as `result: 0` responses; verify against a live server |
+| attribute key map | inferred from the capture (`611`=exp, `612`=gold, `600`=level, `608`=max exp) | confirm against client code before relying on it further |
+| `cargo build` verification | no Rust toolchain in the analysis sandbox | run `cargo build --workspace && cargo test --workspace` |
 
-The proxy stored `decoded: null` for these (no schema, no raw bytes). Two ways
-forward:
-
-1. Re-run the proxy (it now records `payload_hex` for undecoded server packets)
-   against the live server, then add the message structs.
-2. Add a *raw packet* fallback to `capture_replay.rs` so a capture that carries
-   `payload_hex` replays those messages byte-exact even without a schema
-   (planned follow-up, not implemented yet).
-
-Also note `13044`, `13046`, `13061`, `20102`, `24113` have **no captured
-response**: the real server answered nothing (or the reply was empty). Handlers
-for them should stay no-ops or be derived from game rules, not from this file.
-
-## 3. Using the generated data set
+## Regenerating the data set
 
 ```sh
-# 1. This capture only populates login/, shop/shop_type_1.json,
-#    shop/direct_gift_panel.json and hero_biography/*.
+# loader files + flow tables + per-command dumps
 python3 tools/import_capture_data.py requests_20261005_new.jsonl --all
 
-# 2. The hero-biography sequence wants 5 panels this capture does not contain.
-#    Write empty placeholder panels for them (reviewed: all fields are lists/0):
+# empty placeholder panels for biography files the capture lacks
 python3 tools/import_capture_data.py requests_20261005_new.jsonl \
     --fill-defaults --only hero_biography/
 
-# 3. Normal-mode emulation now answers CS_ACCOUNT_LOGIN, CS_SHOP_TYPE_DATA,
-#    CS_DIRECT_GIFT_PANEL and CS_HERO_BIOGRAPHY_INFO without --replay-capture.
-cargo run -p tcpserver -- --bind 127.0.0.1 --port 8702
+cargo run -p tcpserver -- --bind 127.0.0.1 --port 8702      # normal mode
+cargo run -p tcpserver -- --replay-capture requests_20261005_new.jsonl
 ```
-
-`shop/shop_type_2..5.json` are deliberately **not** generated: the capture never
-requested those shop types, and a guessed shop payload would be wrong. The
-handler returns a descriptive error for them, as designed.
-
-## 4. Suggested order
-
-1. Tier 1 handlers (small, self-contained).
-2. Tier 2 reward/claim flows, starting with `16007` and `24065` (mail + sign-in
-   touch only bag/attribute updates that already have encoders).
-3. Raw-packet replay fallback in `capture_replay.rs` + a fresh proxy capture to
-   decode `12106`, `12210`, `12220`, `19910`.
-4. Tier 3 battle state machine.

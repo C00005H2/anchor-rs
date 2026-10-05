@@ -126,6 +126,254 @@ def render_default_sequence(struct_name: str, structs: dict[str, MessageStruct])
     }
 
 
+
+# --------------------------------------------------------------------------
+# Flow tables (progression/, battle/, chat/, mail/)
+# --------------------------------------------------------------------------
+
+# Attribute keys observed in the capture: 611 = player exp, 612 = gold coin,
+# 600 = level, 608 = max exp.  Only 611/612 seed the delta ledger from the
+# login base data; others rely on captured updates.
+ATTR_KEY_EXP = 611
+ATTR_KEY_GOLD = 612
+
+FLOW_CMD_REWARD = {24022, 24065, 24098, 24221, 24270, 16007}
+
+
+class AttrLedger:
+    """Tracks last-known attribute values so reward deltas can be extracted."""
+
+    def __init__(self):
+        self.values = {}
+
+    def seed_from_base_data(self, decoded):
+        pairs = {
+            ATTR_KEY_EXP: decoded.get("exp"),
+            ATTR_KEY_GOLD: decoded.get("gold_coin"),
+        }
+        for key, value in pairs.items():
+            if value is not None and key not in self.values:
+                try:
+                    self.values[key] = int(value)
+                except (TypeError, ValueError):
+                    pass
+
+    def absorb(self, decoded):
+        for attr in (decoded or {}).get("attr_list", []):
+            try:
+                self.values[int(attr["key"])] = int(attr["value"])
+            except (KeyError, TypeError, ValueError):
+                continue
+
+    def extract(self, decoded):
+        """Return (after, delta) entries for one attr-update payload."""
+        after, delta = [], []
+        for attr in (decoded or {}).get("attr_list", []):
+            try:
+                key = int(attr["key"])
+                new_value = int(attr["value"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            after.append({"key": key, "value": str(new_value)})
+            before = self.values.get(key)
+            if before is not None:
+                delta.append({"key": key, "value": str(new_value - before)})
+            self.values[key] = new_value
+        return after, delta
+
+
+def reward_from_responses(responses, ledger):
+    """Collect bag items, awards, attr updates and unread notices of a chain."""
+    reward = {
+        "award_list": [],
+        "bag_items": [],
+        "attr_list": [],
+        "attr_delta": [],
+        "unread": [],
+    }
+    for response in responses:
+        decoded = response.decoded
+        if decoded is None:
+            continue
+        if response.cmd == 10059:
+            reward["unread"].append(
+                {"type": decoded.get("type"), "id_list": decoded.get("id_list", [])}
+            )
+        elif response.cmd == 17001:
+            reward["bag_items"].extend(decoded.get("updateList", []))
+        elif response.cmd == 17013:
+            reward["award_list"].extend(decoded.get("award_list", []))
+        elif response.cmd == 24099:
+            reward["award_list"].extend(decoded.get("award_list", []))
+        elif response.cmd == 12003:
+            after, delta = ledger.extract(decoded)
+            reward["attr_list"].extend(after)
+            reward["attr_delta"].extend(delta)
+    return reward
+
+
+def template_payload(responses):
+    """Capture-style response list for TemplateFile (battle scripts etc.)."""
+    template = []
+    for response in responses:
+        entry = {"cmd": response.cmd}
+        if response.decoded is not None:
+            entry["decoded"] = sanitize(response.decoded)
+        elif response.payload_hex:
+            entry["payload_hex"] = response.payload_hex
+        else:
+            continue  # undecoded and no raw bytes: nothing to script
+        template.append(entry)
+    return template
+
+
+def find_response(group, cmd):
+    return next((r for r in group.responses if r.cmd == cmd), None)
+
+
+def write_flow_tables(groups, data_dir, written, skipped_existing, force):
+    """Extract per-flow data tables from the capture."""
+    ledger = AttrLedger()
+    chat_channels = {}
+    enclosure_unread = None
+    achievement_awards = []
+    seven_day = None
+    open_server_sign = None
+    gift_goods = []
+    novice_training = None
+    recruit_rewards = []
+    recruit_times = None
+    battle_enter = None
+    battle_auto = None
+    battle_video_end = []
+    novice_training_panel = None
+
+    def emit(relative_path, payload):
+        target = data_dir / relative_path
+        if target.exists() and not force:
+            skipped_existing.append(relative_path)
+            return
+        if relative_path in written:
+            return
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        written.append(relative_path)
+
+    for group in groups:
+        request = group.request_decoded or {}
+        for response in group.responses:
+            if response.cmd == 12001 and response.decoded:
+                ledger.seed_from_base_data(response.decoded)
+            elif response.cmd in (12002, 12003) and response.cmd not in FLOW_CMD_REWARD:
+                if group.request_cmd not in FLOW_CMD_REWARD | {24111}:
+                    ledger.absorb(response.decoded)
+
+        cmd = group.request_cmd
+
+        if cmd == 10054:
+            response = find_response(group, 10055)
+            if response and response.decoded is not None:
+                channel = response.decoded.get("channel")
+                chat_channels.setdefault(channel, sanitize(response.decoded))
+        elif cmd == 16007:
+            enclosure_unread = reward_from_responses(group.responses, ledger)["unread"]
+        elif cmd == 24022:
+            gain = find_response(group, 24023)
+            update = find_response(group, 24024)
+            complete = find_response(group, 24027)
+            if gain and gain.decoded:
+                entry = {
+                    "achievement_id": gain.decoded.get("achievement_id"),
+                    "stage": gain.decoded.get("stage"),
+                    "point": gain.decoded.get("point"),
+                }
+                entry.update(reward_from_responses(group.responses, ledger))
+                if update and update.decoded:
+                    entry["next"] = update.decoded.get("achievement_info")
+                if complete and complete.decoded:
+                    entry["complete"] = complete.decoded.get("complete_achieve_info", [])
+                achievement_awards.append(entry)
+        elif cmd == 24065:
+            panel = find_response(group, 24066)
+            entry = {"day": request.get("day")}
+            entry.update(reward_from_responses(group.responses, ledger))
+            seven_day = {
+                "login_day": (panel.decoded or {}).get("login_day", 1) if panel else 1,
+                "days": [entry],
+            }
+        elif cmd == 24270:
+            panel = find_response(group, 24271)
+            entry = {"day": request.get("day")}
+            entry.update(reward_from_responses(group.responses, ledger))
+            decoded = (panel.decoded or {}) if panel else {}
+            open_server_sign = {
+                "open_day": decoded.get("open_day", 1),
+                "end_time": decoded.get("end_time", 0),
+                "days": [entry],
+            }
+        elif cmd == 24098:
+            entry = {"goods_id": request.get("goods_id"), "num": request.get("num", 1)}
+            entry.update(reward_from_responses(group.responses, ledger))
+            gift_goods.append(entry)
+        elif cmd == 24111:
+            receive = find_response(group, 24114)
+            panel = find_response(group, 24112)
+            if panel and panel.decoded is not None and novice_training_panel is None:
+                novice_training_panel = sanitize(panel.decoded)
+            if receive and receive.decoded is not None:
+                reward = reward_from_responses(group.responses, ledger)
+                novice_training = {
+                    "tasks": [
+                        {"id": task_id, **reward}
+                        for task_id in receive.decoded.get("task_id_list", [])
+                    ],
+                    "panel": novice_training_panel,
+                }
+        elif cmd == 24221:
+            result = find_response(group, 24222)
+            if result and result.decoded is not None:
+                entry = {"id": result.decoded.get("id")}
+                entry.update(reward_from_responses(group.responses, ledger))
+                recruit_rewards.append(entry)
+        elif cmd == 18006:
+            response = find_response(group, 24220)
+            if response and response.decoded is not None and recruit_times is None:
+                recruit_times = response.decoded.get("recruit_times", 0)
+        elif cmd == 20100 and battle_enter is None:
+            battle_enter = {"groups": [template_payload(group.responses)]}
+        elif cmd == 20113 and battle_auto is None:
+            battle_auto = {"groups": [template_payload(group.responses)]}
+        elif cmd == 20104:
+            battle_video_end.append(template_payload(group.responses))
+
+    if chat_channels:
+        emit("chat/public_chat.json", {"channels": list(chat_channels.values())})
+    if enclosure_unread is not None:
+        emit("mail/enclosure_unread.json", enclosure_unread)
+    if achievement_awards:
+        emit("progression/achievement.json", {"awards": achievement_awards})
+    if seven_day:
+        emit("progression/seven_day.json", seven_day)
+    if open_server_sign:
+        emit("progression/open_server_sign.json", open_server_sign)
+    if gift_goods:
+        emit("progression/direct_gift.json", {"goods": gift_goods})
+    if novice_training and novice_training.get("tasks"):
+        novice_training.setdefault("recruit_times", recruit_times or 0)
+        emit("progression/novice_training.json", novice_training)
+    if recruit_rewards:
+        emit(
+            "progression/novice_recruit.json",
+            {"rewards": recruit_rewards, "recruit_times": recruit_times or 0},
+        )
+    if battle_enter:
+        emit("battle/enter.json", battle_enter)
+    if battle_auto:
+        emit("battle/auto.json", battle_auto)
+    if battle_video_end:
+        emit("battle/video_end.json", {"groups": battle_video_end})
+
+
 # --------------------------------------------------------------------------
 # Main
 # --------------------------------------------------------------------------
@@ -232,6 +480,10 @@ def main(argv: list[str] | None = None) -> int:
                 f"{expectation.cmd}, capture has {', '.join(sorted(captured_names))})"
             )
 
+    flow_written_before = len(written)
+    write_flow_tables(groups, data_dir, written, skipped_existing, args.force)
+    flow_files = len(written) - flow_written_before
+
     if args.fill_defaults:
         for expectation in expectations:
             if expectation.path in covered_paths:
@@ -268,7 +520,8 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"data directory: {data_dir}")
     print(f"loader expectations: {len(expectations)} files")
-    print(f"written from capture: {len(written)}")
+    print(f"written from capture: {len(written) - flow_files}")
+    print(f"flow tables (progression/battle/chat/mail): {flow_files}")
     if dumps:
         print(f"response-group dumps: {len(dumps)} (under capture/)")
     if filled:

@@ -23,6 +23,8 @@ The bind address and port default to `127.0.0.1:8702`. To accept connections fro
 
 The server loads response data from `DATA_DIR` (default: the repository's `data/` directory). Data files are intentionally not included in this repository; commands that depend on a missing JSON file return a descriptive error and do not terminate the process.
 
+Beyond the captured init sequences, normal mode implements: public chat channels (`10054`), module reads (`10057`), mail read/attachment claims (`16005`, `16007`), hero formation/ready updates (`13044`, `13046`, `13061`), reward claims (`24022`, `24065`, `24098`, `24111`, `24113`, `24221`, `24270`) driven by `progression/` tables, and the scripted battle flow (`20100`, `20102`, `20104`, `20113`). Claims are once per id per connection and keep updating the local bag/attribute profile, so repeated requests behave like a stateful server instead of a recording.
+
 ### TCP proxy
 
 ```sh
@@ -39,7 +41,7 @@ A decoded proxy capture can be used as a best-effort local server fixture:
 cargo run -p tcpserver -- --replay-capture requests_20261005.jsonl
 ```
 
-Replay groups are selected by client command and consumed in capture order independently for each connection. Known server message schemas are re-encoded from the decoded JSON; uncaptured commands fall back to the normal handlers, while unknown or undecoded captured responses are skipped. This reproduces the recorded snapshot, not full game logic: response grouping is approximate, values can be stale, and messages without a known schema cannot be reconstructed because the JSONL file does not retain their raw bytes. The replay loader ignores client request bodies and substitutes fresh account/player/session identifiers.
+Replay groups are selected by client command and consumed in capture order independently for each connection. Known server message schemas are re-encoded from the decoded JSON; uncaptured commands fall back to the normal handlers, while undecoded responses are replayed byte-exact when the capture stored their `payload_hex` and skipped otherwise. Captured server timestamps are shifted to the current time. This reproduces the recorded snapshot, not full game logic: response grouping is approximate and values can be stale. The replay loader ignores client request bodies and substitutes fresh account/player/session identifiers. Captures made before the proxy stored `payload_hex` (like `requests_20261005_new.jsonl`) still lack the four schema-less messages `12106`, `12210`, `12220` and `19910`.
 
 ### HTTP API
 
@@ -67,7 +69,7 @@ python3 tools/import_capture_data.py requests_YYYYMMDD.jsonl --all
 python3 tools/import_capture_data.py requests_YYYYMMDD.jsonl --fill-defaults
 ```
 
-`import_capture_data.py` only writes files that `data_loader.rs` actually reads, skips existing files unless `--force` is given, and never writes guessed payloads unless `--fill-defaults` is used (then every field becomes an empty list/zero). `--only <prefix>` limits the run to one data directory. A worked example for `requests_20261005_new.jsonl` is in [`docs/capture_implementation_plan.md`](docs/capture_implementation_plan.md).
+`import_capture_data.py` writes three kinds of files: the JSON files `data_loader.rs` reads, per-flow tables (`progression/`, `battle/`, `chat/`, `mail/`) extracted from the captured claim/battle flows, and with `--all` a dump of every captured response group under `capture/`. Existing files are kept unless `--force` is given; guessed payloads are only written by `--fill-defaults` (every field becomes an empty list/zero), and `--only <prefix>` limits a run to one data directory. A worked example for `requests_20261005_new.jsonl` is in [`docs/capture_implementation_plan.md`](docs/capture_implementation_plan.md).
 
 ### Asset unpacker
 
@@ -81,6 +83,8 @@ When `output_dir` is omitted, decrypted files are written to a sibling `output2/
 
 - TCP packet framing supports fragmented and coalesced frames, with 16-bit protocol lengths.
 - The protocol message catalogue is largely generated; unknown compound structures remain placeholders until their field layouts are known.
-- The emulator currently implements a small set of game commands. Additional response sequences require the matching JSON files under `DATA_DIR`.
+- Capture replay re-encodes every captured message that has a schema, sends schema-less messages byte-exact when the capture recorded `payload_hex`, and shifts captured server timestamps to the current time. Four messages (`12106`, `12210`, `12220`, `19910`) still need a new capture to recover their payloads.
+- Normal mode emulates login, world entry, hero biography init, shop, mail, chat, module reads, all captured reward-claim flows (achievements, sign-ins, gifts, novice training/recruit), and a scripted battle flow; see `docs/capture_implementation_plan.md` for the per-command map and the data files each flow reads.
+- Reward data lives in `DATA_DIR` (`progression/`, `battle/`, `chat/`, `mail/`, ...). Generate a full data set from a capture with `tools/import_capture_data.py`; commands whose JSON files are missing return a descriptive error and do not terminate the process.
 - Several HTTP responses are static stubs. Signature formats and response fields should be verified against captures before extending them.
 - Legacy crypto convenience functions are retained for compatibility. Prefer the `try_*` APIs when invalid keys or ciphertext must be handled explicitly.

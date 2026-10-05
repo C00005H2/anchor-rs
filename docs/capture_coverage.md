@@ -6,30 +6,30 @@ Capture: `requests_20261005_new.jsonl` — 51 request groups, 24 client commands
 
 | cmd | command | calls | handler | tier | response chain |
 | --- | --- | ---: | --- | --- | --- |
-| 10054 | CS_PUBLIC_CHAT_SETTING | 10 | no | data-only handler feasible | `10055` |
-| 10057 | CS_REQ_MODULE_READ | 1 | no | data-only handler feasible | `10058` |
+| 10054 | CS_PUBLIC_CHAT_SETTING | 10 | yes | already handled | `10055` |
+| 10057 | CS_REQ_MODULE_READ | 1 | yes | already handled | `10058` |
 | 11000 | CS_ACCOUNT_LOGIN | 1 | yes | already handled | `10002`, `11001`, `12000`, `12001`, `12009` |
 | 11005 | CS_ENTER_WORLD | 1 | yes | already handled | — |
 | 12033 | CS_PLAYER_HOMEPAGE_INFO | 1 | yes | already handled | — |
-| 13044 | CS_SET_READY | 1 | no | needs game-state logic | — |
-| 13046 | CS_CHANGE_HERO | 1 | no | needs game-state logic | — |
-| 13061 | CS_CANNOT_DEL_HERO_LIST | 1 | no | needs game-state logic | — |
-| 16005 | CS_MAIL_READ | 3 | no | data-only handler feasible | `16006` |
-| 16007 | CS_MAIL_ENCLOSURE_REC | 1 | no | data-only handler feasible | `10059`, `16002`, `16008`, `17001` |
+| 13044 | CS_SET_READY | 1 | yes | already handled | — |
+| 13046 | CS_CHANGE_HERO | 1 | yes | already handled | — |
+| 13061 | CS_CANNOT_DEL_HERO_LIST | 1 | yes | already handled | — |
+| 16005 | CS_MAIL_READ | 3 | yes | already handled | `16006` |
+| 16007 | CS_MAIL_ENCLOSURE_REC | 1 | yes | already handled | `10059`, `16002`, `16008`, `17001` |
 | 17009 | CS_SHOP_TYPE_DATA | 2 | yes | already handled | `17010` |
 | 18006 | CS_HERO_BIOGRAPHY_INFO | 1 | yes | already handled | `10021`, `10032`, `10056`, `10059`, `10071`, `10101`, `12006`, `12009`, `12018`, `12020`, `12022`, `12034`, `12036`, `12051`, `12053`, `12055`, `12058`, `12062`, `12067`, `12100`, `12101`, `12102`, `12103`, `12104`, `12105`, `12106` ⚠, `12160`, `12210` ⚠, `12220` ⚠, `13041`, `13050`, `13060`, `13107`, `13142`, `13200`, `13220`, `13280`, `13350`, `13362`, `13370`, `15001`, `15003`, `15013`, `15028`, `16001`, `17000`, `17006`, `18000`, `18001`, `18054`, `18062`, `18120`, `19002`, `19050`, `19601`, `19910` ⚠, `20111`, `21001`, `23002`, `23008`, `24021`, `24033`, `24041`, `24066`, `24095`, `24097`, `24106`, `24112`, `24131`, `24201`, `24206`, `24212`, `24220`, `24240`, `24250`, `24271`, `24276`, `24351`, `24372`, `24402`, `24462`, `24490` |
-| 20100 | CS_BATTLE_FIELD_ENTER | 1 | no | data-only handler feasible | `13045`, `13047`, `13062`, `20101` |
-| 20102 | CS_BATTLE_START | 1 | no | needs game-state logic | — |
-| 20104 | CS_BATTLE_VIDEO_END | 14 | no | data-only handler feasible | `10032`, `10059`, `12002`, `12003`, `12010`, `12051`, `12105`, `13003`, `13007`, `13090`, `17001`, `18000`, `20103`, `20105`, `20106`, `20125`, `21073`, `24007`, `24024`, `24027`, `24117` |
-| 20113 | CS_BATTLE_AUTO | 1 | no | data-only handler feasible | `10059`, `12100`, `20103`, `20114`, `20125` |
-| 24022 | CS_GAIN_ACHIEVEMENT_AWARD | 1 | no | data-only handler feasible | `12003`, `24023`, `24024`, `24027` |
-| 24065 | CS_GAIN_SEVEN_DAY_REWARD | 1 | no | data-only handler feasible | `17001`, `17013`, `24066` |
+| 20100 | CS_BATTLE_FIELD_ENTER | 1 | yes | already handled | `13045`, `13047`, `13062`, `20101` |
+| 20102 | CS_BATTLE_START | 1 | yes | already handled | — |
+| 20104 | CS_BATTLE_VIDEO_END | 14 | yes | already handled | `10032`, `10059`, `12002`, `12003`, `12010`, `12051`, `12105`, `13003`, `13007`, `13090`, `17001`, `18000`, `20103`, `20105`, `20106`, `20125`, `21073`, `24007`, `24024`, `24027`, `24117` |
+| 20113 | CS_BATTLE_AUTO | 1 | yes | already handled | `10059`, `12100`, `20103`, `20114`, `20125` |
+| 24022 | CS_GAIN_ACHIEVEMENT_AWARD | 1 | yes | already handled | `12003`, `24023`, `24024`, `24027` |
+| 24065 | CS_GAIN_SEVEN_DAY_REWARD | 1 | yes | already handled | `17001`, `17013`, `24066` |
 | 24096 | CS_DIRECT_GIFT_PANEL | 2 | yes | already handled | `24097` |
-| 24098 | CS_DIRECT_GIFT_BUY | 1 | no | data-only handler feasible | `12003`, `24097`, `24099` |
-| 24111 | CS_NOVICE_TRAINING_PANEL | 2 | no | data-only handler feasible | `12003`, `17001`, `17013`, `24112`, `24114` |
-| 24113 | CS_NOVICE_TRAINING_RECEIVE_TASK | 1 | no | needs game-state logic | — |
-| 24221 | CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE | 1 | no | data-only handler feasible | `10059`, `17001`, `17013`, `24222` |
-| 24270 | CS_GAIN_OPEN_SERVER_SIGN_REWARD | 1 | no | data-only handler feasible | `17001`, `17013`, `24271` |
+| 24098 | CS_DIRECT_GIFT_BUY | 1 | yes | already handled | `12003`, `24097`, `24099` |
+| 24111 | CS_NOVICE_TRAINING_PANEL | 2 | yes | already handled | `12003`, `17001`, `17013`, `24112`, `24114` |
+| 24113 | CS_NOVICE_TRAINING_RECEIVE_TASK | 1 | yes | already handled | — |
+| 24221 | CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE | 1 | yes | already handled | `10059`, `17001`, `17013`, `24222` |
+| 24270 | CS_GAIN_OPEN_SERVER_SIGN_REWARD | 1 | yes | already handled | `17001`, `17013`, `24271` |
 
 ## Server responses
 

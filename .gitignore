@@ -4,8 +4,14 @@ data/hero
 data/hero_biography
 data/login
 data/shop
+data/battle
+data/chat
+data/mail
+data/progression
 data/capture
 requests_*.jsonl
+__pycache__/
+*.pyc
 tcpserver/src/packet-old.rs
 tcpserver/src/main.rs.old
 target

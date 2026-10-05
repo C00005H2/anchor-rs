@@ -36,12 +36,35 @@ struct CaptureResponseRow {
     cmd: u32,
     #[serde(default)]
     decoded: Option<Value>,
+    /// Raw payload of a server message that has no schema in `messages.rs`.
+    #[serde(default)]
+    payload_hex: Option<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CapturedResponse {
     pub cmd: u32,
+    /// JSON representation produced by `dispatch_cmd`, or `Value::Null` when the
+    /// message has no schema and only `raw` bytes are available.
     pub decoded: Value,
+    /// Original wire payload, only present for messages without a schema.
+    pub raw: Option<Vec<u8>>,
+}
+
+/// Decode the `payload_hex` capture field. A trailing `...` (truncated payload)
+/// makes the payload unusable, and is rejected.
+pub(crate) fn decode_payload_hex(text: &str) -> Option<Vec<u8>> {
+    if text.is_empty() || text.ends_with("...") || text.len() % 2 != 0 {
+        return None;
+    }
+    let mut bytes = Vec::with_capacity(text.len() / 2);
+    let digits = text.as_bytes();
+    for pair in digits.chunks(2) {
+        let high = (pair[0] as char).to_digit(16)?;
+        let low = (pair[1] as char).to_digit(16)?;
+        bytes.push(((high << 4) | low) as u8);
+    }
+    Some(bytes)
 }
 
 #[derive(Clone, Debug, Default)]
@@ -53,6 +76,8 @@ pub struct CapturedRequestGroup {
 pub struct CaptureReplay {
     groups_by_command: HashMap<u32, Vec<CapturedRequestGroup>>,
     skipped_undecoded_responses: usize,
+    /// `SC_SYS_DATE.time` of the recorded session, used to shift timestamps.
+    captured_time: Option<i64>,
 }
 
 #[derive(Debug)]
@@ -71,6 +96,9 @@ pub struct ReplayCursor {
     account_id: String,
     player_id: String,
     session: String,
+    /// Seconds added to captured server timestamps so a replay reports "now".
+    /// `None` until the capture's own reference time is known.
+    time_offset: Option<i64>,
 }
 
 impl Default for ReplayCursor {
@@ -86,12 +114,14 @@ impl Default for ReplayCursor {
             account_id,
             player_id,
             session: format!("{:032x}", rand::random::<u128>()),
+            time_offset: None,
         }
     }
 }
 
 impl ReplayCursor {
-    /// Replace capture-specific account/session values with per-connection IDs.
+    /// Replace capture-specific account/session values with per-connection IDs
+    /// and move captured server timestamps to the current time.
     pub fn rehydrate(&self, value: &Value) -> Value {
         let mut value = value.clone();
         rehydrate_value(
@@ -99,8 +129,16 @@ impl ReplayCursor {
             &self.account_id,
             &self.player_id,
             &self.session,
+            self.time_offset.unwrap_or(0),
         );
         value
+    }
+
+    /// Start reporting timestamps relative to `captured_time`.
+    fn anchor_to_time(&mut self, captured_time: i64, now: i64) {
+        if self.time_offset.is_none() {
+            self.time_offset = Some(now - captured_time);
+        }
     }
 }
 
@@ -143,15 +181,39 @@ impl CaptureReplay {
             let mut responses = Vec::with_capacity(row.server_responses.len());
 
             for response in row.server_responses {
+                let raw = response
+                    .payload_hex
+                    .as_deref()
+                    .and_then(decode_payload_hex);
+                if response.cmd == 10002 {
+                    if let Some(seconds) = response
+                        .decoded
+                        .as_ref()
+                        .and_then(|decoded| decoded.get("time"))
+                        .and_then(|time| time.as_i64())
+                    {
+                        replay.captured_time.get_or_insert(seconds);
+                    }
+                }
                 match response.decoded {
                     Some(mut decoded) if !decoded.is_null() => {
                         redact_capture_value(response.cmd, &mut decoded);
                         responses.push(CapturedResponse {
                             cmd: response.cmd,
                             decoded,
+                            raw: None,
                         });
                     }
-                    _ => replay.skipped_undecoded_responses += 1,
+                    _ => match raw {
+                        // A message without a schema can still be replayed when
+                        // the capture stored its original bytes.
+                        Some(bytes) => responses.push(CapturedResponse {
+                            cmd: response.cmd,
+                            decoded: Value::Null,
+                            raw: Some(bytes),
+                        }),
+                        None => replay.skipped_undecoded_responses += 1,
+                    },
                 }
             }
 
@@ -173,6 +235,10 @@ impl CaptureReplay {
         let Some(groups) = self.groups_by_command.get(&command) else {
             return ReplayLookup::NotCaptured;
         };
+
+        if let Some(captured_time) = self.captured_time {
+            cursor.anchor_to_time(captured_time, chrono::Utc::now().timestamp());
+        }
 
         let next = cursor.next_group_by_command.entry(command).or_default();
         let Some(group) = groups.get(*next) else {
@@ -219,19 +285,34 @@ pub(crate) fn redact_capture_value(command: u32, value: &mut Value) {
     }
 }
 
-fn rehydrate_value(value: &mut Value, account_id: &str, player_id: &str, session: &str) {
+/// Server timestamps that describe "now" rather than a fixed game date.
+const SHIFTED_TIME_FIELDS: [&str; 2] = ["time", "next_refresh_time"];
+
+fn rehydrate_value(
+    value: &mut Value,
+    account_id: &str,
+    player_id: &str,
+    session: &str,
+    time_offset: i64,
+) {
     match value {
         Value::String(text) if text == MARKER_ACCOUNT_ID => *text = account_id.to_owned(),
         Value::String(text) if text == MARKER_PLAYER_ID => *text = player_id.to_owned(),
         Value::String(text) if text == MARKER_SESSION => *text = session.to_owned(),
         Value::Array(items) => {
             for item in items {
-                rehydrate_value(item, account_id, player_id, session);
+                rehydrate_value(item, account_id, player_id, session, time_offset);
             }
         }
         Value::Object(fields) => {
-            for field in fields.values_mut() {
-                rehydrate_value(field, account_id, player_id, session);
+            for (key, field) in fields.iter_mut() {
+                if time_offset != 0 && SHIFTED_TIME_FIELDS.contains(&key.as_str()) {
+                    if let Some(seconds) = field.as_i64() {
+                        *field = Value::from(seconds.saturating_add(time_offset));
+                        continue;
+                    }
+                }
+                rehydrate_value(field, account_id, player_id, session, time_offset);
             }
         }
         _ => {}
@@ -243,6 +324,12 @@ fn rehydrate_value(value: &mut Value, account_id: &str, player_id: &str, session
 /// schema in this repository and are skipped by the caller.
 pub fn encode_captured_response(response: &CapturedResponse) -> anyhow::Result<Option<Vec<u8>>> {
     let cmd_id = response.cmd;
+    if response.decoded.is_null() {
+        return match &response.raw {
+            Some(payload) => Ok(Some(build_server_packet(cmd_id, payload)?)),
+            None => Ok(None),
+        };
+    }
     let decoded = response.decoded.clone();
 
     macro_rules! encode_as {
@@ -424,6 +511,7 @@ mod tests {
         let response = CapturedResponse {
             cmd: 10002,
             decoded: json!({"time": 123, "open_date": 100, "merge_date": 0}),
+            raw: None,
         };
         let packet = encode_captured_response(&response).unwrap().unwrap();
         let (cmd, body) = parse_server_packet(&packet, "").unwrap();
@@ -432,6 +520,45 @@ mod tests {
             dispatch_cmd(cmd, &body),
             Some(json!({"time": 123, "open_date": 100, "merge_date": 0}))
         );
+    }
+
+    #[test]
+    fn undecoded_payloads_replay_from_raw_bytes() {
+        let capture = concat!(
+            r#"{"client_request":{"cmd":18006,"decoded":null},"server_responses":[{"cmd":19910,"decoded":null,"payload_hex":"0001"}]}"#,
+            "\n",
+            r#"{"client_request":{"cmd":18006,"decoded":null},"server_responses":[{"cmd":19911,"decoded":null,"payload_hex":"00"}]}"#,
+        );
+        let replay = CaptureReplay::from_reader(Cursor::new(capture.as_bytes())).unwrap();
+        let mut cursor = ReplayCursor::default();
+
+        match replay.next_group(&mut cursor, 18006) {
+            ReplayLookup::Group(group) => {
+                assert_eq!(group.responses[0].raw.as_deref(), Some(&[0u8, 1u8][..]));
+                let packet = encode_captured_response(&group.responses[0])
+                    .unwrap()
+                    .unwrap();
+                let (cmd, body) = parse_server_packet(&packet, "").unwrap();
+                assert_eq!(cmd, 19910);
+                assert_eq!(body, vec![0u8, 1]);
+            }
+            _ => panic!("expected a captured group with raw bytes"),
+        }
+
+        // Truncated payloads cannot be replayed and are skipped instead.
+        match replay.next_group(&mut cursor, 18006) {
+            ReplayLookup::Group(group) => assert!(group.responses.is_empty()),
+            _ => panic!("expected the second captured group"),
+        }
+    }
+
+    #[test]
+    fn payload_hex_decoding_rejects_truncated_and_odd_input() {
+        assert_eq!(decode_payload_hex("0102ff"), Some(vec![1, 2, 255]));
+        assert_eq!(decode_payload_hex("0102..."), None);
+        assert_eq!(decode_payload_hex("0"), None);
+        assert_eq!(decode_payload_hex("zz"), None);
+        assert_eq!(decode_payload_hex(""), None);
     }
 
     #[test]
@@ -462,6 +589,7 @@ mod tests {
         let login = CapturedResponse {
             cmd: 11001,
             decoded: replayed,
+            raw: None,
         };
         let packet = encode_captured_response(&login).unwrap().unwrap();
         let (cmd, body) = parse_server_packet(&packet, "").unwrap();

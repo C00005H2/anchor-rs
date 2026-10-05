@@ -6,7 +6,9 @@ mod handle;
 mod messages;
 mod msgid;
 mod packet;
+mod progression;
 mod proxy;
+mod sequence;
 mod server;
 mod state;
 
