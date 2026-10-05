@@ -29,7 +29,7 @@ The server loads response data from `DATA_DIR` (default: the repository's `data/
 cargo run -p tcpserver -- --proxy "gamehost:gameport" --bind 127.0.0.1 --port 8702
 ```
 
-The proxy forwards packet bytes unchanged, decodes supported commands for inspection, and appends request/response groups to daily `requests_YYYYMMDD.jsonl` files in the current working directory. Newly written captures redact known login/device credentials, session and player identifiers, profile names/signatures, and public-chat text. Capture files are ignored by Git; do not commit older, unredacted captures.
+The proxy forwards packet bytes unchanged, decodes supported commands for inspection, and appends request/response groups to daily `requests_YYYYMMDD.jsonl` files in the current working directory. Newly written captures redact known login/device credentials, session and player identifiers, profile names/signatures, and public-chat text. Server messages with no known schema also get a `payload_hex` field (up to 1 KiB) so the message catalogue can be completed from a later capture; client request bytes are never stored this way. Capture files are ignored by Git; do not commit older, unredacted captures.
 
 ### Captured TCP replay
 
@@ -50,6 +50,24 @@ cargo run -p Httpserver
 HTTP listens on `127.0.0.1:10800` by default. Set `HTTP_BIND_HOST=0.0.0.0` to expose it to another device on a trusted LAN. HTTPS on port `10443` starts when `cert/localhost.crt` and `cert/localhost.key` are present. Since development certificates are excluded from version control, the server falls back to HTTP-only mode when they are absent; a present but invalid certificate is reported as an error.
 
 Most endpoints currently emulate captured responses and are not a production authentication service. The `/v1/User/Login` route validates the repository's simplified request signature. Keep the server on a trusted local network and do not use real account credentials.
+
+### Capture tooling
+
+Two helper scripts under `tools/` work with decoded proxy captures:
+
+```sh
+# Coverage report: which captured commands are handled, which responses the
+# replay/encoder can reproduce, and which data files a capture can fill.
+python3 tools/capture_coverage.py requests_YYYYMMDD.jsonl \
+    --markdown docs/capture_coverage.md --json docs/capture_coverage.json
+
+# Write DATA_DIR JSON files from a capture so the normal-mode handlers work
+# without --replay-capture.
+python3 tools/import_capture_data.py requests_YYYYMMDD.jsonl --all
+python3 tools/import_capture_data.py requests_YYYYMMDD.jsonl --fill-defaults
+```
+
+`import_capture_data.py` only writes files that `data_loader.rs` actually reads, skips existing files unless `--force` is given, and never writes guessed payloads unless `--fill-defaults` is used (then every field becomes an empty list/zero). `--only <prefix>` limits the run to one data directory. A worked example for `requests_20261005_new.jsonl` is in [`docs/capture_implementation_plan.md`](docs/capture_implementation_plan.md).
 
 ### Asset unpacker
 

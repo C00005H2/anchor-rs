@@ -74,7 +74,10 @@ impl GameDataLoader {
         load_packet!(SC_TITANIUM_EXCHANGE_GOLD_COIN_INFO, "hero_biography/titanium_exchange.json", 12055, packets);
         load_packet!(SC_MAIL_LIST, "hero_biography/mail_list.json", 16001, packets);
 
-        for bag_type in 1..=7 {
+        // The client version this sequence was captured from initializes eight
+        // bag types (quest/equipment/item/... incl. type 8), so all of them are
+        // required here; bag_init_type8.json is part of the data set.
+        for bag_type in 1..=8 {
             load_packet!(SC_BAG_INIT, &format!("hero_biography/bag_init_type{}.json", bag_type), 17000, packets);
         }
 

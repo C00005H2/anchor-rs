@@ -22,6 +22,10 @@ use crypto::asset_setting::AssetSetting;
 
 const EVENT_CHANNEL_CAPACITY: usize = 128;
 
+/// Undecoded payloads are recorded up to this size so the message catalogue can
+/// be extended from a later capture.
+const MAX_UNDECODED_HEX_BYTES: usize = 1024;
+
 #[derive(Debug, Clone, Serialize)]
 struct PacketInfo {
     timestamp: DateTime<Utc>,
@@ -30,6 +34,8 @@ struct PacketInfo {
     name: String,
     payload_len: usize,
     decoded: Option<Value>,
+    /// Raw bytes of a server message with no known schema; `None` otherwise.
+    payload_hex: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -59,19 +65,12 @@ async fn save_request_group(group: &RequestGroup) -> anyhow::Result<()> {
 
     let group_json = json!({
         "timestamp": group.client_request.timestamp.to_rfc3339(),
-        "client_request": {
-            "cmd": group.client_request.cmd,
-            "name": group.client_request.name,
-            "payload_len": group.client_request.payload_len,
-            "decoded": group.client_request.decoded
-        },
-        "server_responses": group.server_responses.iter().map(|response| json!({
-            "timestamp": response.timestamp.to_rfc3339(),
-            "cmd": response.cmd,
-            "name": response.name,
-            "payload_len": response.payload_len,
-            "decoded": response.decoded
-        })).collect::<Vec<_>>()
+        "client_request": packet_json(&group.client_request),
+        "server_responses": group
+            .server_responses
+            .iter()
+            .map(packet_json)
+            .collect::<Vec<_>>()
     });
 
     let json_string = serde_json::to_string(&group_json)?;
@@ -88,6 +87,37 @@ async fn save_request_group(group: &RequestGroup) -> anyhow::Result<()> {
 
 fn is_ping_packet(cmd: u32) -> bool {
     cmd == 10000 || cmd == 10001
+}
+
+/// Serialize one packet for a capture row. The optional raw payload of
+/// messages without a known schema is only present when it was recorded.
+fn packet_json(packet: &PacketInfo) -> Value {
+    let mut object = serde_json::Map::new();
+    object.insert(
+        "timestamp".to_owned(),
+        json!(packet.timestamp.to_rfc3339()),
+    );
+    object.insert("cmd".to_owned(), json!(packet.cmd));
+    object.insert("name".to_owned(), json!(packet.name));
+    object.insert("payload_len".to_owned(), json!(packet.payload_len));
+    object.insert("decoded".to_owned(), json!(packet.decoded));
+    if let Some(payload_hex) = &packet.payload_hex {
+        object.insert("payload_hex".to_owned(), json!(payload_hex));
+    }
+    Value::Object(object)
+}
+
+fn hex_encode(data: &[u8], limit: usize) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut text = String::with_capacity(data.len().min(limit) * 2);
+    for byte in data.iter().take(limit) {
+        text.push(HEX[(*byte >> 4) as usize] as char);
+        text.push(HEX[(*byte & 0x0f) as usize] as char);
+    }
+    if data.len() > limit {
+        text.push_str("...");
+    }
+    text
 }
 
 /// Run a TCP packet-inspection proxy. Upstream failures are isolated to the
@@ -271,6 +301,15 @@ fn make_packet_info(direction: &str, cmd: u32, data: &[u8]) -> PacketInfo {
         redact_capture_value(cmd, value);
     }
 
+    // Keep the raw bytes of server messages that have no schema yet so the
+    // catalogue can be completed from a later capture. Client requests are not
+    // recorded this way because unknown fields may contain credentials.
+    let payload_hex = if decoded.is_none() && direction == "S->C" {
+        Some(hex_encode(data, MAX_UNDECODED_HEX_BYTES))
+    } else {
+        None
+    };
+
     PacketInfo {
         timestamp: Utc::now(),
         direction: direction.to_owned(),
@@ -278,6 +317,7 @@ fn make_packet_info(direction: &str, cmd: u32, data: &[u8]) -> PacketInfo {
         name,
         payload_len: data.len(),
         decoded,
+        payload_hex,
     }
 }
 

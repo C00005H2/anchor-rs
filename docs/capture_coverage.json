@@ -1,0 +1,1846 @@
+{
+  "capture": "requests_20261005_new.jsonl",
+  "repo": "/home/user/anchor-rs",
+  "totals": {
+    "request_groups": 51,
+    "distinct_client_commands": 24,
+    "distinct_server_commands": 118,
+    "captured_server_packets": 215,
+    "message_structs": 1287
+  },
+  "commands": [
+    {
+      "cmd": 10054,
+      "name": "CS_PUBLIC_CHAT_SETTING",
+      "calls": 10,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "replay-only",
+      "responses": [
+        {
+          "cmd": 10055,
+          "name": "SC_PUBLIC_CHAT_SETTING",
+          "count": 10,
+          "status": "ok",
+          "schema_struct": "SC_PUBLIC_CHAT_SETTING",
+          "problems": [],
+          "loader_paths": []
+        }
+      ]
+    },
+    {
+      "cmd": 10057,
+      "name": "CS_REQ_MODULE_READ",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "replay-only",
+      "responses": [
+        {
+          "cmd": 10058,
+          "name": "SC_RES_MODULE_READ",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_RES_MODULE_READ",
+          "problems": [],
+          "loader_paths": []
+        }
+      ]
+    },
+    {
+      "cmd": 11000,
+      "name": "CS_ACCOUNT_LOGIN",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": true,
+      "handler_line": 136,
+      "tier": "implemented",
+      "responses": [
+        {
+          "cmd": 10002,
+          "name": "SC_SYS_DATE",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_SYS_DATE",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 11001,
+          "name": "SC_ACCOUNT_LOGIN",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_ACCOUNT_LOGIN",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 12000,
+          "name": "SC_PLAYER_END_DATA",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_PLAYER_END_DATA",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 12001,
+          "name": "SC_PLAYER_BASE_DATA",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_PLAYER_BASE_DATA",
+          "problems": [],
+          "loader_paths": [
+            "login/player_base_data.json"
+          ]
+        },
+        {
+          "cmd": 12009,
+          "name": "SC_FUNCTION_OPEN_LIST",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_FUNCTION_OPEN_LIST",
+          "problems": [],
+          "loader_paths": [
+            "login/function_open_list.json"
+          ]
+        }
+      ]
+    },
+    {
+      "cmd": 11005,
+      "name": "CS_ENTER_WORLD",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": true,
+      "handler_line": 141,
+      "tier": "implemented",
+      "responses": []
+    },
+    {
+      "cmd": 12033,
+      "name": "CS_PLAYER_HOMEPAGE_INFO",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": true,
+      "handler_line": 146,
+      "tier": "implemented",
+      "responses": []
+    },
+    {
+      "cmd": 13044,
+      "name": "CS_SET_READY",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "state-only (no captured response)",
+      "responses": []
+    },
+    {
+      "cmd": 13046,
+      "name": "CS_CHANGE_HERO",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "state-only (no captured response)",
+      "responses": []
+    },
+    {
+      "cmd": 13061,
+      "name": "CS_CANNOT_DEL_HERO_LIST",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "state-only (no captured response)",
+      "responses": []
+    },
+    {
+      "cmd": 16005,
+      "name": "CS_MAIL_READ",
+      "calls": 3,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "replay-only",
+      "responses": [
+        {
+          "cmd": 16006,
+          "name": "SC_MAIL_READ",
+          "count": 3,
+          "status": "ok",
+          "schema_struct": "SC_MAIL_READ",
+          "problems": [],
+          "loader_paths": []
+        }
+      ]
+    },
+    {
+      "cmd": 16007,
+      "name": "CS_MAIL_ENCLOSURE_REC",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "replay-only",
+      "responses": [
+        {
+          "cmd": 10059,
+          "name": "SC_NEW_UNREAD",
+          "count": 8,
+          "status": "ok",
+          "schema_struct": "SC_NEW_UNREAD",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 16002,
+          "name": "SC_MAIL_ADD",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_MAIL_ADD",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 16008,
+          "name": "SC_MAIL_ENCLOSURE_REC",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_MAIL_ENCLOSURE_REC",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 17001,
+          "name": "SC_BAG_UPDATE",
+          "count": 6,
+          "status": "ok",
+          "schema_struct": "SC_BAG_UPDATE",
+          "problems": [],
+          "loader_paths": []
+        }
+      ]
+    },
+    {
+      "cmd": 17009,
+      "name": "CS_SHOP_TYPE_DATA",
+      "calls": 2,
+      "request_decoded": true,
+      "handler": true,
+      "handler_line": 160,
+      "tier": "implemented",
+      "responses": [
+        {
+          "cmd": 17010,
+          "name": "SC_SHOP_TYPE_DATA",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_SHOP_TYPE_DATA",
+          "problems": [],
+          "loader_paths": [
+            "shop/shop_type_1.json",
+            "shop/shop_type_2.json",
+            "shop/shop_type_3.json",
+            "shop/shop_type_4.json",
+            "shop/shop_type_5.json",
+            "shop/shop_type_default.json"
+          ]
+        }
+      ]
+    },
+    {
+      "cmd": 18006,
+      "name": "CS_HERO_BIOGRAPHY_INFO",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": true,
+      "handler_line": 165,
+      "tier": "implemented",
+      "responses": [
+        {
+          "cmd": 10021,
+          "name": "SC_PAY_DATA",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_PAY_DATA",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/pay_data.json"
+          ]
+        },
+        {
+          "cmd": 10032,
+          "name": "SC_SYSTEM_ANNOUNCE",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_SYSTEM_ANNOUNCE",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/system_annnounce.json"
+          ]
+        },
+        {
+          "cmd": 10056,
+          "name": "SC_RES_ALL_MODULE_READ",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_RES_ALL_MODULE_READ",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/res_all_module_read.json"
+          ]
+        },
+        {
+          "cmd": 10059,
+          "name": "SC_NEW_UNREAD",
+          "count": 8,
+          "status": "ok",
+          "schema_struct": "SC_NEW_UNREAD",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 10071,
+          "name": "SC_GET_SERVER_STATE",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_GET_SERVER_STATE",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/server_state.json"
+          ]
+        },
+        {
+          "cmd": 10101,
+          "name": "SC_SETTING",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_SETTING",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/settings.json"
+          ]
+        },
+        {
+          "cmd": 12006,
+          "name": "SC_TODAY_NOT_NOTICE",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_TODAY_NOT_NOTICE",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/today_not_notice.json"
+          ]
+        },
+        {
+          "cmd": 12009,
+          "name": "SC_FUNCTION_OPEN_LIST",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_FUNCTION_OPEN_LIST",
+          "problems": [],
+          "loader_paths": [
+            "login/function_open_list.json"
+          ]
+        },
+        {
+          "cmd": 12018,
+          "name": "SC_GET_AVATAR_LIST",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_GET_AVATAR_LIST",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/get_avatar_list.json"
+          ]
+        },
+        {
+          "cmd": 12020,
+          "name": "SC_GET_AVATAR_FRAME_LIST",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_GET_AVATAR_FRAME_LIST",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/get_avatar_frame_list.json"
+          ]
+        },
+        {
+          "cmd": 12022,
+          "name": "SC_GET_DESIGNATION_LIST",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_GET_DESIGNATION_LIST",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/get_designation_list.json"
+          ]
+        },
+        {
+          "cmd": 12034,
+          "name": "SC_PLAYER_HOMEPAGE_INFO",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_PLAYER_HOMEPAGE_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/player_homepage.json",
+            "hero_biography/player_homepage_info.json"
+          ]
+        },
+        {
+          "cmd": 12036,
+          "name": "SC_GET_DIALOG_BOX_LIST",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_GET_DIALOG_BOX_LIST",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/get_dialog_box_list.json"
+          ]
+        },
+        {
+          "cmd": 12051,
+          "name": "SC_PLAYER_STAMINA_INFO",
+          "count": 4,
+          "status": "ok",
+          "schema_struct": "SC_PLAYER_STAMINA_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/player_stamina_info.json"
+          ]
+        },
+        {
+          "cmd": 12053,
+          "name": "SC_PLAYER_STORY_INFO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_PLAYER_STORY_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/player_story_info.json"
+          ]
+        },
+        {
+          "cmd": 12055,
+          "name": "SC_TITANIUM_EXCHANGE_GOLD_COIN_INFO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_TITANIUM_EXCHANGE_GOLD_COIN_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/titanium_exchange.json"
+          ]
+        },
+        {
+          "cmd": 12058,
+          "name": "SC_PLAYER_GUIDE_INFO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_PLAYER_GUIDE_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/player_guide_info.json"
+          ]
+        },
+        {
+          "cmd": 12062,
+          "name": "SC_IS_RENAME",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_IS_RENAME",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/is_rename.json"
+          ]
+        },
+        {
+          "cmd": 12067,
+          "name": "SC_GET_BACKGROUND_LIST",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_GET_BACKGROUND_LIST",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/get_background_list.json"
+          ]
+        },
+        {
+          "cmd": 12100,
+          "name": "SC_MONSTER_MANUAL",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_MONSTER_MANUAL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/monster_manual.json"
+          ]
+        },
+        {
+          "cmd": 12101,
+          "name": "SC_EQUIP_SUIT_MANUAL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_EQUIP_SUIT_MANUAL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/equip_suit_manual.json"
+          ]
+        },
+        {
+          "cmd": 12102,
+          "name": "SC_BRACELET_MANUAL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_BRACELET_MANUAL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/bracelet_manual.json"
+          ]
+        },
+        {
+          "cmd": 12103,
+          "name": "SC_MUSIC_MANUAL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_MUSIC_MANUAL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/music_manual.json"
+          ]
+        },
+        {
+          "cmd": 12104,
+          "name": "SC_STORY_MANUAL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_STORY_MANUAL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/story_manual.json"
+          ]
+        },
+        {
+          "cmd": 12105,
+          "name": "SC_WORLD_MANUAL",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_WORLD_MANUAL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/world_manual.json"
+          ]
+        },
+        {
+          "cmd": 12106,
+          "name": "UNKNOWN(12106)",
+          "count": 1,
+          "status": "undecoded",
+          "schema_struct": null,
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 12160,
+          "name": "SC_DIALOGUE_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_DIALOGUE_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/dialogue_panel.json"
+          ]
+        },
+        {
+          "cmd": 12210,
+          "name": "UNKNOWN(12210)",
+          "count": 1,
+          "status": "undecoded",
+          "schema_struct": null,
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 12220,
+          "name": "UNKNOWN(12220)",
+          "count": 1,
+          "status": "undecoded",
+          "schema_struct": null,
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 13041,
+          "name": "SC_HERO_FORMATION",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_HERO_FORMATION",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/hero_formation.json"
+          ]
+        },
+        {
+          "cmd": 13050,
+          "name": "SC_RECRUIT_INFO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_RECRUIT_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/recruit_info.json"
+          ]
+        },
+        {
+          "cmd": 13060,
+          "name": "SC_HERO_PRE_LIST",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_HERO_PRE_LIST",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/hero_pre_list.json"
+          ]
+        },
+        {
+          "cmd": 13107,
+          "name": "SC_FASHION_INFO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_FASHION_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/fashion_info.json"
+          ]
+        },
+        {
+          "cmd": 13142,
+          "name": "SC_RELATION_REWARD",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_RELATION_REWARD",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/relation_reward.json"
+          ]
+        },
+        {
+          "cmd": 13200,
+          "name": "SC_HERO_LV_REWARD",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_HERO_LV_REWARD",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/hero_lv_reward.json"
+          ]
+        },
+        {
+          "cmd": 13220,
+          "name": "SC_HERO_ASSIST_FIGHT_SKILL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_HERO_ASSIST_FIGHT_SKILL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/assist_fight_skill.json"
+          ]
+        },
+        {
+          "cmd": 13280,
+          "name": "SC_HERO_ACTION_LIST",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_HERO_ACTION_LIST",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/hero_action_list.json"
+          ]
+        },
+        {
+          "cmd": 13350,
+          "name": "SC_HERO_FASHION_HAVE_INFO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_HERO_FASHION_HAVE_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/hero_fashion_have_info.json"
+          ]
+        },
+        {
+          "cmd": 13362,
+          "name": "SC_ACT_FETTER_INFO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_ACT_FETTER_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/act_fetter_info.json"
+          ]
+        },
+        {
+          "cmd": 13370,
+          "name": "SC_FASHION_SCENE_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_FASHION_SCENE_PANEL",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 15001,
+          "name": "SC_FRIEND_LIST",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_FRIEND_LIST",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/friend_list.json"
+          ]
+        },
+        {
+          "cmd": 15003,
+          "name": "SC_FRIEND_APPLY_LIST",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_FRIEND_APPLY_LIST",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/friend_apply_list.json"
+          ]
+        },
+        {
+          "cmd": 15013,
+          "name": "SC_BLACK_LIST",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_BLACK_LIST",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/black_list.json"
+          ]
+        },
+        {
+          "cmd": 15028,
+          "name": "SC_FRIEND_GIFT_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_FRIEND_GIFT_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/friend_gift_panel.json"
+          ]
+        },
+        {
+          "cmd": 16001,
+          "name": "SC_MAIL_LIST",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_MAIL_LIST",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/mail_list.json"
+          ]
+        },
+        {
+          "cmd": 17000,
+          "name": "SC_BAG_INIT",
+          "count": 8,
+          "status": "ok",
+          "schema_struct": "SC_BAG_INIT",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/bag_init_type1.json",
+            "hero_biography/bag_init_type2.json",
+            "hero_biography/bag_init_type3.json",
+            "hero_biography/bag_init_type4.json",
+            "hero_biography/bag_init_type5.json",
+            "hero_biography/bag_init_type6.json",
+            "hero_biography/bag_init_type7.json",
+            "hero_biography/bag_init_type8.json"
+          ]
+        },
+        {
+          "cmd": 17006,
+          "name": "SC_SHOP_DATA",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_SHOP_DATA",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/shop_data.json"
+          ]
+        },
+        {
+          "cmd": 18000,
+          "name": "SC_MAIN_STORY_INFO",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_MAIN_STORY_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/main_story_info.json"
+          ]
+        },
+        {
+          "cmd": 18001,
+          "name": "SC_DUP_DATA",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_DUP_DATA",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/dup_data.json"
+          ]
+        },
+        {
+          "cmd": 18054,
+          "name": "SC_MAIN_STORY_STAGE_AWARD_LIST",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_MAIN_STORY_STAGE_AWARD_LIST",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/main_story_award_list.json"
+          ]
+        },
+        {
+          "cmd": 18062,
+          "name": "SC_CHIP_DUP_PICK_SUIT",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_CHIP_DUP_PICK_SUIT",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/chip_dup_pick_suit.json"
+          ]
+        },
+        {
+          "cmd": 18120,
+          "name": "SC_PARKOUR_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_PARKOUR_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/parked_panel.json"
+          ]
+        },
+        {
+          "cmd": 19002,
+          "name": "SC_COLLEGE_DELEGATION_HALL_INFO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_COLLEGE_DELEGATION_HALL_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/college_delegation.json"
+          ]
+        },
+        {
+          "cmd": 19050,
+          "name": "SC_ACTIVITY_OPEN_INFO",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_ACTIVITY_OPEN_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/open_activity_open_info.json"
+          ]
+        },
+        {
+          "cmd": 19601,
+          "name": "SC_HERO_TRY_INFO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_HERO_TRY_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/hero_try_info.json"
+          ]
+        },
+        {
+          "cmd": 19910,
+          "name": "UNKNOWN(19910)",
+          "count": 1,
+          "status": "undecoded",
+          "schema_struct": null,
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 20111,
+          "name": "SC_BATTLE_REPLAY_INFOS",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_BATTLE_REPLAY_INFOS",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/battle_replay_info.json"
+          ]
+        },
+        {
+          "cmd": 21001,
+          "name": "SC_FORCES_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_FORCES_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/force_panel.json"
+          ]
+        },
+        {
+          "cmd": 23002,
+          "name": "SC_GUILD_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_GUILD_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/guild_panel.json"
+          ]
+        },
+        {
+          "cmd": 23008,
+          "name": "SC_REFRESH_RECOMMEND_GUILDS",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_REFRESH_RECOMMEND_GUILDS",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/refresh_recommend_guilds.json"
+          ]
+        },
+        {
+          "cmd": 24021,
+          "name": "SC_ACHIEVEMENT_PANEL_INFO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_ACHIEVEMENT_PANEL_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/achievement_panel.json"
+          ]
+        },
+        {
+          "cmd": 24033,
+          "name": "SC_SIGN_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_SIGN_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/sign_panel.json"
+          ]
+        },
+        {
+          "cmd": 24041,
+          "name": "SC_NOVICE_TARGET_PANEL_INFO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_NOVICE_TARGET_PANEL_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/novice_target_panel.json"
+          ]
+        },
+        {
+          "cmd": 24066,
+          "name": "SC_SEVEN_DAY_PANEL_INFO",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_SEVEN_DAY_PANEL_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/seven_day_panel.json"
+          ]
+        },
+        {
+          "cmd": 24095,
+          "name": "SC_MONTH_CARD_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_MONTH_CARD_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/month_card_panel.json"
+          ]
+        },
+        {
+          "cmd": 24097,
+          "name": "SC_DIRECT_GIFT_PANEL",
+          "count": 4,
+          "status": "ok",
+          "schema_struct": "SC_DIRECT_GIFT_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/direct_gift_panel.json",
+            "shop/direct_gift_panel.json"
+          ]
+        },
+        {
+          "cmd": 24106,
+          "name": "SC_ACC_PAY_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_ACC_PAY_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/acc_pay_panel.json"
+          ]
+        },
+        {
+          "cmd": 24112,
+          "name": "SC_NOVICE_TRAINING_PANEL",
+          "count": 3,
+          "status": "ok",
+          "schema_struct": "SC_NOVICE_TRAINING_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/novice_training_panel.json"
+          ]
+        },
+        {
+          "cmd": 24131,
+          "name": "SC_FASHION_SHOP_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_FASHION_SHOP_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/fashion_shop_panel.json"
+          ]
+        },
+        {
+          "cmd": 24201,
+          "name": "SC_LEVEL_GIFT_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_LEVEL_GIFT_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/level_gift_panel.json"
+          ]
+        },
+        {
+          "cmd": 24206,
+          "name": "SC_FUND_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_FUND_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/fund_panel.json"
+          ]
+        },
+        {
+          "cmd": 24212,
+          "name": "SC_FIRST_PAY_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_FIRST_PAY_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/first_pay_panel.json"
+          ]
+        },
+        {
+          "cmd": 24220,
+          "name": "SC_ACTIVITY_NOVICE_RECRUIT_HERO_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_ACTIVITY_NOVICE_RECRUIT_HERO_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/activity_novice_recruit.json"
+          ]
+        },
+        {
+          "cmd": 24240,
+          "name": "SC_ACTIVITY_NOVICE_UPGRADE_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_ACTIVITY_NOVICE_UPGRADE_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/activity_novice_upgrade.json"
+          ]
+        },
+        {
+          "cmd": 24250,
+          "name": "SC_ACTIVITY_NOVICE_START",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_ACTIVITY_NOVICE_START",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/activity_novice_start.json"
+          ]
+        },
+        {
+          "cmd": 24271,
+          "name": "SC_OPEN_SERVER_SIGN_PANEL_INFO",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_OPEN_SERVER_SIGN_PANEL_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/open_server_sign_panel.json"
+          ]
+        },
+        {
+          "cmd": 24276,
+          "name": "SC_PLATFORM_ACHIEVE_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_PLATFORM_ACHIEVE_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/platform_achieve_panel.json"
+          ]
+        },
+        {
+          "cmd": 24351,
+          "name": "SC_STAMINA_MONTH_CARD_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_STAMINA_MONTH_CARD_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/stamina_month_card_panel.json"
+          ]
+        },
+        {
+          "cmd": 24372,
+          "name": "SC_DOWN_GIFT_SHOW",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_DOWN_GIFT_SHOW",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/down_gift_show.json"
+          ]
+        },
+        {
+          "cmd": 24402,
+          "name": "SC_LIMITED_GIFT_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_LIMITED_GIFT_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/limited_gift_panel.json"
+          ]
+        },
+        {
+          "cmd": 24462,
+          "name": "SC_ACTIVITY_DAY_REWARD_PANEL",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_ACTIVITY_DAY_REWARD_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/activity_day_reward_panel.json"
+          ]
+        },
+        {
+          "cmd": 24490,
+          "name": "SC_ACTIVITY_EXPIRED_GOODS",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_ACTIVITY_EXPIRED_GOODS",
+          "problems": [],
+          "loader_paths": []
+        }
+      ]
+    },
+    {
+      "cmd": 20100,
+      "name": "CS_BATTLE_FIELD_ENTER",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "replay-only",
+      "responses": [
+        {
+          "cmd": 13045,
+          "name": "SC_SET_READY",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_SET_READY",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 13047,
+          "name": "SC_CHANGE_HERO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_CHANGE_HERO",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 13062,
+          "name": "SC_CANNOT_DEL_HERO_LIST",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_CANNOT_DEL_HERO_LIST",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 20101,
+          "name": "SC_BATTLE_FIELD_INFO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_BATTLE_FIELD_INFO",
+          "problems": [],
+          "loader_paths": []
+        }
+      ]
+    },
+    {
+      "cmd": 20102,
+      "name": "CS_BATTLE_START",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "state-only (no captured response)",
+      "responses": []
+    },
+    {
+      "cmd": 20104,
+      "name": "CS_BATTLE_VIDEO_END",
+      "calls": 14,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "replay-only",
+      "responses": [
+        {
+          "cmd": 10032,
+          "name": "SC_SYSTEM_ANNOUNCE",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_SYSTEM_ANNOUNCE",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/system_annnounce.json"
+          ]
+        },
+        {
+          "cmd": 10059,
+          "name": "SC_NEW_UNREAD",
+          "count": 8,
+          "status": "ok",
+          "schema_struct": "SC_NEW_UNREAD",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 12002,
+          "name": "SC_PLAYER_UPDATE_ATTR_INT",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_PLAYER_UPDATE_ATTR_INT",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 12003,
+          "name": "SC_PLAYER_UPDATE_ATTR_BIGINT",
+          "count": 7,
+          "status": "ok",
+          "schema_struct": "SC_PLAYER_UPDATE_ATTR_BIGINT",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 12010,
+          "name": "SC_ADD_FUNCTION_OPEN",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_ADD_FUNCTION_OPEN",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 12051,
+          "name": "SC_PLAYER_STAMINA_INFO",
+          "count": 4,
+          "status": "ok",
+          "schema_struct": "SC_PLAYER_STAMINA_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/player_stamina_info.json"
+          ]
+        },
+        {
+          "cmd": 12105,
+          "name": "SC_WORLD_MANUAL",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_WORLD_MANUAL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/world_manual.json"
+          ]
+        },
+        {
+          "cmd": 13003,
+          "name": "SC_HERO_UPDATE_ATTR",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_HERO_UPDATE_ATTR",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 13007,
+          "name": "SC_HERO_LEVELUP",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_HERO_LEVELUP",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 13090,
+          "name": "SC_HERO_UPDATE_ATTR_BIGINT",
+          "count": 5,
+          "status": "ok",
+          "schema_struct": "SC_HERO_UPDATE_ATTR_BIGINT",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 17001,
+          "name": "SC_BAG_UPDATE",
+          "count": 6,
+          "status": "ok",
+          "schema_struct": "SC_BAG_UPDATE",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 18000,
+          "name": "SC_MAIN_STORY_INFO",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_MAIN_STORY_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/main_story_info.json"
+          ]
+        },
+        {
+          "cmd": 20103,
+          "name": "SC_BATTLE_ACTION",
+          "count": 14,
+          "status": "ok",
+          "schema_struct": "SC_BATTLE_ACTION",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 20105,
+          "name": "SC_BATTLE_ACTION_END",
+          "count": 6,
+          "status": "ok",
+          "schema_struct": "SC_BATTLE_ACTION_END",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 20106,
+          "name": "SC_BATTLE_RESULT",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_BATTLE_RESULT",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 20125,
+          "name": "SC_BATTLE_ACTION_NOTICE",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_BATTLE_ACTION_NOTICE",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 21073,
+          "name": "SC_UPDATE_FORCES_TASK_INFO",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_UPDATE_FORCES_TASK_INFO",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 24007,
+          "name": "SC_UPDATE_TASK_INFO",
+          "count": 5,
+          "status": "ok",
+          "schema_struct": "SC_UPDATE_TASK_INFO",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 24024,
+          "name": "SC_UPDATE_ACHIEVEMENT_INFO",
+          "count": 10,
+          "status": "ok",
+          "schema_struct": "SC_UPDATE_ACHIEVEMENT_INFO",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 24027,
+          "name": "SC_UPDATE_COMPLETE_ACHIEVE_INFO",
+          "count": 3,
+          "status": "ok",
+          "schema_struct": "SC_UPDATE_COMPLETE_ACHIEVE_INFO",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 24117,
+          "name": "SC_UPDATE_NOVICE_TRAINING_TASK",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_UPDATE_NOVICE_TRAINING_TASK",
+          "problems": [],
+          "loader_paths": []
+        }
+      ]
+    },
+    {
+      "cmd": 20113,
+      "name": "CS_BATTLE_AUTO",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "replay-only",
+      "responses": [
+        {
+          "cmd": 10059,
+          "name": "SC_NEW_UNREAD",
+          "count": 8,
+          "status": "ok",
+          "schema_struct": "SC_NEW_UNREAD",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 12100,
+          "name": "SC_MONSTER_MANUAL",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_MONSTER_MANUAL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/monster_manual.json"
+          ]
+        },
+        {
+          "cmd": 20103,
+          "name": "SC_BATTLE_ACTION",
+          "count": 14,
+          "status": "ok",
+          "schema_struct": "SC_BATTLE_ACTION",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 20114,
+          "name": "SC_BATTLE_AUTO",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_BATTLE_AUTO",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 20125,
+          "name": "SC_BATTLE_ACTION_NOTICE",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_BATTLE_ACTION_NOTICE",
+          "problems": [],
+          "loader_paths": []
+        }
+      ]
+    },
+    {
+      "cmd": 24022,
+      "name": "CS_GAIN_ACHIEVEMENT_AWARD",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "replay-only",
+      "responses": [
+        {
+          "cmd": 12003,
+          "name": "SC_PLAYER_UPDATE_ATTR_BIGINT",
+          "count": 7,
+          "status": "ok",
+          "schema_struct": "SC_PLAYER_UPDATE_ATTR_BIGINT",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 24023,
+          "name": "SC_GAIN_ACHIEVEMENT_AWARD",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_GAIN_ACHIEVEMENT_AWARD",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 24024,
+          "name": "SC_UPDATE_ACHIEVEMENT_INFO",
+          "count": 10,
+          "status": "ok",
+          "schema_struct": "SC_UPDATE_ACHIEVEMENT_INFO",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 24027,
+          "name": "SC_UPDATE_COMPLETE_ACHIEVE_INFO",
+          "count": 3,
+          "status": "ok",
+          "schema_struct": "SC_UPDATE_COMPLETE_ACHIEVE_INFO",
+          "problems": [],
+          "loader_paths": []
+        }
+      ]
+    },
+    {
+      "cmd": 24065,
+      "name": "CS_GAIN_SEVEN_DAY_REWARD",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "replay-only",
+      "responses": [
+        {
+          "cmd": 17001,
+          "name": "SC_BAG_UPDATE",
+          "count": 6,
+          "status": "ok",
+          "schema_struct": "SC_BAG_UPDATE",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 17013,
+          "name": "SC_PROP_AWARD_SEND",
+          "count": 4,
+          "status": "ok",
+          "schema_struct": "SC_PROP_AWARD_SEND",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 24066,
+          "name": "SC_SEVEN_DAY_PANEL_INFO",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_SEVEN_DAY_PANEL_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/seven_day_panel.json"
+          ]
+        }
+      ]
+    },
+    {
+      "cmd": 24096,
+      "name": "CS_DIRECT_GIFT_PANEL",
+      "calls": 2,
+      "request_decoded": true,
+      "handler": true,
+      "handler_line": 169,
+      "tier": "implemented",
+      "responses": [
+        {
+          "cmd": 24097,
+          "name": "SC_DIRECT_GIFT_PANEL",
+          "count": 4,
+          "status": "ok",
+          "schema_struct": "SC_DIRECT_GIFT_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/direct_gift_panel.json",
+            "shop/direct_gift_panel.json"
+          ]
+        }
+      ]
+    },
+    {
+      "cmd": 24098,
+      "name": "CS_DIRECT_GIFT_BUY",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "replay-only",
+      "responses": [
+        {
+          "cmd": 12003,
+          "name": "SC_PLAYER_UPDATE_ATTR_BIGINT",
+          "count": 7,
+          "status": "ok",
+          "schema_struct": "SC_PLAYER_UPDATE_ATTR_BIGINT",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 24097,
+          "name": "SC_DIRECT_GIFT_PANEL",
+          "count": 4,
+          "status": "ok",
+          "schema_struct": "SC_DIRECT_GIFT_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/direct_gift_panel.json",
+            "shop/direct_gift_panel.json"
+          ]
+        },
+        {
+          "cmd": 24099,
+          "name": "SC_DIRECT_GIFT_BUY",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_DIRECT_GIFT_BUY",
+          "problems": [],
+          "loader_paths": []
+        }
+      ]
+    },
+    {
+      "cmd": 24111,
+      "name": "CS_NOVICE_TRAINING_PANEL",
+      "calls": 2,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "replay-only",
+      "responses": [
+        {
+          "cmd": 12003,
+          "name": "SC_PLAYER_UPDATE_ATTR_BIGINT",
+          "count": 7,
+          "status": "ok",
+          "schema_struct": "SC_PLAYER_UPDATE_ATTR_BIGINT",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 17001,
+          "name": "SC_BAG_UPDATE",
+          "count": 6,
+          "status": "ok",
+          "schema_struct": "SC_BAG_UPDATE",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 17013,
+          "name": "SC_PROP_AWARD_SEND",
+          "count": 4,
+          "status": "ok",
+          "schema_struct": "SC_PROP_AWARD_SEND",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 24112,
+          "name": "SC_NOVICE_TRAINING_PANEL",
+          "count": 3,
+          "status": "ok",
+          "schema_struct": "SC_NOVICE_TRAINING_PANEL",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/novice_training_panel.json"
+          ]
+        },
+        {
+          "cmd": 24114,
+          "name": "SC_NOVICE_TRAINING_RECEIVE_TASK",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_NOVICE_TRAINING_RECEIVE_TASK",
+          "problems": [],
+          "loader_paths": []
+        }
+      ]
+    },
+    {
+      "cmd": 24113,
+      "name": "CS_NOVICE_TRAINING_RECEIVE_TASK",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "state-only (no captured response)",
+      "responses": []
+    },
+    {
+      "cmd": 24221,
+      "name": "CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "replay-only",
+      "responses": [
+        {
+          "cmd": 10059,
+          "name": "SC_NEW_UNREAD",
+          "count": 8,
+          "status": "ok",
+          "schema_struct": "SC_NEW_UNREAD",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 17001,
+          "name": "SC_BAG_UPDATE",
+          "count": 6,
+          "status": "ok",
+          "schema_struct": "SC_BAG_UPDATE",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 17013,
+          "name": "SC_PROP_AWARD_SEND",
+          "count": 4,
+          "status": "ok",
+          "schema_struct": "SC_PROP_AWARD_SEND",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 24222,
+          "name": "SC_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE",
+          "count": 1,
+          "status": "ok",
+          "schema_struct": "SC_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE",
+          "problems": [],
+          "loader_paths": []
+        }
+      ]
+    },
+    {
+      "cmd": 24270,
+      "name": "CS_GAIN_OPEN_SERVER_SIGN_REWARD",
+      "calls": 1,
+      "request_decoded": true,
+      "handler": false,
+      "handler_line": null,
+      "tier": "replay-only",
+      "responses": [
+        {
+          "cmd": 17001,
+          "name": "SC_BAG_UPDATE",
+          "count": 6,
+          "status": "ok",
+          "schema_struct": "SC_BAG_UPDATE",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 17013,
+          "name": "SC_PROP_AWARD_SEND",
+          "count": 4,
+          "status": "ok",
+          "schema_struct": "SC_PROP_AWARD_SEND",
+          "problems": [],
+          "loader_paths": []
+        },
+        {
+          "cmd": 24271,
+          "name": "SC_OPEN_SERVER_SIGN_PANEL_INFO",
+          "count": 2,
+          "status": "ok",
+          "schema_struct": "SC_OPEN_SERVER_SIGN_PANEL_INFO",
+          "problems": [],
+          "loader_paths": [
+            "hero_biography/open_server_sign_panel.json"
+          ]
+        }
+      ]
+    }
+  ],
+  "loader": {
+    "expected_files": 105,
+    "required_for_capture": 96,
+    "covered_by_capture": 86,
+    "missing_from_capture": [
+      {
+        "cmd": 24300,
+        "struct": "SC_ACTIVITY_NOVICE_TURNTABLE_PANEL",
+        "path": "hero_biography/activity_novice_turntable.json"
+      },
+      {
+        "cmd": 24425,
+        "struct": "SC_ACTIVITY_PAY_SIGN2_PANEL",
+        "path": "hero_biography/activity_pay_sign2_panel.json"
+      },
+      {
+        "cmd": 18181,
+        "struct": "SC_PACK_BAG_PANEL",
+        "path": "hero_biography/pack_bag_panel.json"
+      },
+      {
+        "cmd": 18190,
+        "struct": "SC_HAPPY_FARM_FIELD_LIST",
+        "path": "hero_biography/happy_farm_field_list.json"
+      },
+      {
+        "cmd": 18191,
+        "struct": "SC_HAPPY_FARM_ORDER_LIST",
+        "path": "hero_biography/happy_farm_order_list.json"
+      },
+      {
+        "cmd": 17010,
+        "struct": "SC_SHOP_TYPE_DATA",
+        "path": "shop/shop_type_2.json"
+      },
+      {
+        "cmd": 17010,
+        "struct": "SC_SHOP_TYPE_DATA",
+        "path": "shop/shop_type_3.json"
+      },
+      {
+        "cmd": 17010,
+        "struct": "SC_SHOP_TYPE_DATA",
+        "path": "shop/shop_type_4.json"
+      },
+      {
+        "cmd": 17010,
+        "struct": "SC_SHOP_TYPE_DATA",
+        "path": "shop/shop_type_5.json"
+      }
+    ]
+  }
+}
