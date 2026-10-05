@@ -1,11 +1,15 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
+use crate::capture_replay::ReplayCursor;
+
 pub struct ConnectionContext {
     pub player_id: Option<i64>,
     pub session_id: String,
     pub logged_in: bool,
     pub last_heartbeat: Instant,
+    /// Per-client cursor and anonymized IDs used by optional capture replay.
+    pub replay_cursor: ReplayCursor,
     /// Track dialogue progression for each NPC
     /// Key: "dialogue_{npc_id}", Value: current dialogue part
     pub dialogue_state: HashMap<String, i32>,
@@ -18,6 +22,7 @@ impl ConnectionContext {
             session_id,
             logged_in: false,
             last_heartbeat: Instant::now(),
+            replay_cursor: ReplayCursor::default(),
             dialogue_state: HashMap::new(),
         }
     }
@@ -45,7 +50,7 @@ impl ConnectionContext {
     /// Advance dialogue to next part
     pub fn advance_dialogue(&mut self, npc_id: i32) -> i32 {
         let current = self.get_dialogue_part(npc_id).unwrap_or(0);
-        let next_part = current + 1;
+        let next_part = current.saturating_add(1);
         self.set_dialogue_part(npc_id, next_part);
         next_part
     }

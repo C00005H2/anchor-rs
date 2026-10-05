@@ -3,6 +3,18 @@ use serde_json::Value;
 use crate::messages::*;
 
 pub fn dispatch_cmd(cmd: u32, data: &[u8]) -> Option<Value> {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        dispatch_cmd_unchecked(cmd, data)
+    })) {
+        Ok(decoded) => decoded,
+        Err(_) => {
+            tracing::warn!(cmd = cmd, payload_len = data.len(), "Failed to decode malformed packet");
+            None
+        }
+    }
+}
+
+fn dispatch_cmd_unchecked(cmd: u32, data: &[u8]) -> Option<Value> {
     match cmd {
         11000 => Some(serde_json::to_value(&CS_ACCOUNT_LOGIN::decode(data)).unwrap()),
         11001 => Some(serde_json::to_value(&SC_ACCOUNT_LOGIN::decode(data)).unwrap()),

@@ -15,7 +15,7 @@ async fn get_login_bulletins(
     path: web::Path<(u32,)>,
 ) -> impl Responder {
     let gid = path.into_inner().0;
-    println!("[Bulletin] group={gid}, data={}", form.data);
+    tracing::info!(group = gid, "Login bulletins requested");
 
     HttpResponse::Ok().json(json!({
         "status": 1,

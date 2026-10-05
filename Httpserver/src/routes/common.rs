@@ -26,7 +26,7 @@ pub struct LogForm {
 
 #[post("/v1/LogHandle/Common")]
 async fn log_handle_common(form: web::Form<LogForm>) -> impl Responder {
-    println!("[LogHandle] eventType={}, data={}", form.eventType, form.data);
+    tracing::info!(event_type = %form.eventType, "Common log event received");
 
     HttpResponse::Ok().json(json!({
         "code": 1,

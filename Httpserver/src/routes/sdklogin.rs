@@ -12,7 +12,7 @@ pub struct SdkLoginForm {
 #[post("/User/Login/g/{gid}")]
 async fn sdk_user_login(form: web::Form<SdkLoginForm>, path: web::Path<(u32,)>) -> impl Responder {
     let gid = path.into_inner().0;
-    println!("[SDK UserLogin] group={gid}, time={}, data={}", form.time, form.data);
+    tracing::info!(group = gid, request_time = %form.time, "SDK login request received");
 
     // In a real server you'd verify `sign`, parse `data` (URL-encoded key/value pairs)
     // But since you are emulating, we just skip checks and return a fixed response.

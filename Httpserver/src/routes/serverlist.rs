@@ -22,19 +22,25 @@ async fn pf_recommend_srv_list(
     path: web::Path<(u32,)>,
 ) -> impl Responder {
     let gid = path.into_inner().0;
-    println!("[PfRecommendSrvList] group={gid}, data={}", form.data);
-
     let params = parse_urlencoded(&form.data);
     let requested_srv_id = params.get("srv_id");
+    tracing::info!(group = gid, requested_srv_id = ?requested_srv_id, "Server list requested");
+    let game_host = std::env::var("GAME_SERVER_HOST")
+        .unwrap_or_else(|_| ::common::GAMESERVER.to_owned());
+    let game_port = std::env::var("GAME_SERVER_PORT")
+        .ok()
+        .and_then(|port| port.parse::<u16>().ok())
+        .unwrap_or(::common::GAMESERVER_PORT)
+        .to_string();
 
     // Stubbed server list response (copied from your capture)
     let servers = json!({
         "1822010005": {
             "srv_id": "1822010005",
             "logsrv_id": "10005",
-            "domain": "127.0.0.1",
+            "domain": game_host.as_str(),
             "gateway": "",
-            "client_port": "8702",
+            "client_port": game_port.as_str(),
             "status": "1",
             "open_time": "1757666400",
             "srv_type": "18220001",
@@ -53,9 +59,9 @@ async fn pf_recommend_srv_list(
         "1822010004": {
             "srv_id": "1822010004",
             "logsrv_id": "10004",
-            "domain": "127.0.0.1",
+            "domain": game_host.as_str(),
             "gateway": "",
-            "client_port": "8702",
+            "client_port": game_port.as_str(),
             "status": "1",
             "open_time": "1757666400",
             "srv_type": "18220001",
@@ -74,9 +80,9 @@ async fn pf_recommend_srv_list(
         "1822010003": {
             "srv_id": "1822010003",
             "logsrv_id": "10003",
-            "domain": "127.0.0.1",
+            "domain": game_host.as_str(),
             "gateway": "",
-            "client_port": "8702",
+            "client_port": game_port.as_str(),
             "status": "1",
             "open_time": "1757666400",
             "srv_type": "18220001",
@@ -95,9 +101,9 @@ async fn pf_recommend_srv_list(
         "1822010002": {
             "srv_id": "1822010002",
             "logsrv_id": "10002",
-            "domain": "127.0.0.1",
+            "domain": game_host.as_str(),
             "gateway": "",
-            "client_port": "8702",
+            "client_port": game_port.as_str(),
             "status": "1",
             "open_time": "1757666400",
             "srv_type": "18220001",
@@ -116,9 +122,9 @@ async fn pf_recommend_srv_list(
         "1822010001": {
             "srv_id": "1822010001",
             "logsrv_id": "10001",
-            "domain": "127.0.0.1",
+            "domain": game_host.as_str(),
             "gateway": "",
-            "client_port": "8702",
+            "client_port": game_port.as_str(),
             "status": "1",
             "open_time": "1757666400",
             "srv_type": "18220001",
@@ -137,9 +143,9 @@ async fn pf_recommend_srv_list(
         "1822010000": {
             "srv_id": "1822010000",
             "logsrv_id": "10000",
-            "domain": "127.0.0.1",
+            "domain": game_host.as_str(),
             "gateway": "",
-            "client_port": "8702",
+            "client_port": game_port.as_str(),
             "status": "1",
             "open_time": "1757666400",
             "srv_type": "18220001",
@@ -158,10 +164,16 @@ async fn pf_recommend_srv_list(
     });
 
     let response_data = if let Some(srv_id) = requested_srv_id {
-        // Only return the requested server if found
-        servers.get(srv_id).cloned().map(|srv| {
-            json!({ srv_id: srv })
-        }).unwrap_or_else(|| json!({}))
+        // Preserve the server id as the dynamic map key. `json!({ srv_id: ... })`
+        // stringifies an identifier and incorrectly returns a `"srv_id"` key.
+        match servers.get(srv_id.as_str()).cloned() {
+            Some(server) => {
+                let mut selected = serde_json::Map::new();
+                selected.insert(srv_id.to_owned(), server);
+                serde_json::Value::Object(selected)
+            }
+            None => json!({}),
+        }
     } else {
         servers
     };
@@ -175,4 +187,24 @@ async fn pf_recommend_srv_list(
 
 pub fn config(cfg: &mut actix_web::web::ServiceConfig) {
     cfg.service(pf_recommend_srv_list);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::{http::header, test, App};
+
+    #[actix_web::test]
+    async fn requested_server_is_keyed_by_its_actual_id() {
+        let app = test::init_service(App::new().service(pf_recommend_srv_list)).await;
+        let request = test::TestRequest::post()
+            .uri("/ApiServer/pfRecommendSrvList/g/1")
+            .insert_header((header::CONTENT_TYPE, "application/x-www-form-urlencoded"))
+            .set_payload("time=1&data=srv_id%3D1822010005&sign=x")
+            .to_request();
+        let response: serde_json::Value = test::call_and_read_body_json(&app, request).await;
+        let data = response.get("data").and_then(serde_json::Value::as_object).unwrap();
+        assert!(data.contains_key("1822010005"));
+        assert!(!data.contains_key("srv_id"));
+    }
 }

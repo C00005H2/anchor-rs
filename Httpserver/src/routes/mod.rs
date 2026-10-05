@@ -1,3 +1,4 @@
+pub mod health;
 pub mod webkey;
 pub mod user;
 pub mod client;
@@ -8,5 +9,4 @@ pub mod common;
 pub mod generic;
 pub mod serverlist;
 pub mod bullentin;
-pub mod login;
 pub mod sdklogin;

@@ -12,7 +12,7 @@ pub struct CollectForm {
 #[post("/Api/GameReport/checkCollect/g/{gid}")]
 async fn check_collect(form: web::Form<CollectForm>, path: web::Path<(u32,)>) -> impl Responder {
     let gid = path.into_inner().0;
-    println!("[GameReport] group={gid}, data={}", form.data);
+    tracing::info!(group = gid, "Game report check requested");
 
     // Ignore signature completely, always return a fixed response
     HttpResponse::Ok().json(json!({

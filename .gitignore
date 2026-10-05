@@ -4,6 +4,7 @@ data/hero
 data/hero_biography
 data/login
 data/shop
+requests_*.jsonl
 tcpserver/src/packet-old.rs
 tcpserver/src/main.rs.old
 target

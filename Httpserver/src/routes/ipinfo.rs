@@ -13,10 +13,7 @@ pub struct IpForm {
 async fn get_client_ip(form: web::Form<IpForm>, path: web::Path<(u32,)>) -> impl Responder {
     let gid = path.into_inner().0;
 
-    println!(
-        "[IpInfo] group={gid}, time={}, data='{}'",
-        form.time, form.data
-    );
+    tracing::info!(group = gid, request_time = %form.time, "Client IP requested");
 
     // Always return success — skip signature validation
     HttpResponse::Ok().json(json!({
