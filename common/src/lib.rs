@@ -27,7 +27,9 @@ pub static DATA_DIRECTORY: Lazy<PathBuf> = Lazy::new(|| {
 
 pub fn init_tracing() {
     #[cfg(target_os = "windows")]
-    ansi_term::enable_ansi_support().unwrap();
+    let _ = ansi_term::enable_ansi_support();
 
-    tracing_subscriber::fmt().init();
+    // Tests, embedded callers, and multiple services may already have installed
+    // a global subscriber; initialization should not panic in those cases.
+    let _ = tracing_subscriber::fmt().try_init();
 }

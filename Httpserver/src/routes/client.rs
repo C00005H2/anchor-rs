@@ -16,7 +16,7 @@ async fn login_step_logs(
     path: web::Path<(u32,)>
 ) -> impl Responder {
     let gid = path.into_inner().0;
-    println!("[StepLogs] group={gid}, data={}", form.data);
+    tracing::info!(group = gid, "Login step logs received");
 
     // check cookie header only
     let has_cookie = req

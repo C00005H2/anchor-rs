@@ -1,6 +1,11 @@
 use super::constants::ProtocolConst;
 use thiserror::Error;
 
+/// Upper bound used when decoding untrusted 16-bit collection lengths.
+/// Captured game messages stay well below this limit; malformed counts should
+/// not trigger huge allocations or long decode loops.
+pub const MAX_COLLECTION_ITEMS: usize = 1024;
+
 #[derive(Debug, Error)]
 pub enum ProtocolError {
     #[error("Not enough bytes: need {needed}, but only {remaining} remaining")]
@@ -66,18 +71,17 @@ impl PacketBuffer {
             // Read length field (first 2 bytes)
             let len = u16::from_be_bytes([self.buffer[pos], self.buffer[pos + 1]]) as usize;
 
-            println!("PacketBuffer: Found packet at pos {}, header says length {}, need total {}",
-                     pos, len, header_size + len);
+            let Some(frame_len) = header_size.checked_add(len) else {
+                break;
+            };
 
-            // Check if we have the complete packet
-            if pos + header_size + len <= self.buffer.len() {
+            // Check if we have the complete packet.
+            if pos + frame_len <= self.buffer.len() {
                 // Complete packet available - extract it
-                let packet = self.buffer[pos..pos + header_size + len].to_vec();
+                let packet = self.buffer[pos..pos + frame_len].to_vec();
                 packets.push(packet);
-                pos += header_size + len;
+                pos += frame_len;
             } else {
-                println!("PacketBuffer: Incomplete packet, waiting for {} more bytes",
-                         (pos + header_size + len) - self.buffer.len());
                 break;
             }
         }
@@ -206,6 +210,13 @@ impl ProtocolByteBuf {
         self.read_i16().unwrap()
     }
 
+    /// Read a signed 16-bit collection count and clamp malformed values to a
+    /// safe range before converting to `usize`.
+    pub fn read_count_padded(&mut self) -> usize {
+        self.read_i16_padded()
+            .clamp(0, MAX_COLLECTION_ITEMS as i16) as usize
+    }
+
     pub fn read_i32_padded(&mut self) -> i32 {
         self.ensure_capacity(4);
         self.read_i32().unwrap()
@@ -261,6 +272,9 @@ impl ProtocolByteBuf {
     pub fn write_i16(&mut self, v: i16) {
         self.data.extend_from_slice(&v.to_be_bytes());
     }
+    pub fn write_count(&mut self, count: usize) {
+        self.write_i16(count.min(MAX_COLLECTION_ITEMS) as i16);
+    }
     pub fn write_i32(&mut self, v: i32) {
         self.data.extend_from_slice(&v.to_be_bytes());
     }
@@ -277,17 +291,88 @@ impl ProtocolByteBuf {
         self.data.extend_from_slice(&v.to_be_bytes());
     }
     pub fn write_string(&mut self, s: &str) {
-        self.write_i16(s.len() as i16);
-        self.data.extend_from_slice(s.as_bytes());
+        let mut len = s.len().min(i16::MAX as usize);
+        while !s.is_char_boundary(len) {
+            len -= 1;
+        }
+        if len < s.len() {
+            tracing::warn!(original_len = s.len(), encoded_len = len, "Truncating oversized protocol string");
+        }
+        self.write_i16(len as i16);
+        self.data.extend_from_slice(&s.as_bytes()[..len]);
     }
     pub fn write_bool(&mut self, v: bool) {
         self.data.push(if v { 1 } else { 0 });
     }
     pub fn write_bytes(&mut self, bytes: &[u8]) {
-        self.write_i16(bytes.len() as i16);
-        self.data.extend_from_slice(bytes);
+        let len = bytes.len().min(i16::MAX as usize);
+        if len < bytes.len() {
+            tracing::warn!(original_len = bytes.len(), encoded_len = len, "Truncating oversized protocol byte field");
+        }
+        self.write_i16(len as i16);
+        self.data.extend_from_slice(&bytes[..len]);
     }
     pub fn write_raw_bytes(&mut self, bytes: &[u8]) {
         self.data.extend_from_slice(bytes);
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn packet_buffer_handles_fragmented_and_coalesced_frames() {
+        let first = [0, 1, 0, 0, 0, 0, 10, 0xaa];
+        let second = [0, 2, 0, 0, 0, 0, 11, 0xbb, 0xcc];
+        let mut buffer = PacketBuffer::new(true);
+
+        buffer.push_data(&first[..4]);
+        assert!(buffer.drain_complete_packets().is_empty());
+        assert_eq!(buffer.buffer_size(), 4);
+
+        let mut remainder = first[4..].to_vec();
+        remainder.extend_from_slice(&second);
+        buffer.push_data(&remainder);
+        assert_eq!(
+            buffer.drain_complete_packets(),
+            vec![first.to_vec(), second.to_vec()]
+        );
+        assert!(!buffer.has_partial_data());
+    }
+
+    #[test]
+    fn packet_buffer_uses_six_byte_server_header() {
+        let frame = [0, 1, 0, 0, 0, 12, 0xaa];
+        let mut buffer = PacketBuffer::new(false);
+        buffer.push_data(&frame);
+        assert_eq!(buffer.drain_complete_packets(), vec![frame.to_vec()]);
+    }
+
+    #[test]
+    fn padded_collection_count_is_nonnegative_and_bounded() {
+        let mut negative = ProtocolByteBuf::new(&i16::MIN.to_be_bytes());
+        assert_eq!(negative.read_count_padded(), 0);
+
+        let mut too_large = ProtocolByteBuf::new(&i16::MAX.to_be_bytes());
+        assert_eq!(too_large.read_count_padded(), MAX_COLLECTION_ITEMS);
+
+        let mut writer = ProtocolByteBuf::new_write();
+        writer.write_count(usize::MAX);
+        assert_eq!(
+            writer.into_bytes(),
+            (MAX_COLLECTION_ITEMS as i16).to_be_bytes().to_vec()
+        );
+    }
+
+    #[test]
+    fn string_writer_clamps_length_without_splitting_utf8() {
+        let value = "é".repeat(16_384);
+        let mut writer = ProtocolByteBuf::new_write();
+        writer.write_string(&value);
+        let encoded = writer.into_bytes();
+        let length = i16::from_be_bytes([encoded[0], encoded[1]]) as usize;
+        assert_eq!(length, i16::MAX as usize - 1);
+        assert_eq!(encoded.len(), length + 2);
+        assert!(std::str::from_utf8(&encoded[2..]).is_ok());
     }
 }

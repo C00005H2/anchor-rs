@@ -12,7 +12,7 @@ pub struct GenericArgsForm {
 #[post("/ClientServer/genericArgs/g/{gid}")]
 async fn generic_args(form: web::Form<GenericArgsForm>, path: web::Path<(u32,)>) -> impl Responder {
     let gid = path.into_inner().0;
-    println!("[GenericArgs] group={gid}, data={}", form.data);
+    tracing::info!(group = gid, "Generic arguments requested");
 
     // Always reply with a stubbed "parameter error" (to mimic real server)
     HttpResponse::Ok().json(json!({

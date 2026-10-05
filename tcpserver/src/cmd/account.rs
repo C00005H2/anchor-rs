@@ -1,23 +1,25 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::info;
 
+use crate::data_loader::GameDataLoader;
 use crate::messages::CS_ACCOUNT_LOGIN;
 use crate::state::ConnectionContext;
-use crate::data_loader::GameDataLoader;
 
-/// Handle CS_ACCOUNT_LOGIN (11000) -> prepare multiple initialization packets
+/// Handle CS_ACCOUNT_LOGIN (11000) -> prepare initialization packets.
 pub async fn handle_account_login(
     ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_ACCOUNT_LOGIN,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    println!("Processing login for account: {}", request.acc_name);
-    println!(
-        "Device: {} ({})",
-        request.dev_model, request.dev_platform_type
+    // Avoid logging account names, device tokens, and login credentials.
+    info!(
+        device_platform = request.dev_platform_type,
+        server_id = request.srv_id,
+        channel_id = request.channel_id,
+        "Processing login"
     );
-    println!("Server ID: {}, Channel: {}", request.srv_id, request.channel_id);
 
-    // For now, use a fixed account id
+    // For now, use a fixed account id until the local account store is implemented.
     let account_id = 7825473380164860269;
     let server_time = chrono::Utc::now().timestamp() as i32;
 
@@ -29,10 +31,6 @@ pub async fn handle_account_login(
         connection.update_heartbeat();
     }
 
-    println!("Login successful - Player ID: {}", account_id);
-
-    // Load the initialization sequence
-    let packets = GameDataLoader::load_login_sequence(account_id, server_time)?;
-
-    Ok(packets)
+    info!(player_id = account_id, "Login accepted");
+    GameDataLoader::load_login_sequence(account_id, server_time)
 }

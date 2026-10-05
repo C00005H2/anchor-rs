@@ -18,5 +18,5 @@ pub async fn handle_ping(
         time: chrono::Utc::now().timestamp() as i32,
     };
 
-    Ok(vec![build_server_packet(10001, &response.encode())])
+    Ok(vec![build_server_packet(10001, &response.encode())?])
 }

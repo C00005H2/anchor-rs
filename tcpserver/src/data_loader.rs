@@ -1,9 +1,11 @@
 use serde_json;
 use std::fs;
+use std::path::{Component, Path, PathBuf};
+
+use anyhow::Context;
+use common::DATA_DIRECTORY;
 use crate::messages::*;
 use crate::packet::build_server_packet;
-use common::DATA_DIRECTORY;
-use anyhow::Context;
 
 macro_rules! load_packet {
     ($ty:ty, $path:expr, $id:expr, $packets:ident) => {
@@ -17,36 +19,46 @@ macro_rules! load_packet {
 pub struct GameDataLoader;
 
 impl GameDataLoader {
-    /// Load any message struct from JSON file
+    /// Load any message struct from a JSON file under `DATA_DIRECTORY`.
     pub fn load_struct<T>(relative_path: &str) -> Result<T, anyhow::Error>
     where
         T: serde::de::DeserializeOwned,
     {
-        let file_path = DATA_DIRECTORY.join(relative_path);
-        let json_data = fs::read_to_string(&file_path)?;
-        let data: T = serde_json::from_str(&json_data)?;
-        Ok(data)
+        let file_path = Self::resolve_data_path(relative_path)?;
+        let json_data = fs::read_to_string(&file_path)
+            .with_context(|| format!("could not read JSON data file {}", file_path.display()))?;
+        serde_json::from_str(&json_data)
+            .with_context(|| format!("invalid JSON in data file {}", file_path.display()))
     }
 
-    /// Build a packet from JSON file
+    /// Build a packet from a JSON data file.
     pub fn build_packet<T>(relative_path: &str, cmd_id: u32) -> Result<Vec<u8>, anyhow::Error>
     where
         T: serde::de::DeserializeOwned + MessageEncode,
     {
-        let file_path = DATA_DIRECTORY.join(relative_path);
-
-        // Check if file exists and provide helpful error message
-        if !file_path.exists() {
+        let file_path = Self::resolve_data_path(relative_path)?;
+        if !file_path.is_file() {
             return Err(anyhow::anyhow!(
-                "Missing JSON file: {}\nPath: {:?}\n\nCreate this file with appropriate message data for command ID {}",
-                relative_path,
-                file_path,
-                cmd_id
+                "Missing JSON file for command ID {cmd_id}: {}\nCreate this file with the message data for {}",
+                file_path.display(),
+                relative_path
             ));
         }
 
         let data: T = Self::load_struct(relative_path)?;
-        Ok(build_server_packet(cmd_id, &data.encode()))
+        Ok(build_server_packet(cmd_id, &data.encode())?)
+    }
+
+    fn resolve_data_path(relative_path: &str) -> Result<PathBuf, anyhow::Error> {
+        let path = Path::new(relative_path);
+        if path.is_absolute()
+            || path.components().any(|component| {
+                matches!(component, Component::ParentDir | Component::RootDir | Component::Prefix(_))
+            })
+        {
+            anyhow::bail!("data file path must stay inside DATA_DIRECTORY: {relative_path}");
+        }
+        Ok(DATA_DIRECTORY.join(path))
     }
 
     /// Load the complete hero biography response sequence from JSON files
@@ -155,24 +167,24 @@ impl GameDataLoader {
             session: format!("{:032x}", rand::random::<u128>()),
             create_time: 1757756377,
         };
-        packets.push(build_server_packet(11001, &login_response.encode()));
+        packets.push(build_server_packet(11001, &login_response.encode())?);
 
         // 2. System ping (dynamic time)
-        packets.push(build_server_packet(10001, &SC_SYS_PING { time: server_time }.encode()));
+        packets.push(build_server_packet(10001, &SC_SYS_PING { time: server_time }.encode())?);
 
         // 3. System date (dynamic time)
         packets.push(build_server_packet(10002, &SC_SYS_DATE {
             time: server_time,
             open_date: 1757666400,
             merge_date: 0,
-        }.encode()));
+        }.encode())?);
 
         // 4. Player base data (from JSON)
         packets.push(Self::build_packet::<SC_PLAYER_BASE_DATA>(
             "login/player_base_data.json", 12001)?);
 
         // 5. Player end data
-        packets.push(build_server_packet(12000, &SC_PLAYER_END_DATA {}.encode()));
+        packets.push(build_server_packet(12000, &SC_PLAYER_END_DATA {}.encode())?);
 
         // 6. Function open list
         packets.push(Self::build_packet::<SC_FUNCTION_OPEN_LIST>(
@@ -344,3 +356,14 @@ impl MessageEncode for SC_FRIEND_GIFT_PANEL { fn encode(&self) -> Vec<u8> { Self
 impl MessageEncode for SC_SHOP_TYPE_DATA { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
 impl MessageEncode for SC_DIALOGUE_TALK { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
 impl MessageEncode for SC_HERO_DETAIL { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn data_paths_cannot_escape_the_configured_root() {
+        assert!(GameDataLoader::resolve_data_path("login/player.json").is_ok());
+        assert!(GameDataLoader::resolve_data_path("../secrets.json").is_err());
+        assert!(GameDataLoader::resolve_data_path("/tmp/secrets.json").is_err());
+    }
+}

@@ -3,26 +3,32 @@ use tokio::{
     net::TcpListener,
 };
 use tracing::{info, error, warn};
-use std::{convert::TryFrom, sync::Arc, time::Instant, collections::HashMap};
+use std::{convert::TryFrom, sync::Arc};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
 
 use crate::{
+    capture_replay::{redact_capture_value, CaptureReplay},
     packet::*,
     state::ConnectionContext,
-    handle::dispatch_packet,
+    handle::dispatch_packet_with_replay,
     msgid::MsgId,
-    dispatch::dispatch_cmd
+    dispatch::dispatch_cmd,
 };
 
 use crypto::asset_setting::AssetSetting;
-use common::{GAMESERVER, GAMESERVER_PORT};
 
-pub async fn run_server() -> anyhow::Result<()> {
-    let listen_addr = format!("{}:{}", GAMESERVER, GAMESERVER_PORT);
+pub async fn run_server(listen_addr: &str) -> anyhow::Result<()> {
+    run_server_with_replay(listen_addr, None).await
+}
+
+pub async fn run_server_with_replay(
+    listen_addr: &str,
+    replay_archive: Option<Arc<CaptureReplay>>,
+) -> anyhow::Result<()> {
     let key = AssetSetting::protocol_key();
 
-    let listener = TcpListener::bind(&listen_addr).await?;
+    let listener = TcpListener::bind(listen_addr).await?;
     info!("[*] Game Server listening on {}", listen_addr);
 
     loop {
@@ -30,16 +36,12 @@ pub async fn run_server() -> anyhow::Result<()> {
         info!("[+] Client connected: {}", addr);
 
         let key_clone = key.to_string();
-        let ctx = Arc::new(Mutex::new(ConnectionContext {
-            player_id: None,
-            session_id: format!("temp_{}", chrono::Utc::now().timestamp()),
-            logged_in: false,
-            last_heartbeat: Instant::now(),
-            dialogue_state: HashMap::new(),
-        }));
+        let replay_clone = replay_archive.clone();
+        let session_id = format!("temp_{}", chrono::Utc::now().timestamp());
+        let ctx = Arc::new(Mutex::new(ConnectionContext::new(session_id)));
 
         tokio::spawn(async move {
-            if let Err(e) = handle_client(client, ctx, key_clone).await {
+            if let Err(e) = handle_client(client, ctx, key_clone, replay_clone).await {
                 error!("[!] Client error: {}", e);
             }
         });
@@ -47,9 +49,10 @@ pub async fn run_server() -> anyhow::Result<()> {
 }
 
 async fn handle_client(
-    mut client: TcpStream,
+    client: TcpStream,
     ctx: Arc<Mutex<ConnectionContext>>,
     key: String,
+    replay_archive: Option<Arc<CaptureReplay>>,
 ) -> Result<(), anyhow::Error> {
     let (mut reader, mut writer) = client.into_split();
     let mut buffer = PacketBuffer::new(true); // client-to-server
@@ -72,19 +75,30 @@ async fn handle_client(
                             .unwrap_or_else(|_| format!("UNKNOWN({})", cmd_id));
 
                         info!(
-                            "[C->S] cmd={} ({}) payload_len={} preview={}",
-                            cmd_id,
-                            name,
-                            decrypted_data.len(),
-                            hex_preview(&decrypted_data, 32)
+                            cmd = cmd_id,
+                            name = %name,
+                            payload_len = decrypted_data.len(),
+                            "Received client packet"
                         );
-
-                        if let Some(val) = dispatch_cmd(cmd_id, &decrypted_data) {
-                            info!("[DECODED] {}", val);
+                        if matches!(cmd_id, 11000 | 11007) {
+                            tracing::debug!("Omitting raw authentication packet preview");
+                        } else {
+                            tracing::debug!(preview = %hex_preview(&decrypted_data, 32), "Client packet preview");
                         }
 
-                        if let Err(e) =
-                            dispatch_packet(Arc::clone(&ctx), cmd_id, &decrypted_data, &mut writer).await
+                        if let Some(mut val) = dispatch_cmd(cmd_id, &decrypted_data) {
+                            redact_capture_value(cmd_id, &mut val);
+                            tracing::debug!(decoded = %val, "Decoded client packet");
+                        }
+
+                        if let Err(e) = dispatch_packet_with_replay(
+                            Arc::clone(&ctx),
+                            cmd_id,
+                            &decrypted_data,
+                            &mut writer,
+                            replay_archive.as_deref(),
+                        )
+                        .await
                         {
                             error!("[!] Command processing error: {:#}", e);
                         }

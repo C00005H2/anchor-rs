@@ -1,40 +1,40 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::info;
+
 use crate::data_loader::GameDataLoader;
 use crate::messages::CS_ENTER_WORLD;
 use crate::state::ConnectionContext;
 
-/// Handle world entry request -> No immediate response
+/// Handle the world-entry request.
 pub async fn handle_enter_world(
     ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_ENTER_WORLD,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    println!("Player entering world, battle_sync_word: {}", request.battle_sync_word);
+    info!(battle_sync_word = request.battle_sync_word, "Player entering world");
 
-    // No immediate responses, keep connection state only
-    {
-        let mut connection = ctx.lock().await;
-        connection.logged_in = true;
+    let mut connection = ctx.lock().await;
+    if !connection.is_authenticated() {
+        tracing::warn!("Rejecting world entry before account login");
+        return Ok(Vec::new());
     }
-
-    Ok(vec![]) // explicitly empty response
+    connection.logged_in = true;
+    Ok(Vec::new())
 }
 
-/// Handle homepage info request -> Empty response for now
+/// Handle homepage info request. Response data is currently supplied by the
+/// game initialization sequence, so this command is intentionally empty.
 pub async fn handle_homepage_info(
     _ctx: Arc<Mutex<ConnectionContext>>,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    println!("Player requesting homepage info");
-
-    // Could push SC_PLAYER_HOMEPAGE_INFO here once JSON is ready
-    Ok(vec![])
+    info!("Player requested homepage info");
+    Ok(Vec::new())
 }
 
-/// Handle hero biography request -> Load JSON sequence
+/// Load the configured hero biography initialization sequence.
 pub async fn handle_hero_biography(
     _ctx: Arc<Mutex<ConnectionContext>>,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    println!("Player requesting hero biography info");
-
+    info!("Player requested hero biography info");
     GameDataLoader::load_hero_biography_sequence()
 }

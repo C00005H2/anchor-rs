@@ -7,6 +7,8 @@ pub mod asset_setting;
 mod md5util;
 pub mod signutil;
 
+pub use aes::AesError;
+pub use des::DesError;
 pub use signutil::SignUtil;
 
 pub use encrypt_util::{EncryptUtil, AES_IV, DES_IV, XXTEA_KEY, ENCRYPTION_KEY};
