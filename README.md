@@ -79,6 +79,30 @@ cargo run -p AssetUnpacker -- <encrypted_dir> --lua [output_dir]
 
 When `output_dir` is omitted, decrypted files are written to a sibling `output2/` directory. The tool validates its arguments, avoids walking its own output, reports per-file failures, and exits non-zero if any file could not be processed.
 
+## Redirecting the game client
+
+The game client decides by itself which game server to contact, so running the
+emulator alone is not enough - an unpatched client keeps talking to the official
+server (and shows your live official progression). The upstream workflow
+([yoncodes/anchor-rs](https://github.com/yoncodes/anchor-rs)) redirects it with
+the [dawn-patch](https://github.com/yoncodes/dawn-patch) DLL:
+
+- build `dawn-patch` (needs a nightly Rust toolchain) and inject the DLL into
+  the game client with any injector;
+- the patch hooks `Lylibs.SocketConnector.Connect` in the client's Mono runtime
+  and rewrites every game-server target to `127.0.0.1:8702` - exactly the
+  emulator's default address;
+- when injected, the patch allocates a console window that prints
+  `[CONNECT] Redirected => 127.0.0.1:8702`. If you do not see that console,
+  the client was **not** redirected.
+
+SDK/HTTP login still goes to the official services (the patch's HTTP module is
+disabled upstream); that is expected - the client only needs a valid login
+token, and the emulator accepts any of them. Start the emulator first, then
+launch the patched client, and watch the emulator log for `Processing login` /
+`Sending server packet` lines: on your server the HUD shows the captured
+snapshot (Lv 3 / 11800 gold) instead of your official progression.
+
 ## Current scope and limitations
 
 - TCP packet framing supports fragmented and coalesced frames, with 16-bit protocol lengths.
