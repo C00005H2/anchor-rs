@@ -486,11 +486,12 @@ pub async fn handle_battle_quit(
     Ok(Vec::new())
 }
 
-/// Heroes the client actually deployed, in formation order, as (id, tid).
+/// Heroes the client actually deployed, in formation order, as
+/// (id, tid, formation slot).
 ///
 /// Prefers the ready-marked team, then team 1001, then the first team with
 /// any heroes.
-fn deployed_heroes(formation: &[crate::messages::pt_hero_formation]) -> Vec<(i32, i32)> {
+fn deployed_heroes(formation: &[crate::messages::pt_hero_formation]) -> Vec<(i32, i32, i8)> {
     let team = formation
         .iter()
         .find(|team| team.is_ready == 1 && !team.formation_hero_list.is_empty())
@@ -499,10 +500,78 @@ fn deployed_heroes(formation: &[crate::messages::pt_hero_formation]) -> Vec<(i32
     team.map(|team| {
         team.formation_hero_list
             .iter()
-            .map(|hero| (hero.hero_id, hero.tid))
+            .map(|hero| (hero.hero_id, hero.tid, hero.pos))
             .collect()
     })
     .unwrap_or_default()
+}
+
+/// Formation slot -> battle grid cell, as observed from real-server
+/// `SC_BATTLE_FIELD_INFO` replies (slots 1-5); the rest are spare cells.
+fn slot_cell(slot: i8, used: &[(i16, i16)]) -> (i16, i16) {
+    let known = [
+        (1i8, (2i16, 1i16)),
+        (2, (1, 2)),
+        (3, (4, 2)),
+        (4, (3, 2)),
+        (5, (2, 3)),
+    ];
+    if let Some((_, cell)) = known.iter().find(|(s, _)| *s == slot) {
+        if !used.contains(cell) {
+            return *cell;
+        }
+    }
+    let spares = [
+        (2i16, 1i16), (1, 2), (4, 2), (3, 2), (2, 3), (1, 1), (3, 1), (4, 1),
+        (1, 3), (3, 3), (4, 3),
+    ];
+    spares
+        .iter()
+        .find(|cell| !used.contains(cell))
+        .copied()
+        .unwrap_or((1, 1))
+}
+
+/// Build one attacker hero entry the way the real server does for heroes it
+/// has no recorded battle data for: base stats per tid, the generic skill
+/// triple (tid*100+1, tid*100+4, tid) and neutral cosmetics.
+fn synth_hero_entry(id: i32, tid: i32, cell: (i16, i16)) -> Vec<u8> {
+    let (max_hp, color) = match tid {
+        1110 => (618i64, 3i16),
+        1305 => (686, 3),
+        1206 => (541, 3),
+        1006 => (529, 4),
+        1304 => (427, 2),
+        1205 => (500, 3),
+        _ => (500, 3),
+    };
+    let mut buf: Vec<u8> = Vec::with_capacity(69);
+    buf.extend_from_slice(&id.to_be_bytes());
+    buf.extend_from_slice(&tid.to_be_bytes());
+    buf.push(0); // msg_type
+    buf.extend_from_slice(&cell.0.to_be_bytes());
+    buf.extend_from_slice(&cell.1.to_be_bytes());
+    buf.extend_from_slice(&max_hp.to_be_bytes());
+    buf.extend_from_slice(&max_hp.to_be_bytes());
+    buf.extend_from_slice(&0i32.to_be_bytes()); // rage
+    buf.push(5); // skill_soul
+    buf.extend_from_slice(&1i16.to_be_bytes()); // lv
+    buf.extend_from_slice(&0i16.to_be_bytes()); // evolution
+    buf.extend_from_slice(&color.to_be_bytes());
+    buf.extend_from_slice(&3i16.to_be_bytes()); // skill count
+    buf.push(1);
+    buf.extend_from_slice(&(tid * 100 + 1).to_be_bytes());
+    buf.push(2);
+    buf.extend_from_slice(&(tid * 100 + 4).to_be_bytes());
+    buf.push(3);
+    buf.extend_from_slice(&tid.to_be_bytes());
+    buf.extend_from_slice(&1i16.to_be_bytes()); // body_fashion_id
+    buf.extend_from_slice(&0i16.to_be_bytes()); // hit_stun
+    buf.extend_from_slice(&0i16.to_be_bytes()); // max_hit_stun
+    buf.extend_from_slice(&0i16.to_be_bytes()); // auto_battle_rule
+    buf.extend_from_slice(&0i16.to_be_bytes()); // body_fashion_color_id
+    buf.extend_from_slice(&1i16.to_be_bytes()); // trailing live-wire i16
+    buf
 }
 
 fn be_i16(bytes: &[u8], offset: usize) -> Option<i16> {
@@ -539,7 +608,24 @@ fn to_hex(bytes: &[u8]) -> String {
 /// freshly recruited heroes clone the first recorded entry into a free grid
 /// cell, and benched recorded heroes are appended at the end so the recorded
 /// action batches keep referencing heroes the client knows about.
-fn patch_field_info_heroes(raw: &[u8], deployed: &[(i32, i32)]) -> Option<Vec<u8>> {
+fn hero_entry_len(raw: &[u8], start: usize) -> Option<usize> {
+    let skills = be_i16(raw, start + 40)? as usize;
+    Some(54 + 5 * skills)
+}
+
+fn skip_assist_list(raw: &[u8], offset: usize) -> Option<usize> {
+    let count = be_i16(raw, offset)? as usize;
+    let mut offset = offset + 2;
+    for _ in 0..count {
+        // hero_tid i32 + hero_lv i16 + hero_evolution i16 + skill count i16.
+        offset += 4 + 2 + 2;
+        let skills = be_i16(raw, offset)? as usize;
+        offset += 2 + 4 * skills;
+    }
+    Some(offset)
+}
+
+fn patch_field_info_heroes(raw: &[u8], deployed: &[(i32, i32, i8)]) -> Option<Vec<u8>> {
     // battle_type i8 + field id i64 + player id i64, then the name string.
     let mut offset = 1 + 8 + 8;
     let name_len = be_i16(raw, offset)? as usize & 0x7fff;
@@ -551,62 +637,93 @@ fn patch_field_info_heroes(raw: &[u8], deployed: &[(i32, i32)]) -> Option<Vec<u8
     let mut recorded: Vec<(i32, i32, Vec<u8>)> = Vec::new();
     for _ in 0..count {
         let start = offset;
-        let id = be_i32(raw, start)?;
-        let tid = be_i32(raw, start + 4)?;
-        let skills = be_i16(raw, start + 40)? as usize;
-        let len = 54 + 5 * skills;
+        let len = hero_entry_len(raw, start)?;
         let end = start + len;
-        recorded.push((id, tid, raw.get(start..end)?.to_vec()));
+        recorded.push((
+            be_i32(raw, start)?,
+            be_i32(raw, start + 4)?,
+            raw.get(start..end)?.to_vec(),
+        ));
         offset = end;
     }
-    let suffix = raw.get(offset..)?;
+    let mid_start = offset;
+
+    // Attacker qte energy + assist list, then the full defender block.
+    offset += 2;
+    offset = skip_assist_list(raw, offset)?;
+    offset += 8; // defender player id
+    let dname = be_i16(raw, offset)? as usize & 0x7fff;
+    offset += 2 + dname + 2 + 8 + 2;
+    let dcount = be_i16(raw, offset)? as usize;
+    offset += 2;
+    for _ in 0..dcount {
+        offset += hero_entry_len(raw, offset)?;
+    }
+    offset += 2;
+    offset = skip_assist_list(raw, offset)?;
+
+    // hero_order: (side i16, hero id i32) entries; appended for added heroes.
+    let order_off = offset;
+    let order_count = be_i16(raw, order_off)? as usize;
+    let order_start = order_off + 2;
+    let order_end = order_start + 6 * order_count;
+    let tail = raw.get(order_end..)?;
+
+    // Unchanged lineup: keep the recorded payload untouched.
+    if deployed.len() == recorded.len()
+        && deployed
+            .iter()
+            .all(|(id, _, _)| recorded.iter().any(|(rid, _, _)| rid == id))
+    {
+        return None;
+    }
 
     let mut used: Vec<(i16, i16)> = recorded.iter().map(|entry| hero_pos(&entry.2)).collect();
-    let cells = [(0i16, 0i16), (1, 0), (2, 0), (0, 1), (1, 1), (2, 1)];
 
     let mut entries: Vec<Vec<u8>> = Vec::new();
-    for (id, tid) in deployed {
-        let mut bytes = match recorded.iter().find(|entry| entry.0 == *id) {
+    let mut added: Vec<i32> = Vec::new();
+    for (id, tid, slot) in deployed {
+        match recorded.iter().find(|entry| entry.0 == *id) {
             Some(entry) => {
                 let mut bytes = entry.2.clone();
                 bytes[4..8].copy_from_slice(&tid.to_be_bytes());
-                bytes
+                entries.push(bytes);
             }
             None => {
-                let mut bytes = recorded.first()?.2.clone();
-                bytes[0..4].copy_from_slice(&id.to_be_bytes());
-                bytes[4..8].copy_from_slice(&tid.to_be_bytes());
-                let free = cells.iter().find(|cell| !used.contains(cell));
-                if let Some((x, y)) = free {
-                    bytes[9..11].copy_from_slice(&x.to_be_bytes());
-                    bytes[11..13].copy_from_slice(&y.to_be_bytes());
-                    used.push((*x, *y));
-                }
-                bytes
+                let cell = slot_cell(*slot, &used);
+                used.push(cell);
+                added.push(*id);
+                entries.push(synth_hero_entry(*id, *tid, cell));
             }
-        };
-        entries.push(bytes);
+        }
     }
     // Benched recorded heroes stay in the lineup so recorded action batches
     // never reference an unknown hero id.
     for entry in &recorded {
-        if !deployed.iter().any(|(id, _)| *id == entry.0) {
+        if !deployed.iter().any(|(id, _, _)| *id == entry.0) {
             entries.push(entry.2.clone());
         }
     }
 
-    let mut out = Vec::with_capacity(raw.len() + 69);
+    let mut out = Vec::with_capacity(raw.len() + 96);
     out.extend_from_slice(&raw[..count_off]);
     out.extend_from_slice(&(entries.len() as i16).to_be_bytes());
     for entry in &entries {
         out.extend_from_slice(entry);
     }
-    out.extend_from_slice(suffix);
+    out.extend_from_slice(&raw[mid_start..order_off]);
+    out.extend_from_slice(&((order_count + added.len()) as i16).to_be_bytes());
+    out.extend_from_slice(&raw[order_start..order_end]);
+    for id in &added {
+        out.extend_from_slice(&1i16.to_be_bytes());
+        out.extend_from_slice(&id.to_be_bytes());
+    }
+    out.extend_from_slice(tail);
     Some(out)
 }
 
 /// Apply the client's deployed formation to a battle entry group's 20101.
-fn patch_enter_formation(group: &mut TemplateGroup, deployed: &[(i32, i32)]) {
+fn patch_enter_formation(group: &mut TemplateGroup, deployed: &[(i32, i32, i8)]) {
     if deployed.is_empty() {
         return;
     }
@@ -618,8 +735,17 @@ fn patch_enter_formation(group: &mut TemplateGroup, deployed: &[(i32, i32)]) {
             continue;
         };
         match patch_field_info_heroes(&raw, deployed) {
-            Some(patched) => response.payload_hex = Some(to_hex(&patched)),
-            None => tracing::warn!("Could not patch battle field info formation"),
+            Some(patched) => {
+                info!(
+                    deployed = ?deployed,
+                    bytes = patched.len(),
+                    "Battle field info patched with client formation"
+                );
+                response.payload_hex = Some(to_hex(&patched));
+            }
+            // None = lineup unchanged (or unparsable payload); the recorded
+            // bytes are already correct in that case.
+            None => {}
         }
     }
 }
