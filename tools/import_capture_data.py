@@ -250,6 +250,15 @@ def write_flow_tables(groups, data_dir, written, skipped_existing, force):
     battle_enter = None
     battle_auto = None
     battle_video_end = []
+    battle_sessions = []
+    current_session = None
+    recruit_item_pulls = []
+    recruit_hero_prepare = []
+    recruit_hero_confirm = None
+    recruit_hero_save_list = []
+    fund_gain = None
+    daily_sign = None
+    guide_end = None
     novice_training_panel = None
     use_by_id = None
     story_pass = None
@@ -364,12 +373,47 @@ def write_flow_tables(groups, data_dir, written, skipped_existing, force):
                 f"hero/attr_preview_{request.get('hero_id')}_{request.get('module_id')}.json",
                 {"groups": [{"responses": template_payload(group.responses)}]},
             )
-        elif cmd == 20100 and battle_enter is None:
-            battle_enter = {"groups": [{"responses": template_payload(group.responses)}]}
-        elif cmd == 20113 and battle_auto is None:
-            battle_auto = {"groups": [{"responses": template_payload(group.responses)}]}
+        elif cmd == 20100:
+            if battle_enter is None:
+                battle_enter = {"groups": [{"responses": template_payload(group.responses)}]}
+            current_session = {
+                "field_id": request.get("battle_field_id"),
+                "battle_type": request.get("battle_type"),
+                "enter": {"responses": template_payload(group.responses)},
+                "auto": None,
+                "steps": [],
+            }
+            battle_sessions.append(current_session)
+        elif cmd == 20113:
+            if battle_auto is None:
+                battle_auto = {"groups": [{"responses": template_payload(group.responses)}]}
+            if current_session is not None and current_session["auto"] is None:
+                current_session["auto"] = {"responses": template_payload(group.responses)}
         elif cmd == 20104:
             battle_video_end.append({"responses": template_payload(group.responses)})
+            if current_session is not None:
+                current_session["steps"].append(
+                    {"request_cmd": 20104, "responses": template_payload(group.responses)})
+        elif cmd in (20108, 20120) and current_session is not None:
+            current_session["steps"].append(
+                {"request_cmd": cmd, "responses": template_payload(group.responses)})
+        elif cmd == 13051:
+            recruit_item_pulls.append({
+                "request": {"id": request.get("id"), "times": request.get("times")},
+                "responses": template_payload(group.responses),
+            })
+        elif cmd == 13292:
+            recruit_hero_prepare.append({"responses": template_payload(group.responses)})
+        elif cmd == 13294 and recruit_hero_confirm is None:
+            recruit_hero_confirm = {"groups": [{"responses": template_payload(group.responses)}]}
+        elif cmd == 13290:
+            recruit_hero_save_list.append({"responses": template_payload(group.responses)})
+        elif cmd == 24207 and fund_gain is None:
+            fund_gain = {"groups": [{"responses": template_payload(group.responses)}]}
+        elif cmd == 24034 and daily_sign is None:
+            daily_sign = {"groups": [{"responses": template_payload(group.responses)}]}
+        elif cmd == 12059 and guide_end is None and group.responses:
+            guide_end = {"groups": [{"responses": template_payload(group.responses)}]}
 
     if chat_channels:
         emit("chat/public_chat.json", {"channels": list(chat_channels.values())})
@@ -397,6 +441,22 @@ def write_flow_tables(groups, data_dir, written, skipped_existing, force):
         emit("battle/auto.json", battle_auto)
     if battle_video_end:
         emit("battle/video_end.json", {"groups": battle_video_end})
+    for number, session in enumerate(battle_sessions, 1):
+        emit(f"battle/session_{number}.json", session)
+    if recruit_item_pulls:
+        emit("recruit/item_pull.json", {"groups": recruit_item_pulls})
+    if recruit_hero_prepare:
+        emit("recruit/hero_new_prepare.json", {"groups": recruit_hero_prepare})
+    if recruit_hero_confirm:
+        emit("recruit/hero_new_confirm.json", recruit_hero_confirm)
+    if recruit_hero_save_list:
+        emit("recruit/hero_new_save_list.json", {"groups": recruit_hero_save_list})
+    if fund_gain:
+        emit("progression/fund_gain.json", fund_gain)
+    if daily_sign:
+        emit("progression/daily_sign.json", daily_sign)
+    if guide_end:
+        emit("world/guide_end.json", guide_end)
     if use_by_id:
         emit("items/use_by_id.json", use_by_id)
     if story_pass:

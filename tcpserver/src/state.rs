@@ -49,6 +49,18 @@ pub struct ConnectionContext {
     pub battle_script_index: usize,
     /// Whether a battle is currently running for this connection.
     pub battle_active: bool,
+    /// Next battle session (battle/session_{n}.json) to try on field enter.
+    pub battle_session_index: usize,
+    /// Session chosen for the battle currently in progress.
+    pub battle_session_chosen: Option<usize>,
+    /// Whether the auto-battle push was already served for this battle.
+    pub battle_auto_served: bool,
+    /// Which recorded action steps of the chosen session were consumed.
+    pub battle_step_consumed: Vec<bool>,
+    /// Position inside the recorded hero-recruit prepare sequence.
+    pub recruit_prepare_index: usize,
+    /// Position inside the recorded hero-recruit save-list sequence.
+    pub recruit_save_index: usize,
     /// Hero formation last reported by `CS_CHANGE_HERO`.
     pub formation: Vec<pt_hero_formation>,
     /// Purchase counts per goods id.
@@ -72,6 +84,12 @@ impl ConnectionContext {
             attrs: HashMap::new(),
             battle_script_index: 0,
             battle_active: false,
+            battle_session_index: 0,
+            battle_session_chosen: None,
+            battle_auto_served: false,
+            battle_step_consumed: Vec::new(),
+            recruit_prepare_index: 0,
+            recruit_save_index: 0,
             formation: Vec::new(),
             purchases: HashMap::new(),
             request_counts: HashMap::new(),

@@ -11,8 +11,9 @@ use tracing::info;
 use crate::{
     data_loader::GameDataLoader,
     messages::{
-        CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE, CS_GAIN_ACHIEVEMENT_AWARD,
-        CS_GAIN_OPEN_SERVER_SIGN_REWARD, CS_GAIN_SEVEN_DAY_REWARD, CS_NOVICE_TRAINING_PANEL,
+        CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE, CS_DAILY_SIGN, CS_GAIN_ACHIEVEMENT_AWARD,
+        CS_GAIN_ALL_FUND, CS_GAIN_OPEN_SERVER_SIGN_REWARD, CS_GAIN_SEVEN_DAY_REWARD,
+        CS_NOVICE_TRAINING_PANEL,
         CS_NOVICE_TRAINING_RECEIVE_TASK, SC_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE,
         SC_GAIN_ACHIEVEMENT_AWARD, SC_NOVICE_TRAINING_RECEIVE_TASK,
         SC_OPEN_SERVER_SIGN_PANEL_INFO, SC_SEVEN_DAY_PANEL_INFO, SC_UPDATE_ACHIEVEMENT_INFO,
@@ -23,6 +24,7 @@ use crate::{
         grant_rewards, unread_packets, AchievementTable, DayReward, IdReward, NoviceTrainingTable,
         SignTable,
     },
+    sequence::TemplateFile,
     state::ConnectionContext,
 };
 
@@ -337,4 +339,44 @@ struct RecruitTable {
     rewards: Vec<IdReward>,
     #[serde(default)]
     recruit_times: i16,
+}
+
+
+const FUND_GAIN_DATA: &str = "progression/fund_gain.json";
+const DAILY_SIGN_DATA: &str = "progression/daily_sign.json";
+
+/// Replay a recorded single-group template and absorb attribute updates.
+async fn replay_first_group(
+    ctx: &Arc<Mutex<ConnectionContext>>,
+    path: &str,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    let script = TemplateFile::load(path)?;
+    let Some(group) = script.first_group().cloned() else {
+        return Ok(Vec::new());
+    };
+    let cursor = ctx.lock().await.replay_cursor.clone();
+    let packets = group.encode(&cursor)?;
+    {
+        let mut connection = ctx.lock().await;
+        crate::cmd::battle::absorb_attr_updates(&mut connection, &group);
+    }
+    Ok(packets)
+}
+
+/// Handle CS_GAIN_ALL_FUND (24207): replay the recorded fund claim.
+pub async fn handle_gain_all_fund(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    _request: CS_GAIN_ALL_FUND,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    info!("Fund reward claimed (replay)");
+    replay_first_group(&ctx, FUND_GAIN_DATA).await
+}
+
+/// Handle CS_DAILY_SIGN (24034): replay the recorded daily sign-in.
+pub async fn handle_daily_sign(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    _request: CS_DAILY_SIGN,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    info!("Daily sign-in (replay)");
+    replay_first_group(&ctx, DAILY_SIGN_DATA).await
 }

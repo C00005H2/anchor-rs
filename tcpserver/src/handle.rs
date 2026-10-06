@@ -9,17 +9,24 @@ use tracing::warn;
 
 use crate::{
     capture_replay::{encode_captured_response, CaptureReplay, ReplayLookup},
-    cmd::{account, activity, battle, dialogue, hero, items, mail, shop, story, system, world},
+    cmd::{
+        account, activity, battle, dialogue, hero, items, mail, recruit, shop, story, system,
+        world,
+    },
     messages::{
         CS_ACCOUNT_LOGIN, CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE, CS_ATTR_PREVIEW_ALL,
-        CS_BATTLE_AUTO,
-        CS_BATTLE_FIELD_ENTER, CS_BATTLE_START, CS_BATTLE_VIDEO_END, CS_CANNOT_DEL_HERO_LIST,
-        CS_CHANGE_HERO, CS_DIALOGUE_TALK, CS_DIRECT_GIFT_BUY, CS_DIRECT_GIFT_PANEL,
-        CS_ENTER_WORLD, CS_GAIN_ACHIEVEMENT_AWARD, CS_GAIN_OPEN_SERVER_SIGN_REWARD,
+        CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_START, CS_BATTLE_SYNC,
+        CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END, CS_CANNOT_DEL_HERO_LIST,
+        CS_CHANGE_HERO, CS_DAILY_SIGN, CS_DIALOGUE_TALK, CS_DIRECT_GIFT_BUY,
+        CS_DIRECT_GIFT_PANEL,
+        CS_ENTER_WORLD, CS_GAIN_ACHIEVEMENT_AWARD, CS_GAIN_ALL_FUND,
+        CS_GAIN_OPEN_SERVER_SIGN_REWARD,
         CS_GAIN_SEVEN_DAY_REWARD, CS_HERO_DETAIL, CS_MAIL_ENCLOSURE_REC, CS_MAIL_READ,
         CS_NOVICE_TRAINING_PANEL, CS_NOVICE_TRAINING_RECEIVE_TASK, CS_PUBLIC_CHAT_SETTING,
         CS_DUP_ONLY_STORY_PASS, CS_GUIDE_END, CS_MONTH_CARD_PANEL, CS_NORMAL_LOG,
-        CS_RECRUIT_HERO_NEW_SAVE_LIST, CS_REQ_MODULE_READ, CS_RESET_HERO_LV_PRE_VIEW,
+        CS_RECRUIT_HERO_NEW_CONFIRM, CS_RECRUIT_HERO_NEW_PREPARE,
+        CS_RECRUIT_HERO_NEW_SAVE_LIST, CS_RECRUIT_ITEM, CS_REQ_MODULE_READ,
+        CS_RESET_HERO_LV_PRE_VIEW,
         CS_SET_READY, CS_SHOP_TYPE_DATA, CS_STORY_OVER, CS_SYS_PING, CS_USE_BY_ID,
         SC_ACCOUNT_LOGIN,
     },
@@ -199,7 +206,22 @@ pub async fn dispatch_packet_with_replay(
         }
         13290 => {
             let request = CS_RECRUIT_HERO_NEW_SAVE_LIST::decode(data);
-            let responses = hero::handle_recruit_hero_new_save_list(ctx, request).await?;
+            let responses = recruit::handle_recruit_hero_new_save_list(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        13051 => {
+            let request = CS_RECRUIT_ITEM::decode(data);
+            let responses = recruit::handle_recruit_item(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        13292 => {
+            let request = CS_RECRUIT_HERO_NEW_PREPARE::decode(data);
+            let responses = recruit::handle_recruit_hero_new_prepare(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        13294 => {
+            let request = CS_RECRUIT_HERO_NEW_CONFIRM::decode(data);
+            let responses = recruit::handle_recruit_hero_new_confirm(ctx, request).await?;
             send_responses!(writer, responses);
         }
         17002 => {
@@ -276,9 +298,29 @@ pub async fn dispatch_packet_with_replay(
             let responses = battle::handle_battle_auto(ctx, request).await?;
             send_responses!(writer, responses);
         }
+        20108 => {
+            let request = CS_BATTLE_USE_SKILL::decode(data);
+            let responses = battle::handle_battle_use_skill(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        20120 => {
+            let request = CS_BATTLE_SYNC::decode(data);
+            let responses = battle::handle_battle_sync(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
         24022 => {
             let request = CS_GAIN_ACHIEVEMENT_AWARD::decode(data);
             let responses = activity::handle_gain_achievement_award(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        24034 => {
+            let request = CS_DAILY_SIGN::decode(data);
+            let responses = activity::handle_daily_sign(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        24207 => {
+            let request = CS_GAIN_ALL_FUND::decode(data);
+            let responses = activity::handle_gain_all_fund(ctx, request).await?;
             send_responses!(writer, responses);
         }
         24065 => {

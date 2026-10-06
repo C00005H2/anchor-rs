@@ -4,8 +4,7 @@ use tracing::info;
 
 use crate::data_loader::GameDataLoader;
 use crate::messages::{
-    CS_ATTR_PREVIEW_ALL, CS_HERO_DETAIL, CS_RECRUIT_HERO_NEW_SAVE_LIST, SC_ATTR_PREVIEW_ALL,
-    SC_RECRUIT_HERO_NEW_SAVE_LIST,
+    CS_ATTR_PREVIEW_ALL, CS_HERO_DETAIL, SC_ATTR_PREVIEW_ALL,
 };
 use crate::packet::build_server_packet;
 use crate::sequence::TemplateFile;
@@ -92,17 +91,3 @@ pub async fn handle_attr_preview_all(
     )?])
 }
 
-/// Handle CS_RECRUIT_HERO_NEW_SAVE_LIST (13290): no newly recruited heroes to
-/// report on a private server.
-pub async fn handle_recruit_hero_new_save_list(
-    _ctx: Arc<Mutex<ConnectionContext>>,
-    _request: CS_RECRUIT_HERO_NEW_SAVE_LIST,
-) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    Ok(vec![build_server_packet(
-        13291,
-        &SC_RECRUIT_HERO_NEW_SAVE_LIST {
-            item_list: Vec::new(),
-        }
-        .encode(),
-    )?])
-}

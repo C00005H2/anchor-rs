@@ -7,6 +7,7 @@ pub mod dialogue;
 pub mod hero;
 pub mod items;
 pub mod mail;
+pub mod recruit;
 pub mod story;
 pub mod shop;
 pub mod system;

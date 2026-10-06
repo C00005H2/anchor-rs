@@ -22,6 +22,7 @@ pub async fn handle_ping(
 }
 
 use crate::data_loader::GameDataLoader;
+use crate::sequence::TemplateFile;
 use crate::messages::{
     CS_GUIDE_END, CS_MONTH_CARD_PANEL, CS_NORMAL_LOG, CS_RESET_HERO_LV_PRE_VIEW,
     SC_MONTH_CARD_PANEL,
@@ -81,13 +82,21 @@ pub async fn handle_req_module_read(
     )?])
 }
 
-/// Handle CS_GUIDE_END (12059): the real server sent no reply.
+/// Handle CS_GUIDE_END (12059): replay the recorded guide-state update when
+/// available, otherwise treat it as a silent no-op.
 pub async fn handle_guide_end(
     ctx: Arc<Mutex<ConnectionContext>>,
     _request: CS_GUIDE_END,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     ctx.lock().await.update_heartbeat();
-    Ok(Vec::new())
+    let Ok(script) = TemplateFile::load("world/guide_end.json") else {
+        return Ok(Vec::new());
+    };
+    let Some(group) = script.first_group().cloned() else {
+        return Ok(Vec::new());
+    };
+    let cursor = ctx.lock().await.replay_cursor.clone();
+    group.encode(&cursor)
 }
 
 /// Handle CS_NORMAL_LOG (12068): client telemetry, no reply.
