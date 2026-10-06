@@ -43,7 +43,7 @@ Capture: `requests_20261005_new.jsonl` — 51 request groups, 24 client commands
 | 12001 | SC_PLAYER_BASE_DATA | 1 | re-encodable | — | `login/player_base_data.json` |
 | 12009 | SC_FUNCTION_OPEN_LIST | 2 | re-encodable | — | `login/function_open_list.json` |
 | 16006 | SC_MAIL_READ | 3 | re-encodable | — | — |
-| 10059 | SC_NEW_UNREAD | 8 | re-encodable | — | — |
+| 10059 | SC_NEW_UNREAD | 8 | re-encodable | — | `hero_biography/new_unread.json` |
 | 16002 | SC_MAIL_ADD | 1 | re-encodable | — | — |
 | 16008 | SC_MAIL_ENCLOSURE_REC | 1 | re-encodable | — | — |
 | 17001 | SC_BAG_UPDATE | 6 | re-encodable | — | — |
@@ -51,7 +51,7 @@ Capture: `requests_20261005_new.jsonl` — 51 request groups, 24 client commands
 | 10021 | SC_PAY_DATA | 1 | re-encodable | — | `hero_biography/pay_data.json` |
 | 10032 | SC_SYSTEM_ANNOUNCE | 2 | re-encodable | — | `hero_biography/system_annnounce.json` |
 | 10056 | SC_RES_ALL_MODULE_READ | 1 | re-encodable | — | `hero_biography/res_all_module_read.json` |
-| 10059 | SC_NEW_UNREAD | 8 | re-encodable | — | — |
+| 10059 | SC_NEW_UNREAD | 8 | re-encodable | — | `hero_biography/new_unread.json` |
 | 10071 | SC_GET_SERVER_STATE | 1 | re-encodable | — | `hero_biography/server_state.json` |
 | 10101 | SC_SETTING | 1 | re-encodable | — | `hero_biography/settings.json` |
 | 12006 | SC_TODAY_NOT_NOTICE | 1 | re-encodable | — | `hero_biography/today_not_notice.json` |
@@ -73,10 +73,10 @@ Capture: `requests_20261005_new.jsonl` — 51 request groups, 24 client commands
 | 12103 | SC_MUSIC_MANUAL | 1 | re-encodable | — | `hero_biography/music_manual.json` |
 | 12104 | SC_STORY_MANUAL | 1 | re-encodable | — | `hero_biography/story_manual.json` |
 | 12105 | SC_WORLD_MANUAL | 2 | re-encodable | — | `hero_biography/world_manual.json` |
-| 12106 | UNKNOWN(12106) | 1 | payload not decoded | — | — |
+| 12106 | UNKNOWN(12106) | 1 | payload not decoded | — | `hero_biography/unknown_12106.json` |
 | 12160 | SC_DIALOGUE_PANEL | 1 | re-encodable | — | `hero_biography/dialogue_panel.json` |
-| 12210 | UNKNOWN(12210) | 1 | payload not decoded | — | — |
-| 12220 | UNKNOWN(12220) | 1 | payload not decoded | — | — |
+| 12210 | UNKNOWN(12210) | 1 | payload not decoded | — | `hero_biography/unknown_12210.json` |
+| 12220 | UNKNOWN(12220) | 1 | payload not decoded | — | `hero_biography/unknown_12220.json` |
 | 13041 | SC_HERO_FORMATION | 1 | re-encodable | — | `hero_biography/hero_formation.json` |
 | 13050 | SC_RECRUIT_INFO | 1 | re-encodable | — | `hero_biography/recruit_info.json` |
 | 13060 | SC_HERO_PRE_LIST | 1 | re-encodable | — | `hero_biography/hero_pre_list.json` |
@@ -87,7 +87,7 @@ Capture: `requests_20261005_new.jsonl` — 51 request groups, 24 client commands
 | 13280 | SC_HERO_ACTION_LIST | 1 | re-encodable | — | `hero_biography/hero_action_list.json` |
 | 13350 | SC_HERO_FASHION_HAVE_INFO | 1 | re-encodable | — | `hero_biography/hero_fashion_have_info.json` |
 | 13362 | SC_ACT_FETTER_INFO | 1 | re-encodable | — | `hero_biography/act_fetter_info.json` |
-| 13370 | SC_FASHION_SCENE_PANEL | 1 | re-encodable | — | — |
+| 13370 | SC_FASHION_SCENE_PANEL | 1 | re-encodable | — | `hero_biography/fashion_scene_panel.json` |
 | 15001 | SC_FRIEND_LIST | 1 | re-encodable | — | `hero_biography/friend_list.json` |
 | 15003 | SC_FRIEND_APPLY_LIST | 1 | re-encodable | — | `hero_biography/friend_apply_list.json` |
 | 15013 | SC_BLACK_LIST | 1 | re-encodable | — | `hero_biography/black_list.json` |
@@ -103,7 +103,7 @@ Capture: `requests_20261005_new.jsonl` — 51 request groups, 24 client commands
 | 19002 | SC_COLLEGE_DELEGATION_HALL_INFO | 1 | re-encodable | — | `hero_biography/college_delegation.json` |
 | 19050 | SC_ACTIVITY_OPEN_INFO | 2 | re-encodable | — | `hero_biography/open_activity_open_info.json` |
 | 19601 | SC_HERO_TRY_INFO | 1 | re-encodable | — | `hero_biography/hero_try_info.json` |
-| 19910 | UNKNOWN(19910) | 1 | payload not decoded | — | — |
+| 19910 | UNKNOWN(19910) | 1 | payload not decoded | — | `hero_biography/unknown_19910.json` |
 | 20111 | SC_BATTLE_REPLAY_INFOS | 1 | re-encodable | — | `hero_biography/battle_replay_info.json` |
 | 21001 | SC_FORCES_PANEL | 1 | re-encodable | — | `hero_biography/force_panel.json` |
 | 23002 | SC_GUILD_PANEL | 1 | re-encodable | — | `hero_biography/guild_panel.json` |
@@ -129,13 +129,13 @@ Capture: `requests_20261005_new.jsonl` — 51 request groups, 24 client commands
 | 24372 | SC_DOWN_GIFT_SHOW | 1 | re-encodable | — | `hero_biography/down_gift_show.json` |
 | 24402 | SC_LIMITED_GIFT_PANEL | 1 | re-encodable | — | `hero_biography/limited_gift_panel.json` |
 | 24462 | SC_ACTIVITY_DAY_REWARD_PANEL | 1 | re-encodable | — | `hero_biography/activity_day_reward_panel.json` |
-| 24490 | SC_ACTIVITY_EXPIRED_GOODS | 1 | re-encodable | — | — |
+| 24490 | SC_ACTIVITY_EXPIRED_GOODS | 1 | re-encodable | — | `hero_biography/activity_expired_goods.json` |
 | 13045 | SC_SET_READY | 1 | re-encodable | — | — |
 | 13047 | SC_CHANGE_HERO | 1 | re-encodable | — | — |
 | 13062 | SC_CANNOT_DEL_HERO_LIST | 1 | re-encodable | — | — |
 | 20101 | SC_BATTLE_FIELD_INFO | 1 | re-encodable | — | — |
 | 10032 | SC_SYSTEM_ANNOUNCE | 2 | re-encodable | — | `hero_biography/system_annnounce.json` |
-| 10059 | SC_NEW_UNREAD | 8 | re-encodable | — | — |
+| 10059 | SC_NEW_UNREAD | 8 | re-encodable | — | `hero_biography/new_unread.json` |
 | 12002 | SC_PLAYER_UPDATE_ATTR_INT | 1 | re-encodable | — | — |
 | 12003 | SC_PLAYER_UPDATE_ATTR_BIGINT | 7 | re-encodable | — | — |
 | 12010 | SC_ADD_FUNCTION_OPEN | 1 | re-encodable | — | — |
@@ -155,7 +155,7 @@ Capture: `requests_20261005_new.jsonl` — 51 request groups, 24 client commands
 | 24024 | SC_UPDATE_ACHIEVEMENT_INFO | 10 | re-encodable | — | — |
 | 24027 | SC_UPDATE_COMPLETE_ACHIEVE_INFO | 3 | re-encodable | — | — |
 | 24117 | SC_UPDATE_NOVICE_TRAINING_TASK | 1 | re-encodable | — | — |
-| 10059 | SC_NEW_UNREAD | 8 | re-encodable | — | — |
+| 10059 | SC_NEW_UNREAD | 8 | re-encodable | — | `hero_biography/new_unread.json` |
 | 12100 | SC_MONSTER_MANUAL | 2 | re-encodable | — | `hero_biography/monster_manual.json` |
 | 20103 | SC_BATTLE_ACTION | 14 | re-encodable | — | — |
 | 20114 | SC_BATTLE_AUTO | 1 | re-encodable | — | — |
@@ -176,7 +176,7 @@ Capture: `requests_20261005_new.jsonl` — 51 request groups, 24 client commands
 | 17013 | SC_PROP_AWARD_SEND | 4 | re-encodable | — | — |
 | 24112 | SC_NOVICE_TRAINING_PANEL | 3 | re-encodable | — | `hero_biography/novice_training_panel.json` |
 | 24114 | SC_NOVICE_TRAINING_RECEIVE_TASK | 1 | re-encodable | — | — |
-| 10059 | SC_NEW_UNREAD | 8 | re-encodable | — | — |
+| 10059 | SC_NEW_UNREAD | 8 | re-encodable | — | `hero_biography/new_unread.json` |
 | 17001 | SC_BAG_UPDATE | 6 | re-encodable | — | — |
 | 17013 | SC_PROP_AWARD_SEND | 4 | re-encodable | — | — |
 | 24222 | SC_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE | 1 | re-encodable | — | — |
@@ -186,15 +186,10 @@ Capture: `requests_20261005_new.jsonl` — 51 request groups, 24 client commands
 
 ## Data-loader coverage
 
-86 of 96 JSON data files for commands present in this capture can be produced from it (105 files are declared by `data_loader.rs` in total).
+93 of 98 JSON data files for commands present in this capture can be produced from it (107 files are declared by `data_loader.rs` in total).
 
 Not present in the capture:
 
-- `hero_biography/activity_novice_turntable.json` (SC_ACTIVITY_NOVICE_TURNTABLE_PANEL, cmd 24300)
-- `hero_biography/activity_pay_sign2_panel.json` (SC_ACTIVITY_PAY_SIGN2_PANEL, cmd 24425)
-- `hero_biography/pack_bag_panel.json` (SC_PACK_BAG_PANEL, cmd 18181)
-- `hero_biography/happy_farm_field_list.json` (SC_HAPPY_FARM_FIELD_LIST, cmd 18190)
-- `hero_biography/happy_farm_order_list.json` (SC_HAPPY_FARM_ORDER_LIST, cmd 18191)
 - `shop/shop_type_2.json` (SC_SHOP_TYPE_DATA, cmd 17010)
 - `shop/shop_type_3.json` (SC_SHOP_TYPE_DATA, cmd 17010)
 - `shop/shop_type_4.json` (SC_SHOP_TYPE_DATA, cmd 17010)

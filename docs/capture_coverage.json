@@ -195,7 +195,9 @@
           "status": "ok",
           "schema_struct": "SC_NEW_UNREAD",
           "problems": [],
-          "loader_paths": []
+          "loader_paths": [
+            "hero_biography/new_unread.json"
+          ]
         },
         {
           "cmd": 16002,
@@ -302,7 +304,9 @@
           "status": "ok",
           "schema_struct": "SC_NEW_UNREAD",
           "problems": [],
-          "loader_paths": []
+          "loader_paths": [
+            "hero_biography/new_unread.json"
+          ]
         },
         {
           "cmd": 10071,
@@ -543,7 +547,9 @@
           "status": "undecoded",
           "schema_struct": null,
           "problems": [],
-          "loader_paths": []
+          "loader_paths": [
+            "hero_biography/unknown_12106.json"
+          ]
         },
         {
           "cmd": 12160,
@@ -563,7 +569,9 @@
           "status": "undecoded",
           "schema_struct": null,
           "problems": [],
-          "loader_paths": []
+          "loader_paths": [
+            "hero_biography/unknown_12210.json"
+          ]
         },
         {
           "cmd": 12220,
@@ -572,7 +580,9 @@
           "status": "undecoded",
           "schema_struct": null,
           "problems": [],
-          "loader_paths": []
+          "loader_paths": [
+            "hero_biography/unknown_12220.json"
+          ]
         },
         {
           "cmd": 13041,
@@ -691,7 +701,9 @@
           "status": "ok",
           "schema_struct": "SC_FASHION_SCENE_PANEL",
           "problems": [],
-          "loader_paths": []
+          "loader_paths": [
+            "hero_biography/fashion_scene_panel.json"
+          ]
         },
         {
           "cmd": 15001,
@@ -872,7 +884,9 @@
           "status": "undecoded",
           "schema_struct": null,
           "problems": [],
-          "loader_paths": []
+          "loader_paths": [
+            "hero_biography/unknown_19910.json"
+          ]
         },
         {
           "cmd": 20111,
@@ -1157,7 +1171,9 @@
           "status": "ok",
           "schema_struct": "SC_ACTIVITY_EXPIRED_GOODS",
           "problems": [],
-          "loader_paths": []
+          "loader_paths": [
+            "hero_biography/activity_expired_goods.json"
+          ]
         }
       ]
     },
@@ -1245,7 +1261,9 @@
           "status": "ok",
           "schema_struct": "SC_NEW_UNREAD",
           "problems": [],
-          "loader_paths": []
+          "loader_paths": [
+            "hero_biography/new_unread.json"
+          ]
         },
         {
           "cmd": 12002,
@@ -1442,7 +1460,9 @@
           "status": "ok",
           "schema_struct": "SC_NEW_UNREAD",
           "problems": [],
-          "loader_paths": []
+          "loader_paths": [
+            "hero_biography/new_unread.json"
+          ]
         },
         {
           "cmd": 12100,
@@ -1719,7 +1739,9 @@
           "status": "ok",
           "schema_struct": "SC_NEW_UNREAD",
           "problems": [],
-          "loader_paths": []
+          "loader_paths": [
+            "hero_biography/new_unread.json"
+          ]
         },
         {
           "cmd": 17001,
@@ -1792,35 +1814,10 @@
     }
   ],
   "loader": {
-    "expected_files": 105,
-    "required_for_capture": 96,
-    "covered_by_capture": 86,
+    "expected_files": 107,
+    "required_for_capture": 98,
+    "covered_by_capture": 93,
     "missing_from_capture": [
-      {
-        "cmd": 24300,
-        "struct": "SC_ACTIVITY_NOVICE_TURNTABLE_PANEL",
-        "path": "hero_biography/activity_novice_turntable.json"
-      },
-      {
-        "cmd": 24425,
-        "struct": "SC_ACTIVITY_PAY_SIGN2_PANEL",
-        "path": "hero_biography/activity_pay_sign2_panel.json"
-      },
-      {
-        "cmd": 18181,
-        "struct": "SC_PACK_BAG_PANEL",
-        "path": "hero_biography/pack_bag_panel.json"
-      },
-      {
-        "cmd": 18190,
-        "struct": "SC_HAPPY_FARM_FIELD_LIST",
-        "path": "hero_biography/happy_farm_field_list.json"
-      },
-      {
-        "cmd": 18191,
-        "struct": "SC_HAPPY_FARM_ORDER_LIST",
-        "path": "hero_biography/happy_farm_order_list.json"
-      },
       {
         "cmd": 17010,
         "struct": "SC_SHOP_TYPE_DATA",

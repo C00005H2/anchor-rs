@@ -7,6 +7,15 @@ use common::DATA_DIRECTORY;
 use crate::messages::*;
 use crate::packet::build_server_packet;
 
+macro_rules! load_raw {
+    ($path:expr, $id:expr, $packets:ident) => {
+        $packets.push(
+            Self::load_raw_packet($path, $id)
+                .with_context(|| format!("Failed to load raw packet {}", $path))?
+        );
+    };
+}
+
 macro_rules! load_packet {
     ($ty:ty, $path:expr, $id:expr, $packets:ident) => {
         $packets.push(
@@ -63,8 +72,13 @@ impl GameDataLoader {
 
     /// Load the complete hero biography response sequence from JSON files
     pub fn load_hero_biography_sequence() -> Result<Vec<Vec<u8>>, anyhow::Error> {
+        // Exact packet order of the official server's response to
+        // CS_HERO_BIOGRAPHY_INFO (18006), including schema-less packets that are
+        // replayed from raw hex files.  Deviating from this order (or dropping
+        // packets) leaves the client stuck on the loading screen.
         let mut packets = Vec::new();
 
+        load_raw!("hero_biography/unknown_19910.json", 19910, packets);
         load_packet!(SC_TODAY_NOT_NOTICE, "hero_biography/today_not_notice.json", 12006, packets);
         load_packet!(SC_NOVICE_TRAINING_PANEL, "hero_biography/novice_training_panel.json", 24112, packets);
         load_packet!(SC_NOVICE_TARGET_PANEL_INFO, "hero_biography/novice_target_panel.json", 24041, packets);
@@ -74,9 +88,7 @@ impl GameDataLoader {
         load_packet!(SC_TITANIUM_EXCHANGE_GOLD_COIN_INFO, "hero_biography/titanium_exchange.json", 12055, packets);
         load_packet!(SC_MAIL_LIST, "hero_biography/mail_list.json", 16001, packets);
 
-        // The client version this sequence was captured from initializes eight
-        // bag types (quest/equipment/item/... incl. type 8), so all of them are
-        // required here; bag_init_type8.json is part of the data set.
+        // The captured client initializes eight bag types (incl. type 8).
         for bag_type in 1..=8 {
             load_packet!(SC_BAG_INIT, &format!("hero_biography/bag_init_type{}.json", bag_type), 17000, packets);
         }
@@ -92,6 +104,7 @@ impl GameDataLoader {
         load_packet!(SC_STAMINA_MONTH_CARD_PANEL, "hero_biography/stamina_month_card_panel.json", 24351, packets);
         load_packet!(SC_DIRECT_GIFT_PANEL, "hero_biography/direct_gift_panel.json", 24097, packets);
         load_packet!(SC_FUND_PANEL, "hero_biography/fund_panel.json", 24206, packets);
+        load_packet!(SC_FASHION_SCENE_PANEL, "hero_biography/fashion_scene_panel.json", 13370, packets);
         load_packet!(SC_FASHION_INFO, "hero_biography/fashion_info.json", 13107, packets);
         load_packet!(SC_HERO_PRE_LIST, "hero_biography/hero_pre_list.json", 13060, packets);
         load_packet!(SC_ACT_FETTER_INFO, "hero_biography/act_fetter_info.json", 13362, packets);
@@ -122,12 +135,14 @@ impl GameDataLoader {
         load_packet!(SC_ACC_PAY_PANEL, "hero_biography/acc_pay_panel.json", 24106, packets);
         load_packet!(SC_HERO_LV_REWARD, "hero_biography/hero_lv_reward.json", 13200, packets);
         load_packet!(SC_RELATION_REWARD, "hero_biography/relation_reward.json", 13142, packets);
+        load_packet!(SC_NEW_UNREAD, "hero_biography/new_unread.json", 10059, packets);
         load_packet!(SC_MONSTER_MANUAL, "hero_biography/monster_manual.json", 12100, packets);
         load_packet!(SC_EQUIP_SUIT_MANUAL, "hero_biography/equip_suit_manual.json", 12101, packets);
         load_packet!(SC_BRACELET_MANUAL, "hero_biography/bracelet_manual.json", 12102, packets);
         load_packet!(SC_MUSIC_MANUAL, "hero_biography/music_manual.json", 12103, packets);
         load_packet!(SC_STORY_MANUAL, "hero_biography/story_manual.json", 12104, packets);
         load_packet!(SC_WORLD_MANUAL, "hero_biography/world_manual.json", 12105, packets);
+        load_raw!("hero_biography/unknown_12106.json", 12106, packets);
         load_packet!(SC_HERO_ASSIST_FIGHT_SKILL, "hero_biography/assist_fight_skill.json", 13220, packets);
         load_packet!(SC_HERO_FORMATION, "hero_biography/hero_formation.json", 13041, packets);
         load_packet!(SC_FASHION_SHOP_PANEL, "hero_biography/fashion_shop_panel.json", 24131, packets);
@@ -136,7 +151,6 @@ impl GameDataLoader {
         load_packet!(SC_ACTIVITY_NOVICE_START, "hero_biography/activity_novice_start.json", 24250, packets);
         load_packet!(SC_ACTIVITY_NOVICE_RECRUIT_HERO_PANEL, "hero_biography/activity_novice_recruit.json", 24220, packets);
         load_packet!(SC_ACTIVITY_NOVICE_UPGRADE_PANEL, "hero_biography/activity_novice_upgrade.json", 24240, packets);
-        load_packet!(SC_ACTIVITY_NOVICE_TURNTABLE_PANEL, "hero_biography/activity_novice_turntable.json", 24300, packets);
         load_packet!(SC_OPEN_SERVER_SIGN_PANEL_INFO, "hero_biography/open_server_sign_panel.json", 24271, packets);
         load_packet!(SC_PARKOUR_PANEL, "hero_biography/parked_panel.json", 18120, packets);
         load_packet!(SC_GUILD_PANEL, "hero_biography/guild_panel.json", 23002, packets);
@@ -144,12 +158,13 @@ impl GameDataLoader {
         load_packet!(SC_DOWN_GIFT_SHOW, "hero_biography/down_gift_show.json", 24372, packets);
         load_packet!(SC_HERO_TRY_INFO, "hero_biography/hero_try_info.json", 19601, packets);
         load_packet!(SC_LIMITED_GIFT_PANEL, "hero_biography/limited_gift_panel.json", 24402, packets);
-        load_packet!(SC_ACTIVITY_PAY_SIGN2_PANEL, "hero_biography/activity_pay_sign2_panel.json", 24425, packets);
-        load_packet!(SC_PACK_BAG_PANEL, "hero_biography/pack_bag_panel.json", 18181, packets);
-        load_packet!(SC_HAPPY_FARM_FIELD_LIST, "hero_biography/happy_farm_field_list.json", 18190, packets);
-        load_packet!(SC_HAPPY_FARM_ORDER_LIST, "hero_biography/happy_farm_order_list.json", 18191, packets);
         load_packet!(SC_ACTIVITY_DAY_REWARD_PANEL, "hero_biography/activity_day_reward_panel.json", 24462, packets);
+        load_packet!(SC_ACTIVITY_EXPIRED_GOODS, "hero_biography/activity_expired_goods.json", 24490, packets);
+        load_raw!("hero_biography/unknown_12210.json", 12210, packets);
+        load_raw!("hero_biography/unknown_12220.json", 12220, packets);
         load_packet!(SC_FUNCTION_OPEN_LIST, "login/function_open_list.json", 12009, packets);
+        load_packet!(SC_ACTIVITY_OPEN_INFO, "hero_biography/open_activity_open_info.json", 19050, packets);
+        // The official server sends the activity-open list twice in a row.
         load_packet!(SC_ACTIVITY_OPEN_INFO, "hero_biography/open_activity_open_info.json", 19050, packets);
         load_packet!(SC_FRIEND_GIFT_PANEL, "hero_biography/friend_gift_panel.json", 15028, packets);
         load_packet!(SC_PLAYER_HOMEPAGE_INFO, "hero_biography/player_homepage_info.json", 12034, packets);
@@ -369,4 +384,15 @@ mod tests {
         assert!(GameDataLoader::resolve_data_path("../secrets.json").is_err());
         assert!(GameDataLoader::resolve_data_path("/tmp/secrets.json").is_err());
     }
+}
+
+fn hex_decode(text: &str) -> Result<Vec<u8>, anyhow::Error> {
+    let text: String = text.chars().filter(|c| !c.is_whitespace()).collect();
+    if text.len() % 2 != 0 {
+        anyhow::bail!("odd-length hex string");
+    }
+    (0..text.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&text[i..i + 2], 16).map_err(anyhow::Error::from))
+        .collect()
 }

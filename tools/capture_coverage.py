@@ -144,6 +144,8 @@ class LoaderEntry:
     # (request field, expected value) when the data file depends on the request;
     # ``None`` as the value marks a fallback file (e.g. ``shop_type_default``).
     selector: tuple[str, str | None] | None = None
+    # Raw passthrough file ({"payload_hex": ...}) for commands without a schema.
+    raw: bool = False
 
 
 def parse_data_loader(path: Path) -> list[LoaderEntry]:
@@ -204,6 +206,19 @@ def parse_data_loader(path: Path) -> list[LoaderEntry]:
                     path=match.group(2),
                     cmd=int(match.group(3)),
                     sequence=sequence,
+                )
+            )
+
+        for match in re.finditer(
+            r'load_raw!\(\s*"([^"]+)"\s*,\s*(\d+)', stripped
+        ):
+            entries.append(
+                LoaderEntry(
+                    struct="",
+                    path=match.group(1),
+                    cmd=int(match.group(2)),
+                    sequence=sequence,
+                    raw=True,
                 )
             )
 

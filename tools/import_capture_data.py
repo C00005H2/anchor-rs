@@ -436,6 +436,20 @@ def main(argv: list[str] | None = None) -> int:
     covered_paths: set[str] = set()
 
     for expectation in expectations:
+        if expectation.raw:
+            for group in by_cmd.get(expectation.cmd, []):
+                response = next(
+                    (r for r in group.responses if r.cmd == expectation.cmd), None
+                )
+                if response is None:
+                    continue
+                hex_payload = response.payload_hex or "00" * (response.payload_len or 0)
+                write_json(expectation.path, {"payload_hex": hex_payload}, written)
+                covered_cmds.add(expectation.cmd)
+                covered_paths.add(expectation.path)
+                break
+            continue
+
         candidate_groups = []
         for group in by_cmd.get(expectation.cmd, []):
             matching_response = next(
@@ -474,6 +488,8 @@ def main(argv: list[str] | None = None) -> int:
             for group in by_cmd.get(expectation.cmd, [])
             for response in group.responses
         }
+        if expectation.raw:
+            continue
         if captured_names and expectation.struct not in captured_names:
             mismatched.append(
                 f"{expectation.path} (loader expects {expectation.struct} for cmd "

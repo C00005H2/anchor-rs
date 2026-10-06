@@ -88,3 +88,5 @@ python3 tools/import_capture_data.py requests_20261005_new.jsonl \
 cargo run -p tcpserver -- --bind 127.0.0.1 --port 8702      # normal mode
 cargo run -p tcpserver -- --replay-capture requests_20261005_new.jsonl
 ```
+
+- 2026-10-06: hero-biography init sequence now byte-exact vs capture (91 packets incl. raw 19910/12106/12210/12220, zero-filled until re-captured with payload_hex).
