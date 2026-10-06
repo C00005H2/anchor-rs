@@ -36,7 +36,7 @@ accumulating instead of resetting to recorded values.
 | --- | --- | --- | --- |
 | 10054 | `CS_PUBLIC_CHAT_SETTING` | `system::handle_public_chat_setting` | `chat/public_chat.json` |
 | 10057 | `CS_REQ_MODULE_READ` | `system::handle_req_module_read` | — (echo) |
-| 13044 / 13046 / 13061 | ready / formation / cannot-delete | `cmd/hero.rs` (formation stored for battle entry) | — |
+| 13044 / 13046 / 13061 | ready / formation / cannot-delete | `cmd/hero.rs` (stored for battle entry + immediate `SC_SET_READY`/`SC_CHANGE_HERO`/`SC_CANNOT_DEL_HERO_LIST` acks; plus `13040`/`13042`/`13048` formation handlers) | — |
 | 16005 | `CS_MAIL_READ` | `mail::handle_mail_read` | `hero_biography/mail_list.json` |
 | 16007 | `CS_MAIL_ENCLOSURE_REC` | `mail::handle_mail_enclosure_rec` | `hero_biography/mail_list.json`, `mail/enclosure_unread.json` |
 | 20100 | `CS_BATTLE_FIELD_ENTER` | `battle::handle_battle_field_enter` | `battle/enter.json` (formation patched in) |
@@ -53,7 +53,11 @@ accumulating instead of resetting to recorded values.
 Battle is a **scripted** flow: the capture's 13 `CS_BATTLE_VIDEO_END` batches
 (42-message finale included) are consumed in order per connection, and the
 attribute updates inside the script are absorbed into the local profile.  This
-reproduces the recorded fight, not arbitrary battle logic.
+reproduces the recorded fight, not arbitrary battle logic.  Recorded no-op
+batches are skipped, result-less sessions are avoided (with a synthesized
+victory fallback), turns of benched heroes are skipped, and a missing
+formation falls back to the recorded roster, so a re-deployed lineup can never
+stall the match with an empty reply.
 
 ### Tooling and data
 

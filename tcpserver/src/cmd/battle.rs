@@ -24,9 +24,10 @@ use crate::{
     capture_replay::decode_payload_hex,
     data_loader::GameDataLoader,
     messages::{
-        CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_START, CS_BATTLE_SYNC,
-        CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END, SC_BATTLE_NONE, SC_BATTLE_RESULT,
-        SC_BATTLE_USE_SKILL,
+        CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_FORCES_SKILL, CS_BATTLE_START,
+        CS_BATTLE_SYNC, CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END, CS_HERO_AUTO_RULE_CHANGE,
+        SC_BATTLE_FORCES_SKILL_ENERGY, SC_BATTLE_NONE, SC_BATTLE_RESULT, SC_BATTLE_USE_SKILL,
+        SC_HERO_AUTO_RULE_CHANGE,
     },
     packet::build_server_packet,
     sequence::{TemplateFile, TemplateGroup, TemplateResponse},
@@ -754,6 +755,10 @@ async fn encode_step(
 ///   * 20108 takes the next skill step only (the caller synthesises an ack
 ///     when none are left),
 ///   * 20120 takes the next sync step only.
+///
+/// Recorded no-op batches (the capture's empty replies to duplicate or
+/// post-result requests) are skipped: handing one to a client that is waiting
+/// for its next action would stall the match with zero packets.
 async fn take_step(
     ctx: &Arc<Mutex<ConnectionContext>>,
     request_cmd: u32,
@@ -769,13 +774,21 @@ async fn take_step(
     let chosen = connection.battle_session_chosen?;
     let session = load_session(chosen)?;
     for (index, step) in session.steps.iter().enumerate() {
-        let consumed = connection.battle_step_consumed.get(index).copied().unwrap_or(true);
-        if !consumed && consumes(step.request_cmd) {
-            if let Some(flag) = connection.battle_step_consumed.get_mut(index) {
-                *flag = true;
-            }
-            return Some(step.clone());
+        let consumed = connection
+            .battle_step_consumed
+            .get(index)
+            .copied()
+            .unwrap_or(true);
+        if consumed || !consumes(step.request_cmd) {
+            continue;
         }
+        if let Some(flag) = connection.battle_step_consumed.get_mut(index) {
+            *flag = true;
+        }
+        if step.responses.is_empty() {
+            continue;
+        }
+        return Some(step.clone());
     }
     None
 }
@@ -800,8 +813,13 @@ pub async fn handle_battle_field_enter(
         let mut connection = ctx.lock().await;
         connection.clear_battle_runtime();
         let start = connection.battle_session_index.min(count - 1);
+        // Prefer recordings that actually finish with SC_BATTLE_RESULT: a
+        // session captured from an abandoned battle would otherwise leave the
+        // match with no way to reach the result screen.
         let mut chosen = None;
         let mut fallback = None;
+        let mut exact_any = None;
+        let mut fallback_any = None;
         for offset in 0..count {
             let index = (start + offset) % count;
             let Some(session) = load_session(index) else { continue };
@@ -814,18 +832,30 @@ pub async fn handle_battle_field_enter(
                     .battle_type
                     .map(|battle_type| battle_type == request.battle_type)
                     .unwrap_or(true);
+            let has_result = session.steps.iter().any(|step| step.contains(20106));
+            if fallback_any.is_none() {
+                fallback_any = Some(index);
+            }
+            if matches && exact_any.is_none() {
+                exact_any = Some(index);
+            }
+            if !has_result {
+                continue;
+            }
             if matches {
-                chosen = Some((index, session));
+                chosen = Some(index);
                 break;
             }
             if fallback.is_none() {
-                fallback = Some((index, session));
+                fallback = Some(index);
             }
         }
-        let (index, session) = chosen.or(fallback).unwrap_or_else(|| {
-            let session = load_session(start).unwrap_or_default();
-            (start, session)
-        });
+        let index = chosen
+            .or(fallback)
+            .or(exact_any)
+            .or(fallback_any)
+            .unwrap_or(start);
+        let session = load_session(index).unwrap_or_default();
         connection.battle_session_index = (index + 1) % count;
         connection.battle_session_chosen = Some(index);
         connection.battle_step_consumed = vec![false; session.steps.len()];
@@ -867,14 +897,29 @@ pub async fn handle_battle_field_enter(
             }
         }
         let deployed = deployed_heroes(&formation, ready_team_id);
-        let roster = patch_enter_formation(&mut group, &deployed);
-        patch_enter_field_id(&mut group, &request.battle_field_id);
-        let mut connection = ctx.lock().await;
-        connection.battle_active_heroes = deployed;
-        connection.battle_actor_map = roster.actor_map;
-        connection.battle_added_heroes = roster.added_heroes;
+        if deployed.is_empty() {
+            // The client deployed nobody: keep the recorded roster on the wire
+            // and use it as the active lineup, so the battle stays playable
+            // instead of filtering away every player-side action.
+            patch_enter_field_id(&mut group, &request.battle_field_id);
+            let recorded = recorded_roster(&group);
+            let mut connection = ctx.lock().await;
+            connection.battle_active_heroes = recorded;
+        } else {
+            let roster = patch_enter_formation(&mut group, &deployed);
+            patch_enter_field_id(&mut group, &request.battle_field_id);
+            let mut connection = ctx.lock().await;
+            connection.battle_active_heroes = deployed;
+            connection.battle_actor_map = roster.actor_map;
+            connection.battle_added_heroes = roster.added_heroes;
+        }
     } else {
         patch_enter_field_id(&mut group, &request.battle_field_id);
+        // No formation was ever reported: track the recorded attackers so
+        // manual skill taps can still be mapped to a valid hero id.
+        let recorded = recorded_roster(&group);
+        let mut connection = ctx.lock().await;
+        connection.battle_active_heroes = recorded;
     }
 
     encode_group(&ctx, group, None).await
@@ -921,14 +966,29 @@ async fn handle_legacy_field_enter(
             }
         }
         let deployed = deployed_heroes(&formation, ready_team_id);
-        let roster = patch_enter_formation(&mut group, &deployed);
-        patch_enter_field_id(&mut group, &request.battle_field_id);
-        let mut connection = ctx.lock().await;
-        connection.battle_active_heroes = deployed;
-        connection.battle_actor_map = roster.actor_map;
-        connection.battle_added_heroes = roster.added_heroes;
+        if deployed.is_empty() {
+            // The client deployed nobody: keep the recorded roster on the wire
+            // and use it as the active lineup, so the battle stays playable
+            // instead of filtering away every player-side action.
+            patch_enter_field_id(&mut group, &request.battle_field_id);
+            let recorded = recorded_roster(&group);
+            let mut connection = ctx.lock().await;
+            connection.battle_active_heroes = recorded;
+        } else {
+            let roster = patch_enter_formation(&mut group, &deployed);
+            patch_enter_field_id(&mut group, &request.battle_field_id);
+            let mut connection = ctx.lock().await;
+            connection.battle_active_heroes = deployed;
+            connection.battle_actor_map = roster.actor_map;
+            connection.battle_added_heroes = roster.added_heroes;
+        }
     } else {
         patch_enter_field_id(&mut group, &request.battle_field_id);
+        // No formation was ever reported: track the recorded attackers so
+        // manual skill taps can still be mapped to a valid hero id.
+        let recorded = recorded_roster(&group);
+        let mut connection = ctx.lock().await;
+        connection.battle_active_heroes = recorded;
     }
 
     info!(
@@ -1077,16 +1137,30 @@ pub async fn handle_battle_video_end(
         );
         return Ok(Vec::new());
     }
+    // A zero sync word is not an abandon signal (quit/skip have their own
+    // commands); process it like any other video-end so a client quirk can
+    // never end the battle prematurely.
     if request.sync_word == 0 {
-        info!("Battle video ended without a sync word");
-        return serve_battle_result(ctx, "video-end").await;
+        info!("Battle video ended without a sync word; serving the next action");
     }
     if !ctx.lock().await.battle_active {
         return Ok(Vec::new());
     }
 
-    if let Some(step) = take_step(&ctx, 20104).await {
-        return encode_step(&ctx, &step).await;
+    // A benched hero's turn encodes to zero packets once roster filtering
+    // removes it; skip ahead to the next batch with visible actions instead of
+    // stalling the match with an empty reply.
+    loop {
+        let Some(step) = take_step(&ctx, 20104).await else {
+            break;
+        };
+        let packets = encode_step(&ctx, &step).await?;
+        if !packets.is_empty() {
+            return Ok(packets);
+        }
+        if !ctx.lock().await.battle_active {
+            return Ok(packets);
+        }
     }
 
     // Out of recorded video-end batches: re-serve the result batch so the
@@ -1108,6 +1182,41 @@ pub async fn handle_battle_video_end(
     }
     if let Some(reward) = reward {
         return encode_step(&ctx, &reward).await;
+    }
+
+    // No recorded result at all (e.g. a result-less session slipped through):
+    // synthesize a victory so the client can leave the battlefield instead of
+    // hanging on a match that will never end.
+    {
+        let mut connection = ctx.lock().await;
+        if connection.battle_session_chosen.is_some() {
+            let round = connection.battle_round;
+            let heroes = connection.battle_active_heroes.clone();
+            connection.battle_result_served = true;
+            connection.battle_active = false;
+            info!(round, "Battle steps exhausted without a recorded result; synthesizing victory");
+            let result = SC_BATTLE_RESULT {
+                result: 1,
+                award: Vec::new(),
+                detail_item_award: Vec::new(),
+                player_exp: 0,
+                hero_exp: 0,
+                hero_relation: 0,
+                args: Vec::new(),
+                hero_id_list: heroes
+                    .iter()
+                    .map(|(hero_id, _, _)| crate::messages::pt_attr_int {
+                        key: *hero_id as i16,
+                        value: 0,
+                    })
+                    .collect(),
+                round,
+                statistic: Vec::new(),
+                pos_effect: Vec::new(),
+                is_replay: 0,
+            };
+            return Ok(vec![build_server_packet(20106, &result.encode())?]);
+        }
     }
 
     // Legacy flat queue (pre-session captures).
@@ -1139,8 +1248,9 @@ async fn handle_legacy_video_end(
 /// Handle CS_BATTLE_USE_SKILL (20108): replay the recorded skill batch.
 ///
 /// Manual battles interleave skill batches with action batches; each recorded
-/// batch is consumed once in capture order. Captured empty responses stay empty,
-/// while requests with no captured step receive a synthesized acknowledgement.
+/// batch is consumed once in capture order. Recorded no-op batches are skipped,
+/// and requests with no usable captured step receive a synthesized
+/// acknowledgement.
 pub async fn handle_battle_use_skill(
     ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_BATTLE_USE_SKILL,
@@ -1213,7 +1323,32 @@ pub async fn handle_battle_use_skill(
                 ctx.lock().await.battle_pending_skills.push_back(skill);
             }
         }
-        return encode_step(&ctx, &step).await;
+        let packets = encode_step(&ctx, &step).await?;
+        if !packets.is_empty() {
+            return Ok(packets);
+        }
+        // The recorded batch was filtered away (e.g. it belonged to a benched
+        // hero): acknowledge the requested skill directly so the tap is not
+        // left hanging.
+        info!(
+            hero_id,
+            tid,
+            skill_id = request.skill_id,
+            sync_word,
+            "Battle skill batch filtered away; acknowledging directly"
+        );
+        return Ok(vec![build_server_packet(
+            20115,
+            &SC_BATTLE_USE_SKILL {
+                hero_id,
+                skill_id: request.skill_id,
+                result: 1,
+                skill_soul: 0,
+                rage: 10000,
+                sync_word,
+            }
+            .encode(),
+        )?]);
     }
 
     // A manual client needs an acknowledgement even when its battle was not
@@ -1249,13 +1384,61 @@ pub async fn handle_battle_sync(
     _request: CS_BATTLE_SYNC,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     if let Some(step) = take_step(&ctx, 20120).await {
-        return encode_step(&ctx, &step).await;
+        let packets = encode_step(&ctx, &step).await?;
+        if !packets.is_empty() {
+            return Ok(packets);
+        }
     }
     if ctx.lock().await.battle_active {
         let response = SC_BATTLE_NONE {};
         return Ok(vec![build_server_packet(20116, &response.encode())?]);
     }
     Ok(Vec::new())
+}
+
+/// Handle CS_BATTLE_FORCES_SKILL (20121): the emulator has no forces-skill
+/// simulation, so acknowledge the tap with the current sync word instead of
+/// leaving the client waiting for an energy update.
+pub async fn handle_battle_forces_skill(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    request: CS_BATTLE_FORCES_SKILL,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    let sync_word = ctx.lock().await.battle_sync_word;
+    info!(
+        skill_id = request.skill_id,
+        sync_word, "Battle forces skill requested"
+    );
+    Ok(vec![build_server_packet(
+        20122,
+        &SC_BATTLE_FORCES_SKILL_ENERGY {
+            energy: 0,
+            sync_word,
+        }
+        .encode(),
+    )?])
+}
+
+/// Handle CS_HERO_AUTO_RULE_CHANGE (20127): accept the new auto-battle rule
+/// for the hero.
+pub async fn handle_hero_auto_rule_change(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    request: CS_HERO_AUTO_RULE_CHANGE,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    ctx.lock().await.update_heartbeat();
+    info!(
+        hero_id = request.hero_id,
+        rule = request.rule_type,
+        "Hero auto rule changed"
+    );
+    Ok(vec![build_server_packet(
+        20128,
+        &SC_HERO_AUTO_RULE_CHANGE {
+            hero_id: request.hero_id,
+            rule_type: request.rule_type,
+            result: 1,
+        }
+        .encode(),
+    )?])
 }
 
 /// Send a non-rewarding retreat result so quit/skip leaves the battle screen
@@ -1664,6 +1847,47 @@ fn patch_field_info_heroes(
     ))
 }
 
+/// Attacker roster recorded in an SC_BATTLE_FIELD_INFO raw payload, as
+/// (id, tid, slot). Used when the client never reported a formation (or
+/// deployed nobody) so battle actions still resolve to valid actor ids.
+fn recorded_attackers(raw: &[u8]) -> Option<Vec<(i32, i32, i8)>> {
+    // battle_type i8 + field id i64 + player id i64, then player name.
+    let name_len_offset = 1 + 8 + 8;
+    let name_len = count_at(raw, name_len_offset)?;
+    let name_end = name_len_offset.checked_add(2)?.checked_add(name_len)?;
+    if name_end > raw.len() {
+        return None;
+    }
+    let total_hp_offset = name_end.checked_add(2)?; // player level
+    let count_off = total_hp_offset.checked_add(8)?.checked_add(2)?; // hp + avatar
+    let recorded_count = count_at(raw, count_off)?;
+    let mut offset = count_off.checked_add(2)?;
+    let mut attackers = Vec::with_capacity(recorded_count);
+    for slot in 1..=recorded_count {
+        let len = hero_entry_len(raw, offset)?;
+        let id = be_i32(raw, offset)?;
+        let tid = be_i32(raw, offset.checked_add(4)?)?;
+        attackers.push((id, tid, slot as i8));
+        offset = offset.checked_add(len)?;
+    }
+    Some(attackers)
+}
+
+fn recorded_roster(group: &TemplateGroup) -> Vec<(i32, i32, i8)> {
+    group
+        .responses
+        .iter()
+        .find(|response| response.cmd == 20101)
+        .and_then(|response| {
+            response
+                .payload_hex
+                .as_deref()
+                .and_then(decode_payload_hex)
+        })
+        .and_then(|raw| recorded_attackers(&raw))
+        .unwrap_or_default()
+}
+
 fn patch_enter_formation(
     group: &mut TemplateGroup,
     deployed: &[(i32, i32, i8)],
@@ -2057,5 +2281,16 @@ mod tests {
         assert_eq!(decoded.hero_order[1].value, 99);
         assert_eq!(roster.actor_map.get(&7), Some(&(42, 1110, 1006)));
         assert!(!roster.actor_map.contains_key(&8));
+    }
+
+    #[test]
+    fn recorded_roster_lists_the_capture_attackers() {
+        let raw = field_info_with_two_attackers();
+        assert_eq!(
+            recorded_attackers(&raw),
+            Some(vec![(7, 1110, 1), (8, 1305, 2)])
+        );
+        assert_eq!(recorded_attackers(&[]), None);
+        assert_eq!(recorded_attackers(&[1, 2, 3]), None);
     }
 }

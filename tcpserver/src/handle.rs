@@ -15,19 +15,20 @@ use crate::{
     },
     messages::{
         CS_ACCOUNT_LOGIN, CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE, CS_ATTR_PREVIEW_ALL,
-        CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_QUIT, CS_BATTLE_SKIP, CS_BATTLE_START,
-        CS_BATTLE_SYNC, CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END, CS_CANNOT_DEL_HERO_LIST,
-        CS_CHANGE_HERO, CS_DAILY_SIGN, CS_DIALOGUE_TALK, CS_DIRECT_GIFT_BUY,
-        CS_DIRECT_GIFT_PANEL,
+        CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_FORCES_SKILL, CS_BATTLE_QUIT,
+        CS_BATTLE_SKIP, CS_BATTLE_START, CS_BATTLE_SYNC, CS_BATTLE_USE_SKILL,
+        CS_BATTLE_VIDEO_END, CS_CANNOT_DEL_HERO_LIST, CS_CHANGE_FORMATION, CS_CHANGE_HERO,
+        CS_DAILY_SIGN, CS_DIALOGUE_TALK, CS_DIRECT_GIFT_BUY, CS_DIRECT_GIFT_PANEL,
         CS_ENTER_WORLD, CS_GAIN_ACHIEVEMENT_AWARD, CS_GAIN_ALL_FUND, CS_GAIN_CONCERN_GIFT,
-        CS_GAIN_OPEN_SERVER_SIGN_REWARD, CS_HERO_EVOLUTION, CS_MAIN_STORY_STAGE_AWARD,
-        CS_SHOP_BUY,
-        CS_GAIN_SEVEN_DAY_REWARD, CS_HERO_DETAIL, CS_MAIL_ENCLOSURE_REC, CS_MAIL_READ,
+        CS_GAIN_OPEN_SERVER_SIGN_REWARD, CS_HERO_AUTO_RULE_CHANGE, CS_HERO_EVOLUTION,
+        CS_HERO_FORMATION, CS_MAIN_STORY_STAGE_AWARD, CS_SHOP_BUY,
+        CS_GAIN_SEVEN_DAY_REWARD, CS_GET_STORY_BATTLE_SUPPORT_HERO_LIST, CS_HERO_DETAIL,
+        CS_MAIL_ENCLOSURE_REC, CS_MAIL_READ, CS_SET_STORY_BATTLE_SUPPORT_HERO_LIST,
         CS_NOVICE_TRAINING_PANEL, CS_NOVICE_TRAINING_RECEIVE_TASK, CS_PUBLIC_CHAT_SETTING,
         CS_DUP_ONLY_STORY_PASS, CS_GUIDE_END, CS_MONTH_CARD_PANEL, CS_NORMAL_LOG,
         CS_RECRUIT_HERO_NEW_CONFIRM, CS_RECRUIT_HERO_NEW_PREPARE,
-        CS_RECRUIT_HERO_NEW_SAVE_LIST, CS_RECRUIT_ITEM, CS_REQ_MODULE_READ,
-        CS_RESET_HERO_LV_PRE_VIEW,
+        CS_RECRUIT_HERO_NEW_SAVE_LIST, CS_RECRUIT_ITEM, CS_RENAME_FORMATION,
+        CS_REQ_MODULE_READ, CS_RESET_HERO_LV_PRE_VIEW,
         CS_SET_READY, CS_SHOP_TYPE_DATA, CS_STORY_OVER, CS_SYS_PING, CS_USE_BY_ID,
         SC_ACCOUNT_LOGIN,
     },
@@ -191,9 +192,24 @@ pub async fn dispatch_packet_with_replay(
             let responses = hero::handle_hero_detail(ctx, request).await?;
             send_responses!(writer, responses);
         }
+        13040 => {
+            let request = CS_HERO_FORMATION::decode(data);
+            let responses = hero::handle_hero_formation(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        13042 => {
+            let request = CS_CHANGE_FORMATION::decode(data);
+            let responses = hero::handle_change_formation(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
         13044 => {
             let request = CS_SET_READY::decode(data);
             let responses = hero::handle_set_ready(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        13048 => {
+            let request = CS_RENAME_FORMATION::decode(data);
+            let responses = hero::handle_rename_formation(ctx, request).await?;
             send_responses!(writer, responses);
         }
         13046 => {
@@ -204,6 +220,16 @@ pub async fn dispatch_packet_with_replay(
         13061 => {
             let request = CS_CANNOT_DEL_HERO_LIST::decode(data);
             let responses = hero::handle_cannot_del_hero_list(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        13092 => {
+            let request = CS_SET_STORY_BATTLE_SUPPORT_HERO_LIST::decode(data);
+            let responses = hero::handle_set_story_battle_support(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        13094 => {
+            let request = CS_GET_STORY_BATTLE_SUPPORT_HERO_LIST::decode(data);
+            let responses = hero::handle_get_story_battle_support(ctx, request).await?;
             send_responses!(writer, responses);
         }
         13150 => {
@@ -333,6 +359,16 @@ pub async fn dispatch_packet_with_replay(
         20120 => {
             let request = CS_BATTLE_SYNC::decode(data);
             let responses = battle::handle_battle_sync(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        20121 => {
+            let request = CS_BATTLE_FORCES_SKILL::decode(data);
+            let responses = battle::handle_battle_forces_skill(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        20127 => {
+            let request = CS_HERO_AUTO_RULE_CHANGE::decode(data);
+            let responses = battle::handle_hero_auto_rule_change(ctx, request).await?;
             send_responses!(writer, responses);
         }
         24022 => {
