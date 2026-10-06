@@ -743,22 +743,7 @@ async fn encode_group(
     {
         let mut connection = ctx.lock().await;
         absorb_attr_updates(&mut connection, &group);
-        if group.responses.iter().any(|response| response.cmd == 20103) {
-            // Remember the last served action so a sync poll can re-send it:
-            // the official server repeats the current action on 20120.
-            if let Some(action) = packets
-                .iter()
-                .rev()
-                .find(|packet| {
-                    packet.len() >= 6
-                        && u32::from_be_bytes([packet[2], packet[3], packet[4], packet[5]])
-                            == 20103
-                })
-                .cloned()
-            {
-                connection.battle_last_action = Some((action, connection.battle_sync_word));
-            }
-        }
+
         if group.responses.iter().any(|response| response.cmd == 20106) {
             connection.battle_result_served = true;
             connection.battle_active = false;
@@ -1290,7 +1275,7 @@ pub async fn handle_battle_use_skill(
         return Ok(Vec::new());
     }
     let (hero_id, tid, sync_word) = {
-        let connection = ctx.lock().await;
+        let mut connection = ctx.lock().await;
         let selected = connection
             .battle_active_heroes
             .iter()
@@ -1301,6 +1286,21 @@ pub async fn handle_battle_use_skill(
         let (hero_id, tid) = selected
             .map(|(hero_id, tid, _)| (*hero_id, *tid))
             .unwrap_or_default();
+        if let Some(skill) = (hero_id != 0).then_some(BattlePendingSkill {
+            hero_id,
+            skill_id: request.skill_id,
+        }) {
+            if connection.battle_pending_skills.contains(&skill) {
+                // Duplicate mashes of the same pending skill stay quiet like
+                // the official server (requests_20261006_new4 lines 138, 145, 172-177).
+                return Ok(Vec::new());
+            }
+            connection.battle_pending_skills.push_back(skill);
+        }
+        // Advance sync word so the client receives a distinct sync token for
+        // this skill ack, matching official captures (requests_20261006_new4
+        // lines 137, 141, 144, 222, 230).
+        connection.battle_sync_word = connection.battle_sync_word.wrapping_add(1);
         (hero_id, tid, connection.battle_sync_word)
     };
     let requested_skill = (hero_id != 0).then_some(BattlePendingSkill {
@@ -1349,16 +1349,7 @@ pub async fn handle_battle_use_skill(
                         .and_then(|raw| raw.first().copied())
                         == Some(1))
         });
-        if !has_skill_ack && contains_player_action {
-            if let Some(skill) = requested_skill {
-                // Mashed taps must not queue the same skill twice; each
-                // queued copy would eat one future player action.
-                let mut connection = ctx.lock().await;
-                if !connection.battle_pending_skills.contains(&skill) {
-                    connection.battle_pending_skills.push_back(skill);
-                }
-            }
-        }
+
         let packets = encode_step(&ctx, &step).await?;
         if !packets.is_empty() {
             return Ok(packets);
@@ -1387,17 +1378,6 @@ pub async fn handle_battle_use_skill(
         )?]);
     }
 
-    // A manual client needs an acknowledgement even when its battle was not
-    // captured in manual mode. Queue the chosen skill for the next player
-    // action batch so the scripted action actually uses it. The queue holds
-    // each skill once: a mashed button must not pile up copies that each
-    // eat one future player action.
-    if let Some(skill) = requested_skill {
-        let mut connection = ctx.lock().await;
-        if !connection.battle_pending_skills.contains(&skill) {
-            connection.battle_pending_skills.push_back(skill);
-        }
-    }
     info!(
         hero_id,
         tid,
@@ -1419,44 +1399,27 @@ pub async fn handle_battle_use_skill(
     )?])
 }
 
-/// Handle CS_BATTLE_SYNC (20120): replay the recorded sync batch, if any,
-/// otherwise re-send the last served action once per sync word so the client
-/// can confirm it is in step (session_3 steps 30-31). A poll never advances
-/// the script: tapped skills execute on the next video-end, so serving steps
-/// here would let a mash of the skill button fast-forward the whole battle.
+/// Handle CS_BATTLE_SYNC (20120): replay the recorded sync batch, if any.
+///
+/// When the session contains no recorded sync batch, stay quiet with an empty
+/// response, matching official captures (requests_20261006_new3 line 157).
+/// Never re-send the current action (which restarts or corrupts an in-progress
+/// animation) and never send SC_BATTLE_NONE (20116, which forces the client
+/// into an error loading screen).
 pub async fn handle_battle_sync(
     ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_BATTLE_SYNC,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    ctx.lock().await.update_heartbeat();
     if let Some(step) = take_step(&ctx, 20120).await {
         let packets = encode_step(&ctx, &step).await?;
         if !packets.is_empty() {
+            info!(
+                sync_word = request.sync_word,
+                "Battle sync served recorded batch"
+            );
             return Ok(packets);
         }
-    }
-
-    // Otherwise re-send the last action once per sync word so the client can
-    // confirm it is in step; further polls stay quiet until a newer action
-    // is served (session_3 steps 30-31).
-    {
-        let mut connection = ctx.lock().await;
-        if connection.battle_active && !connection.battle_result_served {
-            if let Some((packet, sync)) = connection.battle_last_action.clone() {
-                if connection.battle_last_repeat_sync != Some(sync) {
-                    connection.battle_last_repeat_sync = Some(sync);
-                    info!(
-                        sync_word = request.sync_word,
-                        repeated = sync,
-                        "Battle sync repeated last action"
-                    );
-                    return Ok(vec![packet]);
-                }
-            }
-        }
-    }
-    if ctx.lock().await.battle_active {
-        let response = SC_BATTLE_NONE {};
-        return Ok(vec![build_server_packet(20116, &response.encode())?]);
     }
     Ok(Vec::new())
 }
@@ -2423,12 +2386,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn battle_sync_poll_repeats_without_advancing_or_consuming() {
-        // Regression test for the ghost-skill loop: sync polls must neither
-        // advance the script nor consume queued skills. Tapped skills execute
-        // on the next video-end, on their own hero's turn. The poll re-sends
-        // the last served action once as a sync confirmation (session_3
-        // steps 30-31), then stays quiet.
+    async fn battle_sync_poll_stays_quiet_and_skills_execute_on_video_end() {
+        // Regression test: sync polls must stay quiet without advancing the
+        // battle, re-sending actions, or serving SC_BATTLE_NONE (20116).
+        // Tapped skills are acknowledged with an incremented sync word, duplicate
+        // mashes are ignored, and queued skills execute cleanly on the hero's turn.
         let mut connection = ConnectionContext::new("test".to_owned());
         let steps = load_session(0).map(|data| data.steps.len()).unwrap_or(13);
         connection.battle_active = true;
@@ -2449,34 +2411,35 @@ mod tests {
         assert_eq!(packet_cmd(&first[0]), 20103);
         assert!(ctx.lock().await.battle_step_consumed[1..].iter().all(|done| !done));
 
-        // Queue a skill as a tap would, then poll: the poll must repeat the
-        // last action instead of serving the next step, and the queue must
-        // be left untouched.
-        ctx.lock().await.battle_pending_skills.push_back(crate::state::BattlePendingSkill {
-            hero_id: 3,
+        // Tap a manual skill for hero 3.
+        let ack = handle_battle_use_skill(ctx.clone(), CS_BATTLE_USE_SKILL {
             skill_id: 120201,
-        });
-        let repeated = handle_battle_sync(ctx.clone(), CS_BATTLE_SYNC {
-            sync_word: 41219004,
         })
         .await
-        .expect("sync poll must repeat the last action");
-        assert_eq!(repeated.len(), 1);
-        assert_eq!(repeated[0], first[0]);
-        assert!(ctx.lock().await.battle_step_consumed[1..].iter().all(|done| !done));
+        .expect("skill must be acknowledged");
+        assert_eq!(ack.len(), 1);
+        assert_eq!(packet_cmd(&ack[0]), 20115);
         assert_eq!(ctx.lock().await.battle_pending_skills.len(), 1);
 
-        // A second poll stays quiet with NONE.
-        let quiet = handle_battle_sync(ctx.clone(), CS_BATTLE_SYNC {
+        // Duplicate mash of the same skill: stays quiet with an empty response.
+        let mash = handle_battle_use_skill(ctx.clone(), CS_BATTLE_USE_SKILL {
+            skill_id: 120201,
+        })
+        .await
+        .expect("mash must succeed");
+        assert!(mash.is_empty(), "duplicate mash must receive an empty response");
+        assert_eq!(ctx.lock().await.battle_pending_skills.len(), 1);
+
+        // A sync poll stays quiet with empty bytes, never advancing or corrupting.
+        let poll = handle_battle_sync(ctx.clone(), CS_BATTLE_SYNC {
             sync_word: 41219004,
         })
         .await
-        .expect("sync poll must answer");
-        assert_eq!(quiet.len(), 1);
-        assert_eq!(packet_cmd(&quiet[0]), 20116);
+        .expect("sync poll must succeed");
+        assert!(poll.is_empty(), "unscripted sync poll must return empty packets");
+        assert_eq!(ctx.lock().await.battle_pending_skills.len(), 1);
 
-        // The following video-ends play the script out; the queued skill
-        // fires on its own hero's turn and hijacks no other hero's action.
+        // Subsequent video-ends play out; hero 3's turn executes its tapped skill.
         let mut saw_own_skill = false;
         for sync in 41219004..41219030 {
             if ctx.lock().await.battle_pending_skills.is_empty() {
