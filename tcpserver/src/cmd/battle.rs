@@ -533,24 +533,26 @@ async fn encode_group(
             }
         }
     }
-    let pending_skill = {
+    {
         let mut connection = ctx.lock().await;
         for skill in acknowledged_skills {
             if !connection.battle_pending_skills.contains(&skill) {
                 connection.battle_pending_skills.push_back(skill);
             }
         }
-        if request_consumes_pending_skill(request_cmd) {
-            connection.battle_pending_skills.front().copied()
-        } else {
-            None
-        }
-    };
+    }
+    // A queued manual skill may only rewrite its own hero's turn, and only on
+    // requests that advance the battle (video-ends and skill batches). Sync
+    // polls and pushes must leave both the script and the queue untouched, so
+    // a tapped skill can neither fast-forward the battle nor hijack another
+    // hero's action.
+    let may_apply_pending_skill = request_consumes_pending_skill(request_cmd);
 
-    // A queued manual skill applies to the next player-side action only, not
-    // every player action that may happen to share a server-response group.
-    let mut applied_pending_skill = false;
-    if let Some(skill) = pending_skill {
+    // A queued manual skill applies to its own hero's next player-side action
+    // only, not every player action that may happen to share a
+    // server-response group. Skills tapped for other heroes stay queued.
+    if may_apply_pending_skill {
+        let mut applied_pending_skill = false;
         for response in &mut group.responses {
             if response.cmd != 20103 || applied_pending_skill {
                 continue;
@@ -583,6 +585,22 @@ async fn encode_group(
             if !is_player_action || !actor_id.is_some_and(|id| active_ids.contains(&id)) {
                 continue;
             }
+            let Some(actor) = actor_id else {
+                continue;
+            };
+            // Only a skill tapped for this hero may rewrite its turn; anything
+            // else stays queued for its own hero's next action.
+            let skill = {
+                let mut connection = ctx.lock().await;
+                connection
+                    .battle_pending_skills
+                    .iter()
+                    .position(|queued| queued.hero_id == actor)
+                    .and_then(|index| connection.battle_pending_skills.remove(index))
+            };
+            let Some(skill) = skill else {
+                continue;
+            };
             if let Some(decoded) = response.decoded.as_mut() {
                 if let Some(object) = decoded.as_object_mut() {
                     object.insert("hero_id".to_owned(), json!(skill.hero_id));
@@ -740,9 +758,6 @@ async fn encode_group(
             {
                 connection.battle_last_action = Some((action, connection.battle_sync_word));
             }
-        }
-        if applied_pending_skill {
-            connection.battle_pending_skills.pop_front();
         }
         if group.responses.iter().any(|response| response.cmd == 20106) {
             connection.battle_result_served = true;
@@ -1404,7 +1419,11 @@ pub async fn handle_battle_use_skill(
     )?])
 }
 
-/// Handle CS_BATTLE_SYNC (20120): replay the recorded sync batch, if any.
+/// Handle CS_BATTLE_SYNC (20120): replay the recorded sync batch, if any,
+/// otherwise re-send the last served action once per sync word so the client
+/// can confirm it is in step (session_3 steps 30-31). A poll never advances
+/// the script: tapped skills execute on the next video-end, so serving steps
+/// here would let a mash of the skill button fast-forward the whole battle.
 pub async fn handle_battle_sync(
     ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_BATTLE_SYNC,
@@ -1415,29 +1434,7 @@ pub async fn handle_battle_sync(
             return Ok(packets);
         }
     }
-    // Awaiting skill execution: the client polls sync until its tap turns
-    // into an action, and the official server answers the poll with the
-    // action itself (session_3 step30). Serve the next action step instead
-    // of an empty NONE the client just retries around until it gives up on
-    // a loading screen.
-    if !ctx.lock().await.battle_pending_skills.is_empty() {
-        loop {
-            let Some(step) = take_step(&ctx, 20104).await else {
-                break;
-            };
-            let packets = encode_step(&ctx, &step).await?;
-            if !packets.is_empty() {
-                info!(
-                    sync_word = request.sync_word,
-                    "Battle sync served pending skill execution"
-                );
-                return Ok(packets);
-            }
-            if !ctx.lock().await.battle_active {
-                return Ok(packets);
-            }
-        }
-    }
+
     // Otherwise re-send the last action once per sync word so the client can
     // confirm it is in step; further polls stay quiet until a newer action
     // is served (session_3 steps 30-31).
@@ -2426,13 +2423,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn battle_sync_poll_serves_pending_skill_then_repeats_once() {
-        // Regression test for the mid-battle loading stall: the client polls
-        // 20120 until a tapped skill turns into an action (the official
-        // server answers the poll with the action itself), then expects the
-        // current action re-sent once as a sync confirmation (session_3
-        // steps 30-31). Answering NONE to every poll made the client retry
-        // its tap and eventually give up on a loading screen.
+    async fn battle_sync_poll_repeats_without_advancing_or_consuming() {
+        // Regression test for the ghost-skill loop: sync polls must neither
+        // advance the script nor consume queued skills. Tapped skills execute
+        // on the next video-end, on their own hero's turn. The poll re-sends
+        // the last served action once as a sync confirmation (session_3
+        // steps 30-31), then stays quiet.
         let mut connection = ConnectionContext::new("test".to_owned());
         let steps = load_session(0).map(|data| data.steps.len()).unwrap_or(13);
         connection.battle_active = true;
@@ -2442,40 +2438,71 @@ mod tests {
         connection.battle_active_heroes = vec![(1, 1110, 1), (3, 1202, 2)];
         connection.battle_actor_map.insert(1, (1, 1110, 1110));
         connection.battle_actor_map.insert(2, (3, 1305, 1202));
-        connection
-            .battle_pending_skills
-            .push_back(crate::state::BattlePendingSkill {
-                hero_id: 3,
-                skill_id: 120204,
-            });
         let ctx = Arc::new(Mutex::new(connection));
 
-        // First poll carries a pending skill: the next action step is served
-        // with the skill applied, and the queue is consumed.
-        let first = handle_battle_sync(ctx.clone(), CS_BATTLE_SYNC { sync_word: 0 })
-            .await
-            .expect("sync poll must serve the pending execution");
+        // Play the first action through a video-end, as the client would.
+        let first =
+            handle_battle_video_end(ctx.clone(), CS_BATTLE_VIDEO_END { sync_word: 0 })
+                .await
+                .expect("video-end must serve the first action");
         assert!(!first.is_empty());
         assert_eq!(packet_cmd(&first[0]), 20103);
-        assert!(ctx.lock().await.battle_pending_skills.is_empty());
+        assert!(ctx.lock().await.battle_step_consumed[1..].iter().all(|done| !done));
 
-        // Second poll has nothing pending: the last action is repeated once
-        // so the client can confirm it is in step.
-        let second = handle_battle_sync(ctx.clone(), CS_BATTLE_SYNC {
+        // Queue a skill as a tap would, then poll: the poll must repeat the
+        // last action instead of serving the next step, and the queue must
+        // be left untouched.
+        ctx.lock().await.battle_pending_skills.push_back(crate::state::BattlePendingSkill {
+            hero_id: 3,
+            skill_id: 120201,
+        });
+        let repeated = handle_battle_sync(ctx.clone(), CS_BATTLE_SYNC {
             sync_word: 41219004,
         })
         .await
         .expect("sync poll must repeat the last action");
-        assert_eq!(second.len(), 1);
-        assert_eq!(second[0], first[0]);
+        assert_eq!(repeated.len(), 1);
+        assert_eq!(repeated[0], first[0]);
+        assert!(ctx.lock().await.battle_step_consumed[1..].iter().all(|done| !done));
+        assert_eq!(ctx.lock().await.battle_pending_skills.len(), 1);
 
-        // Third poll: already repeated, so the server stays quiet with NONE.
-        let third = handle_battle_sync(ctx.clone(), CS_BATTLE_SYNC {
+        // A second poll stays quiet with NONE.
+        let quiet = handle_battle_sync(ctx.clone(), CS_BATTLE_SYNC {
             sync_word: 41219004,
         })
         .await
         .expect("sync poll must answer");
-        assert_eq!(third.len(), 1);
-        assert_eq!(packet_cmd(&third[0]), 20116);
+        assert_eq!(quiet.len(), 1);
+        assert_eq!(packet_cmd(&quiet[0]), 20116);
+
+        // The following video-ends play the script out; the queued skill
+        // fires on its own hero's turn and hijacks no other hero's action.
+        let mut saw_own_skill = false;
+        for sync in 41219004..41219030 {
+            if ctx.lock().await.battle_pending_skills.is_empty() {
+                break;
+            }
+            let packets = handle_battle_video_end(ctx.clone(), CS_BATTLE_VIDEO_END {
+                sync_word: sync,
+            })
+            .await
+            .expect("video-end must serve");
+            for packet in &packets {
+                if packet_cmd(packet) != 20103 || packet.len() < 9 || packet[0] != 1 {
+                    continue;
+                }
+                let hero = i32::from_be_bytes([packet[1], packet[2], packet[3], packet[4]]);
+                let skill = i32::from_be_bytes([packet[5], packet[6], packet[7], packet[8]]);
+                if hero == 3 {
+                    if skill == 120201 {
+                        saw_own_skill = true;
+                    }
+                } else {
+                    assert_ne!(skill, 120201, "queued skill must not rewrite another hero's turn");
+                }
+            }
+        }
+        assert!(saw_own_skill, "queued skill must fire on its hero's turn");
+        assert!(ctx.lock().await.battle_pending_skills.is_empty());
     }
 }
