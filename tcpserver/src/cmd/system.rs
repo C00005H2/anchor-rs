@@ -7,7 +7,7 @@ use crate::packet::build_server_packet;
 /// Handle CS_SYS_PING (10000) -> SC_SYS_PING (10001)
 pub async fn handle_ping(
     ctx: Arc<Mutex<ConnectionContext>>,
-    request: CS_SYS_PING,
+    _request: CS_SYS_PING,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     {
         let mut connection = ctx.lock().await;

@@ -18,7 +18,7 @@ use std::sync::Arc;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use tokio::sync::Mutex;
-use tracing::info;
+use tracing::{debug, info, warn};
 
 use crate::{
     capture_replay::decode_payload_hex,
@@ -26,7 +26,7 @@ use crate::{
     messages::{
         CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_FORCES_SKILL, CS_BATTLE_START,
         CS_BATTLE_SYNC, CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END, CS_HERO_AUTO_RULE_CHANGE,
-        SC_BATTLE_FORCES_SKILL_ENERGY, SC_BATTLE_NONE, SC_BATTLE_RESULT, SC_BATTLE_USE_SKILL,
+        SC_BATTLE_FORCES_SKILL_ENERGY, SC_BATTLE_RESULT, SC_BATTLE_USE_SKILL,
         SC_HERO_AUTO_RULE_CHANGE,
     },
     packet::build_server_packet,
@@ -603,7 +603,6 @@ async fn encode_group(
             };
             info!(
                 actor = actor,
-                original_skill = skill_id,
                 queued_hero = skill.hero_id,
                 applied_skill = skill.skill_id,
                 "Queued manual skill applied to hero turn action"
