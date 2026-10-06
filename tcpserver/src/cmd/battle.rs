@@ -138,22 +138,58 @@ pub(crate) fn absorb_attr_updates(connection: &mut ConnectionContext, group: &Te
     }
 }
 
-fn mapped_actor(
-    actor_map: &HashMap<i32, (i32, i32, i32)>,
-    actor_id: i32,
-) -> Option<(i32, i32, i32)> {
-    actor_map
-        .get(&actor_id)
-        .copied()
-        .or_else(|| actor_map.values().min_by_key(|mapped| mapped.0).copied())
-}
-
 fn remap_skill_id(skill_id: i32, old_tid: i32, new_tid: i32) -> i32 {
-    if skill_id >= 0 && skill_id / 100 == old_tid {
+    // Captured basic attacks sometimes use the hero tid itself as the skill id.
+    if skill_id == old_tid {
+        new_tid
+    } else if skill_id >= 0 && skill_id / 100 == old_tid {
         new_tid.saturating_mul(100).saturating_add(skill_id % 100)
     } else {
         skill_id
     }
+}
+
+fn battle_skill_ack(
+    response: &TemplateResponse,
+    actor_map: &HashMap<i32, (i32, i32, i32)>,
+) -> Option<BattlePendingSkill> {
+    if response.cmd != 20115 {
+        return None;
+    }
+    let (hero_id, skill_id, result) = if let Some(decoded) = response.decoded.as_ref() {
+        (
+            decoded.get("hero_id")?.as_i64()? as i32,
+            decoded.get("skill_id")?.as_i64()? as i32,
+            decoded.get("result")?.as_i64()? as i8,
+        )
+    } else {
+        let raw = response.payload_hex.as_deref().and_then(decode_payload_hex)?;
+        if raw.len() < 9 {
+            return None;
+        }
+        (be_i32(&raw, 0)?, be_i32(&raw, 4)?, raw[8] as i8)
+    };
+    if result != 1 || hero_id == 0 {
+        return None;
+    }
+
+    // Captured acknowledgements still use capture actor ids and skill ids.
+    // An ack rewritten by handle_battle_use_skill has no raw payload and is
+    // already expressed in the currently deployed formation.
+    if response.payload_hex.is_some() {
+        if let Some((current_id, old_tid, new_tid)) = actor_map.get(&hero_id).copied() {
+            return Some(BattlePendingSkill {
+                hero_id: current_id,
+                skill_id: remap_skill_id(skill_id, old_tid, new_tid),
+            });
+        }
+        if !actor_map.is_empty()
+            && !actor_map.values().any(|(current_id, _, _)| *current_id == hero_id)
+        {
+            return None;
+        }
+    }
+    Some(BattlePendingSkill { hero_id, skill_id })
 }
 
 fn remap_side_heroes(value: &mut Value, actor_map: &HashMap<i32, (i32, i32, i32)>) {
@@ -163,7 +199,7 @@ fn remap_side_heroes(value: &mut Value, actor_map: &HashMap<i32, (i32, i32, i32)
             let old_id = object.get("hero_id").and_then(Value::as_i64);
             if side == Some(1) {
                 if let Some(old_id) = old_id {
-                    if let Some((new_id, _, _)) = mapped_actor(actor_map, old_id as i32) {
+                    if let Some((new_id, _, _)) = actor_map.get(&(old_id as i32)) {
                         object.insert("hero_id".to_owned(), json!(new_id));
                     }
                 }
@@ -177,7 +213,7 @@ fn remap_side_heroes(value: &mut Value, actor_map: &HashMap<i32, (i32, i32, i32)
                 if let Some(object) = item.as_object_mut() {
                     if object.get("side").and_then(Value::as_i64) == Some(1) {
                         if let Some(old_id) = object.get("hero_id").and_then(Value::as_i64) {
-                            let Some((new_id, _, _)) = mapped_actor(actor_map, old_id as i32) else {
+                            let Some((new_id, _, _)) = actor_map.get(&(old_id as i32)) else {
                                 return false;
                             };
                             object.insert("hero_id".to_owned(), json!(new_id));
@@ -194,6 +230,7 @@ fn remap_side_heroes(value: &mut Value, actor_map: &HashMap<i32, (i32, i32, i32)
 
 fn remap_order_list(value: &mut Value, actor_map: &HashMap<i32, (i32, i32, i32)>) {
     let Some(items) = value.as_array_mut() else { return };
+    let mut seen_attackers = HashSet::new();
     items.retain_mut(|item| {
         let Some(object) = item.as_object_mut() else { return true };
         if object.get("key").and_then(Value::as_i64) != Some(1) {
@@ -202,9 +239,12 @@ fn remap_order_list(value: &mut Value, actor_map: &HashMap<i32, (i32, i32, i32)>
         let Some(old_id) = object.get("value").and_then(Value::as_i64) else {
             return false;
         };
-        let Some((new_id, _, _)) = mapped_actor(actor_map, old_id as i32) else {
+        let Some((new_id, _, _)) = actor_map.get(&(old_id as i32)) else {
             return false;
         };
+        if !seen_attackers.insert(*new_id) {
+            return false;
+        }
         object.insert("value".to_owned(), json!(new_id));
         true
     });
@@ -224,7 +264,7 @@ fn remap_battle_response(
                     if object.get("side").and_then(Value::as_i64) == Some(1) {
                         if let Some(old_id) = object.get("hero_id").and_then(Value::as_i64) {
                             if let Some((new_id, old_tid, new_tid)) =
-                                mapped_actor(actor_map, old_id as i32)
+                                actor_map.get(&(old_id as i32)).copied()
                             {
                                 object.insert("hero_id".to_owned(), json!(new_id));
                                 if let Some(skill_id) =
@@ -235,6 +275,10 @@ fn remap_battle_response(
                                         json!(remap_skill_id(skill_id as i32, old_tid, new_tid)),
                                     );
                                 }
+                            } else {
+                                // An unmapped captured attacker was benched;
+                                // do not let an ID collision make it appear active.
+                                object.insert("hero_id".to_owned(), json!(0));
                             }
                         }
                     }
@@ -245,8 +289,10 @@ fn remap_battle_response(
                     }
                     if object.get("target_side").and_then(Value::as_i64) == Some(1) {
                         if let Some(old_id) = object.get("target_id").and_then(Value::as_i64) {
-                            if let Some((new_id, _, _)) = mapped_actor(actor_map, old_id as i32) {
+                            if let Some((new_id, _, _)) = actor_map.get(&(old_id as i32)) {
                                 object.insert("target_id".to_owned(), json!(new_id));
+                            } else {
+                                object.insert("target_id".to_owned(), json!(0));
                             }
                         }
                     }
@@ -270,15 +316,44 @@ fn remap_battle_response(
                     }
                 }
             }
+            20115 => {
+                // A raw-backed response is still in capture coordinates. The
+                // manual handler clears the raw payload after writing the
+                // selected hero and skill, so it must not be remapped twice.
+                if response.payload_hex.is_some() {
+                    let Some(object) = decoded.as_object_mut() else { return };
+                    let Some(old_id) = object.get("hero_id").and_then(Value::as_i64) else {
+                        return;
+                    };
+                    let Some((new_id, old_tid, new_tid)) =
+                        actor_map.get(&(old_id as i32)).copied()
+                    else {
+                        object.insert("hero_id".to_owned(), json!(0));
+                        response.payload_hex = None;
+                        return;
+                    };
+                    object.insert("hero_id".to_owned(), json!(new_id));
+                    if let Some(skill_id) = object.get("skill_id").and_then(Value::as_i64) {
+                        object.insert(
+                            "skill_id".to_owned(),
+                            json!(remap_skill_id(skill_id as i32, old_tid, new_tid)),
+                        );
+                    }
+                    response.payload_hex = None;
+                }
+            }
             20129 => {
                 if let Some(object) = decoded.as_object_mut() {
                     if object.get("hero_side").and_then(Value::as_i64) == Some(1) {
                         if let Some(old_id) = object.get("hero_id").and_then(Value::as_i64) {
                             if let Some((new_id, _, new_tid)) =
-                                mapped_actor(actor_map, old_id as i32)
+                                actor_map.get(&(old_id as i32)).copied()
                             {
                                 object.insert("hero_id".to_owned(), json!(new_id));
                                 object.insert("hero_tid".to_owned(), json!(new_tid));
+                            } else {
+                                object.insert("hero_id".to_owned(), json!(0));
+                                object.insert("hero_tid".to_owned(), json!(0));
                             }
                         }
                     }
@@ -296,7 +371,7 @@ fn remap_battle_response(
                                 return false;
                             };
                             let Some((new_id, _, new_tid)) =
-                                mapped_actor(actor_map, old_id as i32)
+                                actor_map.get(&(old_id as i32)).copied()
                             else {
                                 return false;
                             };
@@ -311,7 +386,7 @@ fn remap_battle_response(
                             let Some(old_id) = item.get("key").and_then(Value::as_i64) else {
                                 return true;
                             };
-                            let Some((new_id, _, _)) = mapped_actor(actor_map, old_id as i32) else {
+                            let Some((new_id, _, _)) = actor_map.get(&(old_id as i32)) else {
                                 return false;
                             };
                             item.insert("key".to_owned(), json!(new_id));
@@ -337,11 +412,47 @@ fn remap_battle_response(
     match response.cmd {
         20103 if raw.len() >= 9 && raw[0] == 1 => {
             let Some(old_id) = be_i32(&raw, 1) else { return };
-            let Some((new_id, old_tid, new_tid)) = mapped_actor(actor_map, old_id) else { return };
+            let Some((new_id, old_tid, new_tid)) = actor_map.get(&old_id).copied() else {
+                raw[1..5].copy_from_slice(&0i32.to_be_bytes());
+                raw[5..9].copy_from_slice(&0i32.to_be_bytes());
+                response.payload_hex = Some(to_hex(&raw));
+                return;
+            };
             raw[1..5].copy_from_slice(&new_id.to_be_bytes());
             if let Some(skill_id) = be_i32(&raw, 5) {
                 raw[5..9].copy_from_slice(&remap_skill_id(skill_id, old_tid, new_tid).to_be_bytes());
             }
+        }
+        20115 if raw.len() >= 17 => {
+            let Some(old_id) = be_i32(&raw, 0) else { return };
+            let Some((new_id, old_tid, new_tid)) = actor_map.get(&old_id).copied() else {
+                raw[..4].copy_from_slice(&0i32.to_be_bytes());
+                raw[4..8].copy_from_slice(&0i32.to_be_bytes());
+                response.payload_hex = Some(to_hex(&raw));
+                return;
+            };
+            let Some(skill_id) = be_i32(&raw, 4) else { return };
+            response.decoded = Some(json!({
+                "hero_id": new_id,
+                "skill_id": remap_skill_id(skill_id, old_tid, new_tid),
+                "result": raw[8] as i8,
+                "skill_soul": be_i16(&raw, 9).unwrap_or_default(),
+                "rage": be_i16(&raw, 11).unwrap_or_default(),
+                "sync_word": be_i32(&raw, 13).unwrap_or_default(),
+            }));
+            response.payload_hex = None;
+            return;
+        }
+        20129 if raw.len() >= 10 && raw[0] == 1 => {
+            let Some(old_id) = be_i32(&raw, 1) else { return };
+            let Some((new_id, _, new_tid)) = actor_map.get(&old_id).copied() else {
+                raw[1..5].copy_from_slice(&0i32.to_be_bytes());
+                raw[5..9].copy_from_slice(&0i32.to_be_bytes());
+                response.payload_hex = Some(to_hex(&raw));
+                return;
+            };
+            raw[1..5].copy_from_slice(&new_id.to_be_bytes());
+            raw[5..9].copy_from_slice(&new_tid.to_be_bytes());
         }
         _ => return,
     }
@@ -376,38 +487,107 @@ fn injected_actions(added: &[(i32, i32)], responses: &[TemplateResponse]) -> Vec
         .collect()
 }
 
+/// Captures show that a 20120 sync can carry an ordinary player action between
+/// a skill acknowledgement and the action that executes that skill. Only a
+/// 20104 action batch (or an action-bearing 20108 batch) consumes the queue.
+fn request_consumes_pending_skill(request_cmd: Option<u32>) -> bool {
+    matches!(request_cmd, Some(20104) | Some(20108))
+}
+
 /// Remap, encode and account for one server-response group.
 async fn encode_group(
     ctx: &Arc<Mutex<ConnectionContext>>,
     mut group: TemplateGroup,
+    request_cmd: Option<u32>,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    let (cursor, added, actor_map, pending_skill, suppress_attacker) = {
+    let (cursor, added, actor_map, active_heroes, suppress_attacker) = {
         let connection = ctx.lock().await;
         (
             connection.replay_cursor.clone(),
             connection.battle_added_heroes.clone(),
             connection.battle_actor_map.clone(),
-            connection.battle_pending_skills.front().copied(),
+            connection.battle_active_heroes.clone(),
             connection.formation_received && connection.battle_active_heroes.is_empty(),
         )
     };
-    let mut applied_pending_skill = false;
+    let active_ids: HashSet<i32> = active_heroes.iter().map(|(id, _, _)| *id).collect();
     for response in &mut group.responses {
         if !actor_map.is_empty() || suppress_attacker {
             remap_battle_response(response, &actor_map);
         }
-        if response.cmd != 20103 {
-            continue;
+    }
+
+    // A skill ack is the authoritative signal that a manual skill was
+    // accepted. Some captures deliver it in a later 20104/20120 response
+    // group rather than in the 20108 response to the original request.
+    // Collapse duplicate copies within a single captured group, but preserve
+    // separately acknowledged skills in timeline order.
+    let mut acknowledged_skills = Vec::new();
+    if !suppress_attacker {
+        for response in &group.responses {
+            if let Some(skill) = battle_skill_ack(response, &actor_map) {
+                if !acknowledged_skills.contains(&skill) {
+                    acknowledged_skills.push(skill);
+                }
+            }
         }
-        if let Some(skill) = pending_skill {
+    }
+    let pending_skill = {
+        let mut connection = ctx.lock().await;
+        for skill in acknowledged_skills {
+            if !connection.battle_pending_skills.contains(&skill) {
+                connection.battle_pending_skills.push_back(skill);
+            }
+        }
+        if request_consumes_pending_skill(request_cmd) {
+            connection.battle_pending_skills.front().copied()
+        } else {
+            None
+        }
+    };
+
+    // A queued manual skill applies to the next player-side action only, not
+    // every player action that may happen to share a server-response group.
+    let mut applied_pending_skill = false;
+    if let Some(skill) = pending_skill {
+        for response in &mut group.responses {
+            if response.cmd != 20103 || applied_pending_skill {
+                continue;
+            }
+            let is_player_action = response
+                .decoded
+                .as_ref()
+                .and_then(|decoded| decoded.get("side"))
+                .and_then(Value::as_i64)
+                == Some(1)
+                || response
+                    .payload_hex
+                    .as_deref()
+                    .and_then(decode_payload_hex)
+                    .and_then(|raw| raw.first().copied())
+                    == Some(1);
+            let actor_id = response
+                .decoded
+                .as_ref()
+                .and_then(|decoded| decoded.get("hero_id"))
+                .and_then(Value::as_i64)
+                .map(|id| id as i32)
+                .or_else(|| {
+                    response
+                        .payload_hex
+                        .as_deref()
+                        .and_then(decode_payload_hex)
+                        .and_then(|raw| be_i32(&raw, 1))
+                });
+            if !is_player_action || !actor_id.is_some_and(|id| active_ids.contains(&id)) {
+                continue;
+            }
             if let Some(decoded) = response.decoded.as_mut() {
-                if decoded.get("side").and_then(Value::as_i64) == Some(1) {
-                    if let Some(object) = decoded.as_object_mut() {
-                        object.insert("hero_id".to_owned(), json!(skill.hero_id));
-                        object.insert("skill_id".to_owned(), json!(skill.skill_id));
-                        response.payload_hex = None;
-                        applied_pending_skill = true;
-                    }
+                if let Some(object) = decoded.as_object_mut() {
+                    object.insert("hero_id".to_owned(), json!(skill.hero_id));
+                    object.insert("skill_id".to_owned(), json!(skill.skill_id));
+                    response.payload_hex = None;
+                    applied_pending_skill = true;
                 }
             } else if let Some(mut raw) =
                 response.payload_hex.as_deref().and_then(decode_payload_hex)
@@ -420,6 +600,89 @@ async fn encode_group(
                 }
             }
         }
+    }
+    if !active_heroes.is_empty() {
+        group.responses.retain(|response| match response.cmd {
+            20103 => {
+                let side = response
+                    .decoded
+                    .as_ref()
+                    .and_then(|decoded| decoded.get("side"))
+                    .and_then(Value::as_i64)
+                    .or_else(|| {
+                        response
+                            .payload_hex
+                            .as_deref()
+                            .and_then(decode_payload_hex)
+                            .and_then(|raw| raw.first().copied())
+                            .map(i64::from)
+                    });
+                if side != Some(1) {
+                    return true;
+                }
+                let hero_id = response
+                    .decoded
+                    .as_ref()
+                    .and_then(|decoded| decoded.get("hero_id"))
+                    .and_then(Value::as_i64)
+                    .map(|id| id as i32)
+                    .or_else(|| {
+                        response
+                            .payload_hex
+                            .as_deref()
+                            .and_then(decode_payload_hex)
+                            .and_then(|raw| be_i32(&raw, 1))
+                    });
+                hero_id.is_some_and(|id| active_ids.contains(&id))
+            }
+            20129 => {
+                let side = response
+                    .decoded
+                    .as_ref()
+                    .and_then(|decoded| decoded.get("hero_side"))
+                    .and_then(Value::as_i64)
+                    .or_else(|| {
+                        response
+                            .payload_hex
+                            .as_deref()
+                            .and_then(decode_payload_hex)
+                            .and_then(|raw| raw.first().copied())
+                            .map(i64::from)
+                    });
+                if side != Some(1) {
+                    return true;
+                }
+                response
+                    .decoded
+                    .as_ref()
+                    .and_then(|decoded| decoded.get("hero_id"))
+                    .and_then(Value::as_i64)
+                    .map(|id| id as i32)
+                    .or_else(|| {
+                        response
+                            .payload_hex
+                            .as_deref()
+                            .and_then(decode_payload_hex)
+                            .and_then(|raw| be_i32(&raw, 1))
+                    })
+                    .is_some_and(|id| active_ids.contains(&id))
+            }
+            20115 => response
+                .decoded
+                .as_ref()
+                .and_then(|decoded| decoded.get("hero_id"))
+                .and_then(Value::as_i64)
+                .map(|id| active_ids.contains(&(id as i32)))
+                .unwrap_or_else(|| {
+                    response
+                        .payload_hex
+                        .as_deref()
+                        .and_then(decode_payload_hex)
+                        .and_then(|raw| be_i32(&raw, 0))
+                        .is_some_and(|id| active_ids.contains(&id))
+                }),
+            _ => true,
+        });
     }
     if suppress_attacker {
         group.responses.retain(|response| match response.cmd {
@@ -476,7 +739,7 @@ async fn encode_step(
     ctx: &Arc<Mutex<ConnectionContext>>,
     step: &BattleStep,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    encode_group(ctx, step.as_group()).await
+    encode_group(ctx, step.as_group(), Some(step.request_cmd)).await
 }
 
 /// Pick the next unconsumed step the requester may consume.
@@ -610,7 +873,7 @@ pub async fn handle_battle_field_enter(
         connection.battle_added_heroes = roster.added_heroes;
     }
 
-    encode_group(&ctx, group).await
+    encode_group(&ctx, group, None).await
 }
 
 /// Legacy entry path for captures without per-battle session files.
@@ -666,7 +929,7 @@ async fn handle_legacy_field_enter(
         battle_field_id = %request.battle_field_id,
         "Battle field entered"
     );
-    encode_group(&ctx, group).await
+    encode_group(&ctx, group, None).await
 }
 
 /// Handle CS_BATTLE_START (20102): the real server sent no reply.
@@ -726,7 +989,7 @@ pub async fn handle_battle_auto(
     }
 
     info!(is_auto = request.is_auto, "Auto-battle requested");
-    encode_group(&ctx, group.clone()).await
+    encode_group(&ctx, group.clone(), Some(20113)).await
 }
 
 /// Handle CS_BATTLE_VIDEO_END (20104): feed the next scripted action batch.
@@ -794,14 +1057,14 @@ async fn handle_legacy_video_end(
         script.group(index).cloned().unwrap_or_default()
     };
 
-    encode_group(&ctx, group).await
+    encode_group(&ctx, group, Some(20104)).await
 }
 
 /// Handle CS_BATTLE_USE_SKILL (20108): replay the recorded skill batch.
 ///
 /// Manual battles interleave skill batches with action batches; each recorded
-/// batch is consumed once, in capture order.  Outside a recorded manual
-/// battle the real server replied with nothing.
+/// batch is consumed once in capture order. Captured empty responses stay empty,
+/// while requests with no captured step receive a synthesized acknowledgement.
 pub async fn handle_battle_use_skill(
     ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_BATTLE_USE_SKILL,
@@ -810,27 +1073,28 @@ pub async fn handle_battle_use_skill(
         return Ok(Vec::new());
     }
     let (hero_id, tid, sync_word) = {
-        let mut connection = ctx.lock().await;
+        let connection = ctx.lock().await;
         let selected = connection
             .battle_active_heroes
             .iter()
-            .find(|(_, hero_tid, _)| request.skill_id / 100 == *hero_tid)
+            .find(|(_, hero_tid, _)| {
+                request.skill_id == *hero_tid || request.skill_id / 100 == *hero_tid
+            })
             .or_else(|| connection.battle_active_heroes.first());
         let (hero_id, tid) = selected
             .map(|(hero_id, tid, _)| (*hero_id, *tid))
             .unwrap_or_default();
-        if hero_id != 0 {
-            connection.battle_pending_skills.push_back(BattlePendingSkill {
-                hero_id,
-                skill_id: request.skill_id,
-            });
-        }
         (hero_id, tid, connection.battle_sync_word)
     };
+    let requested_skill = (hero_id != 0).then_some(BattlePendingSkill {
+        hero_id,
+        skill_id: request.skill_id,
+    });
 
     if let Some(mut step) = take_step(&ctx, 20108).await {
+        let has_skill_ack = step.responses.iter().any(|response| response.cmd == 20115);
         for response in &mut step.responses {
-            if response.cmd != 20115 {
+            if battle_skill_ack(response, &HashMap::new()).is_none() {
                 continue;
             }
             if let Some(object) = response.decoded.as_mut().and_then(Value::as_object_mut) {
@@ -838,11 +1102,39 @@ pub async fn handle_battle_use_skill(
                 object.insert("skill_id".to_owned(), json!(request.skill_id));
                 response.payload_hex = None;
             } else if let Some(mut raw) = response.payload_hex.as_deref().and_then(decode_payload_hex) {
-                if raw.len() >= 8 {
+                if raw.len() >= 17 {
                     raw[..4].copy_from_slice(&hero_id.to_be_bytes());
                     raw[4..8].copy_from_slice(&request.skill_id.to_be_bytes());
-                    response.payload_hex = Some(to_hex(&raw));
+                    response.decoded = Some(json!({
+                        "hero_id": hero_id,
+                        "skill_id": request.skill_id,
+                        "result": raw[8] as i8,
+                        "skill_soul": be_i16(&raw, 9).unwrap_or_default(),
+                        "rage": be_i16(&raw, 11).unwrap_or_default(),
+                        "sync_word": be_i32(&raw, 13).unwrap_or_default(),
+                    }));
+                    response.payload_hex = None;
                 }
+            }
+        }
+        let contains_player_action = step.responses.iter().any(|response| {
+            response.cmd == 20103
+                && (response
+                    .decoded
+                    .as_ref()
+                    .and_then(|decoded| decoded.get("side"))
+                    .and_then(Value::as_i64)
+                    == Some(1)
+                    || response
+                        .payload_hex
+                        .as_deref()
+                        .and_then(decode_payload_hex)
+                        .and_then(|raw| raw.first().copied())
+                        == Some(1))
+        });
+        if !has_skill_ack && contains_player_action {
+            if let Some(skill) = requested_skill {
+                ctx.lock().await.battle_pending_skills.push_back(skill);
             }
         }
         return encode_step(&ctx, &step).await;
@@ -851,6 +1143,9 @@ pub async fn handle_battle_use_skill(
     // A manual client needs an acknowledgement even when its battle was not
     // captured in manual mode. Queue the chosen skill for the next player
     // action batch so the scripted action actually uses it.
+    if let Some(skill) = requested_skill {
+        ctx.lock().await.battle_pending_skills.push_back(skill);
+    }
     info!(
         hero_id,
         tid,
@@ -955,6 +1250,7 @@ fn deployed_heroes(
     team.map(|team| {
         team.formation_hero_list
             .iter()
+            .filter(|hero| hero.pos > 0 && hero.hero_id != 0 && hero.tid != 0)
             .map(|hero| (hero.hero_id, hero.tid, hero.pos))
             .collect()
     })
@@ -1046,16 +1342,6 @@ fn to_hex(bytes: &[u8]) -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
-/// Rewrite the attacker hero list inside a raw `SC_BATTLE_FIELD_INFO` (20101)
-/// payload so the battle spawns the heroes the client deployed.
-///
-/// The live wire format of `pt_battle_hero` carries one more trailing i16
-/// than the message schema knows about, so the payload cannot be re-encoded
-/// through the struct.  The attacker hero section is therefore rebuilt with
-/// byte surgery: recorded entries are reused for heroes that stay deployed,
-/// freshly recruited heroes clone the first recorded entry into a free grid
-/// cell, and benched recorded heroes are appended at the end so the recorded
-/// action batches keep referencing heroes the client knows about.
 fn count_at(raw: &[u8], offset: usize) -> Option<usize> {
     let count = be_i16(raw, offset)?;
     if count < 0 || count > 4096 {
@@ -1110,17 +1396,28 @@ fn build_actor_map(
     if deployed.is_empty() {
         return actor_map;
     }
-    for (index, (old_id, old_tid, _)) in recorded.iter().enumerate() {
+
+    // Reserve exact hero-id matches first so an earlier fallback match cannot
+    // steal a selected hero from its own captured actor.
+    for (old_id, old_tid, _) in recorded {
+        if let Some((new_id, new_tid, _)) = deployed.iter().find(|hero| hero.0 == *old_id) {
+            if assigned.insert(*new_id) {
+                actor_map.insert(*old_id, (*new_id, *old_tid, *new_tid));
+            }
+        }
+    }
+
+    // Next preserve hero identity by tid, then pair remaining recorded actors
+    // with remaining deployed slots. Excess captured actors stay unmapped and
+    // are filtered from actions, orders and trigger responses.
+    for (old_id, old_tid, _) in recorded {
+        if actor_map.contains_key(old_id) {
+            continue;
+        }
         let target = deployed
             .iter()
-            .find(|hero| hero.0 == *old_id)
-            .or_else(|| {
-                deployed
-                    .iter()
-                    .find(|hero| hero.1 == *old_tid && !assigned.contains(&hero.0))
-            })
-            .or_else(|| deployed.iter().find(|hero| !assigned.contains(&hero.0)))
-            .or_else(|| deployed.get(index % deployed.len()));
+            .find(|hero| hero.1 == *old_tid && !assigned.contains(&hero.0))
+            .or_else(|| deployed.iter().find(|hero| !assigned.contains(&hero.0)));
         if let Some((new_id, new_tid, _)) = target {
             actor_map.insert(*old_id, (*new_id, *old_tid, *new_tid));
             assigned.insert(*new_id);
@@ -1135,10 +1432,9 @@ struct FormationPatch {
     added_heroes: Vec<(i32, i32)>,
 }
 
-/// Rebuild the attacker roster in an SC_BATTLE_FIELD_INFO raw payload. Unlike
-/// the old behavior, captured bench heroes are removed rather than appended.
-/// Their captured actor IDs are redirected to the client's ready formation in
-/// subsequent actions and result messages.
+/// Rebuild the attacker roster in an SC_BATTLE_FIELD_INFO raw payload. Captured
+/// heroes outside the selected deployment are removed, and only one-to-one
+/// actor mappings are retained for subsequent actions and result messages.
 fn patch_field_info_heroes(
     raw: &[u8],
     deployed: &[(i32, i32, i8)],
@@ -1354,6 +1650,7 @@ mod tests {
                 "target_id": 8,
                 "target_list": [
                     {"side": 1, "hero_id": 8, "effect_list": []},
+                    {"side": 1, "hero_id": 99, "effect_list": []},
                     {"side": 2, "hero_id": 99, "effect_list": []}
                 ],
                 "hero_list": [],
@@ -1371,8 +1668,11 @@ mod tests {
         let decoded = response.decoded.unwrap();
         assert_eq!(decoded["hero_id"], 42);
         assert_eq!(decoded["skill_id"], 100601);
+        assert_eq!(remap_skill_id(1305, 1305, 1006), 1006);
         assert_eq!(decoded["target_id"], 43);
+        assert_eq!(decoded["target_list"].as_array().unwrap().len(), 2);
         assert_eq!(decoded["target_list"][0]["hero_id"], 43);
+        assert_eq!(decoded["target_list"][1]["side"], 2);
         assert_eq!(decoded["target_list"][1]["hero_id"], 99);
         assert_eq!(decoded["result_list"][0]["hero_list"][0]["hero_id"], 42);
         assert!(response.payload_hex.is_none());
@@ -1435,6 +1735,98 @@ mod tests {
     }
 
     #[test]
+    fn battle_order_entries_follow_the_selected_roster_without_duplicates() {
+        let actor_map = HashMap::from([
+            (7, (42, 1305, 1006)),
+            (8, (42, 1110, 1006)),
+            (9, (43, 1006, 1206)),
+        ]);
+        let mut order = json!([
+            {"key": 1, "value": 7},
+            {"key": 1, "value": 8},
+            {"key": 1, "value": 9},
+            {"key": 1, "value": 99},
+            {"key": 2, "value": 99}
+        ]);
+
+        remap_order_list(&mut order, &actor_map);
+        assert_eq!(order, json!([
+            {"key": 1, "value": 42},
+            {"key": 1, "value": 43},
+            {"key": 2, "value": 99}
+        ]));
+    }
+
+    #[test]
+    fn manual_skill_queue_waits_for_action_batches_not_sync_or_auto_toggles() {
+        assert!(request_consumes_pending_skill(Some(20104)));
+        assert!(request_consumes_pending_skill(Some(20108)));
+        assert!(!request_consumes_pending_skill(Some(20120)));
+        assert!(!request_consumes_pending_skill(Some(20113)));
+        assert!(!request_consumes_pending_skill(None));
+    }
+
+    #[test]
+    fn manual_skill_ack_uses_the_selected_actor_and_skill() {
+        let actor_map = HashMap::from([(7, (42, 1305, 1006))]);
+        let mut response = TemplateResponse {
+            cmd: 20115,
+            decoded: Some(json!({
+                "hero_id": 7,
+                "skill_id": 130501,
+                "result": 1,
+                "skill_soul": 0,
+                "rage": 10000,
+                "sync_word": 123
+            })),
+            payload_hex: Some("deadbeef".to_owned()),
+        };
+
+        remap_battle_response(&mut response, &actor_map);
+        assert_eq!(response.decoded.as_ref().unwrap()["hero_id"], 42);
+        assert_eq!(response.decoded.as_ref().unwrap()["skill_id"], 100601);
+        assert!(response.payload_hex.is_none());
+        assert_eq!(
+            battle_skill_ack(&response, &actor_map),
+            Some(BattlePendingSkill {
+                hero_id: 42,
+                skill_id: 100601
+            })
+        );
+
+        let failed = TemplateResponse {
+            cmd: 20115,
+            decoded: Some(json!({
+                "hero_id": 42,
+                "skill_id": 100601,
+                "result": 0
+            })),
+            payload_hex: None,
+        };
+        assert_eq!(battle_skill_ack(&failed, &actor_map), None);
+    }
+
+    #[test]
+    fn order_change_trigger_uses_the_selected_hero() {
+        let actor_map = HashMap::from([(7, (42, 1305, 1006))]);
+        let mut response = TemplateResponse {
+            cmd: 20129,
+            decoded: Some(json!({
+                "hero_side": 1,
+                "hero_id": 7,
+                "hero_tid": 1305,
+                "hero_type": 1
+            })),
+            payload_hex: Some("deadbeef".to_owned()),
+        };
+
+        remap_battle_response(&mut response, &actor_map);
+        assert_eq!(response.decoded.as_ref().unwrap()["hero_id"], 42);
+        assert_eq!(response.decoded.as_ref().unwrap()["hero_tid"], 1006);
+        assert!(response.payload_hex.is_none());
+    }
+
+    #[test]
     fn attacker_trigger_heroes_are_not_reintroduced_after_field_entry() {
         let mut actor_map = HashMap::new();
         actor_map.insert(7, (42, 1305, 1006));
@@ -1457,8 +1849,8 @@ mod tests {
 
     #[test]
     fn selected_ready_team_wins_over_the_captured_team() {
-        let hero = |hero_id, tid| crate::messages::pt_formation_hero_info {
-            pos: 1,
+        let hero = |hero_id, tid, pos| crate::messages::pt_formation_hero_info {
+            pos,
             is_captain: 1,
             hero_id,
             tid,
@@ -1470,7 +1862,7 @@ mod tests {
                 formation_id: 1,
                 is_ready: 1,
                 name: "capture team".to_owned(),
-                formation_hero_list: vec![hero(7, 1110)],
+                formation_hero_list: vec![hero(7, 1110, 1)],
                 assist_fight_list: Vec::new(),
                 pet_id: 0,
             },
@@ -1479,12 +1871,35 @@ mod tests {
                 formation_id: 2,
                 is_ready: 0,
                 name: "selected team".to_owned(),
-                formation_hero_list: vec![hero(42, 1006)],
+                formation_hero_list: vec![hero(42, 1006, 1), hero(99, 1206, 0)],
                 assist_fight_list: Vec::new(),
                 pet_id: 0,
             },
         ];
         assert_eq!(deployed_heroes(&formation, Some(1002)), vec![(42, 1006, 1)]);
+    }
+
+    #[test]
+    fn actor_map_reserves_exact_matches_and_does_not_reuse_deployed_heroes() {
+        let recorded = vec![
+            (1, 1110, Vec::new()),
+            (42, 1305, Vec::new()),
+            (3, 1206, Vec::new()),
+        ];
+        let deployed = [(42, 1006, 1), (9, 1006, 2)];
+
+        let actor_map = build_actor_map(&recorded, &deployed);
+        assert_eq!(actor_map.get(&42), Some(&(42, 1305, 1006)));
+        assert_eq!(actor_map.get(&1), Some(&(9, 1110, 1006)));
+        assert!(!actor_map.contains_key(&3));
+        assert_eq!(
+            actor_map
+                .values()
+                .map(|mapped| mapped.0)
+                .collect::<HashSet<_>>()
+                .len(),
+            2
+        );
     }
 
     #[test]
@@ -1504,6 +1919,6 @@ mod tests {
         assert_eq!(decoded.hero_order[1].key, 2);
         assert_eq!(decoded.hero_order[1].value, 99);
         assert_eq!(roster.actor_map.get(&7), Some(&(42, 1110, 1006)));
-        assert_eq!(roster.actor_map.get(&8), Some(&(42, 1305, 1006)));
+        assert!(!roster.actor_map.contains_key(&8));
     }
 }

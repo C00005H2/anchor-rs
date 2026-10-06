@@ -69,8 +69,8 @@ pub struct ConnectionContext {
     /// action batches); they get cloned attack actions so they participate.
     pub battle_added_heroes: Vec<(i32, i32)>,
     /// Recorded attacker hero id -> (deployed id, recorded tid, deployed tid).
-    /// The battle replayer uses this to adapt captured actions to the player's
-    /// currently selected formation instead of leaving benched units on field.
+    /// Only one-to-one mappings survive; excess captured actors are filtered
+    /// so the selected formation is the only attacker roster.
     pub battle_actor_map: HashMap<i32, (i32, i32, i32)>,
     /// The actual attacker lineup used by the current battle: (id, tid, slot).
     pub battle_active_heroes: Vec<(i32, i32, i8)>,
