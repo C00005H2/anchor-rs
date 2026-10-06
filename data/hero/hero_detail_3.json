@@ -1,0 +1,26 @@
+{
+  "id": 3,
+  "hero_info": {
+    "id": 3,
+    "tid": 0,
+    "level": 0,
+    "exp": 0,
+    "exp_max": 0,
+    "military_rank": 0,
+    "evolution": 0,
+    "power": 0,
+    "is_lock": 0,
+    "is_like": 0,
+    "color": 0,
+    "relation_level": 0,
+    "relation_exp": 0,
+    "increases_lv": 0,
+    "equip_list": [],
+    "attr_list": [],
+    "equip_attr_list": [],
+    "active_skill_list": [],
+    "passive_skill_list": [],
+    "fight_skill_list": [],
+    "resonance_id_list": []
+  }
+}

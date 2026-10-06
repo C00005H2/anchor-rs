@@ -1,0 +1,84 @@
+{
+  "rewards": [
+    {
+      "id": 2,
+      "award_list": [
+        {
+          "break_add_attr": [],
+          "color": 4,
+          "count": 2,
+          "expiredOddTime": 0,
+          "expiredTime": 0,
+          "refine_lv": 0,
+          "skill_effect": [],
+          "tid": 2022,
+          "total_attr": []
+        },
+        {
+          "break_add_attr": [],
+          "color": 3,
+          "count": 10,
+          "expiredOddTime": 0,
+          "expiredTime": 0,
+          "refine_lv": 0,
+          "skill_effect": [],
+          "tid": 2012,
+          "total_attr": []
+        }
+      ],
+      "bag_items": [
+        {
+          "bracelet_remake_attr": [],
+          "breakup_rank": 0,
+          "color": 3,
+          "count": 18,
+          "createdTime": 1791239665,
+          "empower_slot_info": [],
+          "expiredTime": 0,
+          "filter_base_attr": [],
+          "filter_subjoin_attr": [],
+          "hero_id": 0,
+          "id": 601,
+          "is_lock": 0,
+          "refine_lv": 0,
+          "remake_attr": [],
+          "strength_exp": 0,
+          "strength_lv": 0,
+          "tid": 2012
+        },
+        {
+          "bracelet_remake_attr": [],
+          "breakup_rank": 0,
+          "color": 4,
+          "count": 12,
+          "createdTime": 1791239604,
+          "empower_slot_info": [],
+          "expiredTime": 0,
+          "filter_base_attr": [],
+          "filter_subjoin_attr": [],
+          "hero_id": 0,
+          "id": 501,
+          "is_lock": 0,
+          "refine_lv": 0,
+          "remake_attr": [],
+          "strength_exp": 0,
+          "strength_lv": 0,
+          "tid": 2022
+        }
+      ],
+      "attr_list": [],
+      "attr_delta": [],
+      "unread": [
+        {
+          "type": 210,
+          "id_list": []
+        },
+        {
+          "type": 210,
+          "id_list": []
+        }
+      ]
+    }
+  ],
+  "recruit_times": 1
+}

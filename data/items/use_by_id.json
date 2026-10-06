@@ -1,0 +1,240 @@
+{
+  "groups": [
+    {
+      "request": {
+        "id": 701
+      },
+      "responses": [
+        {
+          "cmd": 12051,
+          "payload_hex": "000001770000000000000000000a",
+          "decoded": {
+            "all_add_time": 0,
+            "buy_times": 0,
+            "max_buy_times": 10,
+            "next_add_time": 0,
+            "stamina": 375
+          }
+        },
+        {
+          "cmd": 10058,
+          "payload_hex": "000000d300000001",
+          "decoded": {
+            "id": 1,
+            "type": 211
+          }
+        },
+        {
+          "cmd": 10058,
+          "payload_hex": "000000d200000899",
+          "decoded": {
+            "id": 2201,
+            "type": 210
+          }
+        },
+        {
+          "cmd": 17001,
+          "payload_hex": "010001000002bd00000899000000096ac425f50000000003000000000000000000000000000000000000000000000000000000000000000000",
+          "decoded": {
+            "delList": [],
+            "type": 1,
+            "updateList": [
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 3,
+                "count": 9,
+                "createdTime": 1791239669,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 701,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 2201
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "request": {
+        "id": 701
+      },
+      "responses": [
+        {
+          "cmd": 12051,
+          "payload_hex": "000001950000000000000000000a",
+          "decoded": {
+            "all_add_time": 0,
+            "buy_times": 0,
+            "max_buy_times": 10,
+            "next_add_time": 0,
+            "stamina": 405
+          }
+        },
+        {
+          "cmd": 10058,
+          "payload_hex": "000000d300000001",
+          "decoded": {
+            "id": 1,
+            "type": 211
+          }
+        },
+        {
+          "cmd": 10058,
+          "payload_hex": "000000d200000899",
+          "decoded": {
+            "id": 2201,
+            "type": 210
+          }
+        },
+        {
+          "cmd": 17001,
+          "payload_hex": "010001000002bd00000899000000086ac425f50000000003000000000000000000000000000000000000000000000000000000000000000000",
+          "decoded": {
+            "delList": [],
+            "type": 1,
+            "updateList": [
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 3,
+                "count": 8,
+                "createdTime": 1791239669,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 701,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 2201
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "request": {
+        "id": 801
+      },
+      "responses": [
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d2000100002b66",
+          "decoded": {
+            "id_list": [
+              11110
+            ],
+            "type": 210
+          }
+        },
+        {
+          "cmd": 17001,
+          "payload_hex": "0100010000038500002b66000000016ac4c63c0000000002000000000000000000000000000000000000000000000000000000000000000000",
+          "decoded": {
+            "delList": [],
+            "type": 1,
+            "updateList": [
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 2,
+                "count": 1,
+                "createdTime": 1791280700,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 901,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 11110
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 17013,
+          "payload_hex": "000100002b660000000102000000000000000000000000000000000000",
+          "decoded": {
+            "award_list": [
+              {
+                "break_add_attr": [],
+                "color": 2,
+                "count": 1,
+                "expiredOddTime": 0,
+                "expiredTime": 0,
+                "refine_lv": 0,
+                "skill_effect": [],
+                "tid": 11110,
+                "total_attr": []
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 10058,
+          "payload_hex": "000000d300000001",
+          "decoded": {
+            "id": 1,
+            "type": 211
+          }
+        },
+        {
+          "cmd": 10058,
+          "payload_hex": "000000d200002ced",
+          "decoded": {
+            "id": 11501,
+            "type": 210
+          }
+        },
+        {
+          "cmd": 17001,
+          "payload_hex": "0100010000032100002ced000000036ac4bbe60000000002000000000000000000000000000000000000000000000000000000000000000000",
+          "decoded": {
+            "delList": [],
+            "type": 1,
+            "updateList": [
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 2,
+                "count": 3,
+                "createdTime": 1791278054,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 801,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 11501
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

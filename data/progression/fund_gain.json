@@ -1,0 +1,50 @@
+{
+  "groups": [
+    {
+      "responses": [
+        {
+          "cmd": 12003,
+          "payload_hex": "000102640000000000011d28",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 612,
+                "value": "73000"
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 17013,
+          "payload_hex": "0001000000010000271002000000000000000000000000000000000000",
+          "decoded": {
+            "award_list": [
+              {
+                "break_add_attr": [],
+                "color": 2,
+                "count": 10000,
+                "expiredOddTime": 0,
+                "expiredTime": 0,
+                "refine_lv": 0,
+                "skill_effect": [],
+                "tid": 1,
+                "total_attr": []
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 24206,
+          "payload_hex": "00010001000000",
+          "decoded": {
+            "gained_primary_fund_list": [
+              1
+            ],
+            "gained_senior_fund_list": [],
+            "whether_unlock_senior_fund": 0
+          }
+        }
+      ]
+    }
+  ]
+}

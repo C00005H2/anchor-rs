@@ -1,0 +1,53 @@
+{
+  "open_day": 2,
+  "end_time": 2072944800,
+  "days": [
+    {
+      "day": 2,
+      "award_list": [
+        {
+          "break_add_attr": [],
+          "color": 4,
+          "count": 10,
+          "expiredOddTime": 0,
+          "expiredTime": 0,
+          "refine_lv": 0,
+          "skill_effect": [],
+          "tid": 2023,
+          "total_attr": []
+        }
+      ],
+      "bag_items": [
+        {
+          "bracelet_remake_attr": [],
+          "breakup_rank": 0,
+          "color": 4,
+          "count": 10,
+          "createdTime": 1791280915,
+          "empower_slot_info": [],
+          "expiredTime": 0,
+          "filter_base_attr": [],
+          "filter_subjoin_attr": [],
+          "hero_id": 0,
+          "id": 1001,
+          "is_lock": 0,
+          "refine_lv": 0,
+          "remake_attr": [],
+          "strength_exp": 0,
+          "strength_lv": 0,
+          "tid": 2023
+        }
+      ],
+      "attr_list": [],
+      "attr_delta": [],
+      "unread": [
+        {
+          "type": 210,
+          "id_list": [
+            2023
+          ]
+        }
+      ]
+    }
+  ]
+}

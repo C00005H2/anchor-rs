@@ -1,0 +1,102 @@
+{
+  "tasks": [
+    {
+      "id": 3,
+      "award_list": [
+        {
+          "break_add_attr": [],
+          "color": 2,
+          "count": 20000,
+          "expiredOddTime": 0,
+          "expiredTime": 0,
+          "refine_lv": 0,
+          "skill_effect": [],
+          "tid": 1,
+          "total_attr": []
+        },
+        {
+          "break_add_attr": [],
+          "color": 4,
+          "count": 4,
+          "expiredOddTime": 0,
+          "expiredTime": 0,
+          "refine_lv": 0,
+          "skill_effect": [],
+          "tid": 2013,
+          "total_attr": []
+        }
+      ],
+      "bag_items": [
+        {
+          "bracelet_remake_attr": [],
+          "breakup_rank": 0,
+          "color": 4,
+          "count": 30,
+          "createdTime": 1791236732,
+          "empower_slot_info": [],
+          "expiredTime": 0,
+          "filter_base_attr": [],
+          "filter_subjoin_attr": [],
+          "hero_id": 0,
+          "id": 401,
+          "is_lock": 0,
+          "refine_lv": 0,
+          "remake_attr": [],
+          "strength_exp": 0,
+          "strength_lv": 0,
+          "tid": 2013
+        }
+      ],
+      "attr_list": [
+        {
+          "key": 612,
+          "value": "106200"
+        }
+      ],
+      "attr_delta": [
+        {
+          "key": 612,
+          "value": "20000"
+        }
+      ],
+      "unread": [
+        {
+          "type": 210,
+          "id_list": []
+        }
+      ]
+    }
+  ],
+  "panel": {
+    "is_received_all": 0,
+    "step": 1,
+    "task_list": [
+      {
+        "count": 0,
+        "id": 5,
+        "state": 1
+      },
+      {
+        "count": 0,
+        "id": 4,
+        "state": 1
+      },
+      {
+        "count": 10,
+        "id": 3,
+        "state": 0
+      },
+      {
+        "count": 10,
+        "id": 2,
+        "state": 1
+      },
+      {
+        "count": 1,
+        "id": 1,
+        "state": 2
+      }
+    ]
+  },
+  "recruit_times": 1
+}

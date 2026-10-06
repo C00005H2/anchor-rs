@@ -1,0 +1,267 @@
+{
+  "groups": [
+    {
+      "responses": [
+        {
+          "cmd": 10058,
+          "payload_hex": "000000d2000007e6",
+          "decoded": {
+            "id": 2022,
+            "type": 210
+          }
+        },
+        {
+          "cmd": 17001,
+          "payload_hex": "010001000001f5000007e60000000a6ac425b40000000004000000000000000000000000000000000000000000000000000000000000000000",
+          "decoded": {
+            "delList": [],
+            "type": 1,
+            "updateList": [
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 4,
+                "count": 10,
+                "createdTime": 1791239604,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 501,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 2022
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 13293,
+          "payload_hex": "01000a000004b50000000005160000000005180000000004b80000000004b50001000006a90000000502000000000000000000000000000000000000000004b50001000006a90000000502000000000000000000000000000000000000000004580000000004b50001000006a90000000502000000000000000000000000000000000000000003f500000000051600010000070a0000000502000000000000000000000000000000000000",
+          "decoded": {
+            "item_list": [
+              {
+                "item_list": [],
+                "tid": 1205
+              },
+              {
+                "item_list": [],
+                "tid": 1302
+              },
+              {
+                "item_list": [],
+                "tid": 1304
+              },
+              {
+                "item_list": [],
+                "tid": 1208
+              },
+              {
+                "item_list": [
+                  {
+                    "break_add_attr": [],
+                    "color": 2,
+                    "count": 5,
+                    "expiredOddTime": 0,
+                    "expiredTime": 0,
+                    "refine_lv": 0,
+                    "skill_effect": [],
+                    "tid": 1705,
+                    "total_attr": []
+                  }
+                ],
+                "tid": 1205
+              },
+              {
+                "item_list": [
+                  {
+                    "break_add_attr": [],
+                    "color": 2,
+                    "count": 5,
+                    "expiredOddTime": 0,
+                    "expiredTime": 0,
+                    "refine_lv": 0,
+                    "skill_effect": [],
+                    "tid": 1705,
+                    "total_attr": []
+                  }
+                ],
+                "tid": 1205
+              },
+              {
+                "item_list": [],
+                "tid": 1112
+              },
+              {
+                "item_list": [
+                  {
+                    "break_add_attr": [],
+                    "color": 2,
+                    "count": 5,
+                    "expiredOddTime": 0,
+                    "expiredTime": 0,
+                    "refine_lv": 0,
+                    "skill_effect": [],
+                    "tid": 1705,
+                    "total_attr": []
+                  }
+                ],
+                "tid": 1205
+              },
+              {
+                "item_list": [],
+                "tid": 1013
+              },
+              {
+                "item_list": [
+                  {
+                    "break_add_attr": [],
+                    "color": 2,
+                    "count": 5,
+                    "expiredOddTime": 0,
+                    "expiredTime": 0,
+                    "refine_lv": 0,
+                    "skill_effect": [],
+                    "tid": 1802,
+                    "total_attr": []
+                  }
+                ],
+                "tid": 1302
+              }
+            ],
+            "result": 1
+          }
+        }
+      ]
+    },
+    {
+      "responses": [
+        {
+          "cmd": 13293,
+          "payload_hex": "01000a000004b50000000004b60000000003ee0000000004b80000000004b50001000006a90000000502000000000000000000000000000000000000000004b80001000006ac0000000502000000000000000000000000000000000000000004b50001000006a90000000502000000000000000000000000000000000000000004b80001000006ac0000000502000000000000000000000000000000000000000004b80001000006ac00000005020000000000000000000000000000000000000000051900010000070d0000000502000000000000000000000000000000000000",
+          "decoded": {
+            "item_list": [
+              {
+                "item_list": [],
+                "tid": 1205
+              },
+              {
+                "item_list": [],
+                "tid": 1206
+              },
+              {
+                "item_list": [],
+                "tid": 1006
+              },
+              {
+                "item_list": [],
+                "tid": 1208
+              },
+              {
+                "item_list": [
+                  {
+                    "break_add_attr": [],
+                    "color": 2,
+                    "count": 5,
+                    "expiredOddTime": 0,
+                    "expiredTime": 0,
+                    "refine_lv": 0,
+                    "skill_effect": [],
+                    "tid": 1705,
+                    "total_attr": []
+                  }
+                ],
+                "tid": 1205
+              },
+              {
+                "item_list": [
+                  {
+                    "break_add_attr": [],
+                    "color": 2,
+                    "count": 5,
+                    "expiredOddTime": 0,
+                    "expiredTime": 0,
+                    "refine_lv": 0,
+                    "skill_effect": [],
+                    "tid": 1708,
+                    "total_attr": []
+                  }
+                ],
+                "tid": 1208
+              },
+              {
+                "item_list": [
+                  {
+                    "break_add_attr": [],
+                    "color": 2,
+                    "count": 5,
+                    "expiredOddTime": 0,
+                    "expiredTime": 0,
+                    "refine_lv": 0,
+                    "skill_effect": [],
+                    "tid": 1705,
+                    "total_attr": []
+                  }
+                ],
+                "tid": 1205
+              },
+              {
+                "item_list": [
+                  {
+                    "break_add_attr": [],
+                    "color": 2,
+                    "count": 5,
+                    "expiredOddTime": 0,
+                    "expiredTime": 0,
+                    "refine_lv": 0,
+                    "skill_effect": [],
+                    "tid": 1708,
+                    "total_attr": []
+                  }
+                ],
+                "tid": 1208
+              },
+              {
+                "item_list": [
+                  {
+                    "break_add_attr": [],
+                    "color": 2,
+                    "count": 5,
+                    "expiredOddTime": 0,
+                    "expiredTime": 0,
+                    "refine_lv": 0,
+                    "skill_effect": [],
+                    "tid": 1708,
+                    "total_attr": []
+                  }
+                ],
+                "tid": 1208
+              },
+              {
+                "item_list": [
+                  {
+                    "break_add_attr": [],
+                    "color": 2,
+                    "count": 5,
+                    "expiredOddTime": 0,
+                    "expiredTime": 0,
+                    "refine_lv": 0,
+                    "skill_effect": [],
+                    "tid": 1805,
+                    "total_attr": []
+                  }
+                ],
+                "tid": 1305
+              }
+            ],
+            "result": 1
+          }
+        }
+      ]
+    }
+  ]
+}

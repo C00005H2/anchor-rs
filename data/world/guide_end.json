@@ -1,0 +1,40 @@
+{
+  "groups": [
+    {
+      "responses": [
+        {
+          "cmd": 12058,
+          "payload_hex": "0006000103f8000203f9000303fa000d0402000503fd000b0400",
+          "decoded": {
+            "guide_list": [
+              {
+                "guide_id": 1016,
+                "line_id": 1
+              },
+              {
+                "guide_id": 1017,
+                "line_id": 2
+              },
+              {
+                "guide_id": 1018,
+                "line_id": 3
+              },
+              {
+                "guide_id": 1026,
+                "line_id": 13
+              },
+              {
+                "guide_id": 1021,
+                "line_id": 5
+              },
+              {
+                "guide_id": 1024,
+                "line_id": 11
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

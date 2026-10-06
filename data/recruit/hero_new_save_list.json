@@ -1,0 +1,57 @@
+{
+  "groups": [
+    {
+      "responses": []
+    },
+    {
+      "responses": [
+        {
+          "cmd": 13291,
+          "payload_hex": "0000",
+          "decoded": {
+            "item_list": []
+          }
+        },
+        {
+          "cmd": 13291,
+          "payload_hex": "0000",
+          "decoded": {
+            "item_list": []
+          }
+        }
+      ]
+    },
+    {
+      "responses": [
+        {
+          "cmd": 13291,
+          "payload_hex": "0000",
+          "decoded": {
+            "item_list": []
+          }
+        }
+      ]
+    },
+    {
+      "responses": []
+    },
+    {
+      "responses": [
+        {
+          "cmd": 13291,
+          "payload_hex": "0000",
+          "decoded": {
+            "item_list": []
+          }
+        },
+        {
+          "cmd": 13291,
+          "payload_hex": "0000",
+          "decoded": {
+            "item_list": []
+          }
+        }
+      ]
+    }
+  ]
+}

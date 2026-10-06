@@ -1,0 +1,621 @@
+{
+  "groups": [
+    {
+      "request": {
+        "battle_type": 2,
+        "field_id": 1005
+      },
+      "responses": [
+        {
+          "cmd": 12053,
+          "payload_hex": "0001000100002743",
+          "decoded": {
+            "story_list": [
+              {
+                "line_id": 1,
+                "story_id": 10051
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 12104,
+          "payload_hex": "000000",
+          "decoded": {
+            "is_init": 0,
+            "story_list": []
+          }
+        },
+        {
+          "cmd": 12105,
+          "payload_hex": "000000",
+          "decoded": {
+            "is_init": 0,
+            "world_list": []
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d70000",
+          "decoded": {
+            "id_list": [],
+            "type": 215
+          }
+        },
+        {
+          "cmd": 12104,
+          "payload_hex": "000000",
+          "decoded": {
+            "is_init": 0,
+            "story_list": []
+          }
+        },
+        {
+          "cmd": 12105,
+          "payload_hex": "000000",
+          "decoded": {
+            "is_init": 0,
+            "world_list": []
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d70000",
+          "decoded": {
+            "id_list": [],
+            "type": 215
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d3000100000001",
+          "decoded": {
+            "id_list": [
+              1
+            ],
+            "type": 211
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d2000100002ced",
+          "decoded": {
+            "id_list": [
+              11501
+            ],
+            "type": 210
+          }
+        },
+        {
+          "cmd": 17001,
+          "payload_hex": "0100010000032100002ced000000046ac4bbe60000000002000000000000000000000000000000000000000000000000000000000000000000",
+          "decoded": {
+            "delList": [],
+            "type": 1,
+            "updateList": [
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 2,
+                "count": 4,
+                "createdTime": 1791278054,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 801,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 11501
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 12003,
+          "payload_hex": "000102630000000000000122",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 611,
+                "value": "290"
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 12003,
+          "payload_hex": "00010264000000000000e290",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 612,
+                "value": "58000"
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 18000,
+          "payload_hex": "0001000003ee0005000003ed000003ec000003eb000003ea000003e90000000000010001",
+          "decoded": {
+            "now_stage_list": [
+              1006
+            ],
+            "ongoing_stage_id": 0,
+            "pass_stage_list": [
+              1005,
+              1004,
+              1003,
+              1002,
+              1001
+            ],
+            "play_chapter_pic_list": [
+              1
+            ]
+          }
+        },
+        {
+          "cmd": 18013,
+          "payload_hex": "00000002000003ed00010003000000030000001e0400000000000000000000000000000000000000000001000004b00200000000000000000000000000000000000000002ced0000000402000000000000000000000000000000000000",
+          "decoded": {
+            "award": [
+              {
+                "break_add_attr": [],
+                "color": 4,
+                "count": 30,
+                "expiredOddTime": 0,
+                "expiredTime": 0,
+                "refine_lv": 0,
+                "skill_effect": [],
+                "tid": 3,
+                "total_attr": []
+              },
+              {
+                "break_add_attr": [],
+                "color": 2,
+                "count": 1200,
+                "expiredOddTime": 0,
+                "expiredTime": 0,
+                "refine_lv": 0,
+                "skill_effect": [],
+                "tid": 1,
+                "total_attr": []
+              },
+              {
+                "break_add_attr": [],
+                "color": 2,
+                "count": 4,
+                "expiredOddTime": 0,
+                "expiredTime": 0,
+                "refine_lv": 0,
+                "skill_effect": [],
+                "tid": 11501,
+                "total_attr": []
+              }
+            ],
+            "battle_type": 2,
+            "field_id": 1005,
+            "result": 1
+          }
+        }
+      ]
+    },
+    {
+      "request": {
+        "battle_type": 2,
+        "field_id": 1007
+      },
+      "responses": [
+        {
+          "cmd": 12053,
+          "payload_hex": "0001000100002757",
+          "decoded": {
+            "story_list": [
+              {
+                "line_id": 1,
+                "story_id": 10071
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 12104,
+          "payload_hex": "000000",
+          "decoded": {
+            "is_init": 0,
+            "story_list": []
+          }
+        },
+        {
+          "cmd": 12105,
+          "payload_hex": "000000",
+          "decoded": {
+            "is_init": 0,
+            "world_list": []
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d70000",
+          "decoded": {
+            "id_list": [],
+            "type": 215
+          }
+        },
+        {
+          "cmd": 12104,
+          "payload_hex": "000000",
+          "decoded": {
+            "is_init": 0,
+            "story_list": []
+          }
+        },
+        {
+          "cmd": 12105,
+          "payload_hex": "000000",
+          "decoded": {
+            "is_init": 0,
+            "world_list": []
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d70000",
+          "decoded": {
+            "id_list": [],
+            "type": 215
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d3000100000001",
+          "decoded": {
+            "id_list": [
+              1
+            ],
+            "type": 211
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d20000",
+          "decoded": {
+            "id_list": [],
+            "type": 210
+          }
+        },
+        {
+          "cmd": 17001,
+          "payload_hex": "0100010000032100002ced000000076ac4bbe60000000002000000000000000000000000000000000000000000000000000000000000000000",
+          "decoded": {
+            "delList": [],
+            "type": 1,
+            "updateList": [
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 2,
+                "count": 7,
+                "createdTime": 1791278054,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 801,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 11501
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 12003,
+          "payload_hex": "0001026400000000000121d8",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 612,
+                "value": "74200"
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 12003,
+          "payload_hex": "00010263000000000000015e",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 611,
+                "value": "350"
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 18000,
+          "payload_hex": "0001000003f00007000003ef000003ee000003ed000003ec000003eb000003ea000003e90000000000010001",
+          "decoded": {
+            "now_stage_list": [
+              1008
+            ],
+            "ongoing_stage_id": 0,
+            "pass_stage_list": [
+              1007,
+              1006,
+              1005,
+              1004,
+              1003,
+              1002,
+              1001
+            ],
+            "play_chapter_pic_list": [
+              1
+            ]
+          }
+        },
+        {
+          "cmd": 18013,
+          "payload_hex": "00000002000003ef0001000300000001000004b002000000000000000000000000000000000000000000030000001e0400000000000000000000000000000000000000002ced0000000402000000000000000000000000000000000000",
+          "decoded": {
+            "award": [
+              {
+                "break_add_attr": [],
+                "color": 2,
+                "count": 1200,
+                "expiredOddTime": 0,
+                "expiredTime": 0,
+                "refine_lv": 0,
+                "skill_effect": [],
+                "tid": 1,
+                "total_attr": []
+              },
+              {
+                "break_add_attr": [],
+                "color": 4,
+                "count": 30,
+                "expiredOddTime": 0,
+                "expiredTime": 0,
+                "refine_lv": 0,
+                "skill_effect": [],
+                "tid": 3,
+                "total_attr": []
+              },
+              {
+                "break_add_attr": [],
+                "color": 2,
+                "count": 4,
+                "expiredOddTime": 0,
+                "expiredTime": 0,
+                "refine_lv": 0,
+                "skill_effect": [],
+                "tid": 11501,
+                "total_attr": []
+              }
+            ],
+            "battle_type": 2,
+            "field_id": 1007,
+            "result": 1
+          }
+        }
+      ]
+    },
+    {
+      "request": {
+        "battle_type": 2,
+        "field_id": 1009
+      },
+      "responses": [
+        {
+          "cmd": 12053,
+          "payload_hex": "000100010000276b",
+          "decoded": {
+            "story_list": [
+              {
+                "line_id": 1,
+                "story_id": 10091
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 12104,
+          "payload_hex": "000000",
+          "decoded": {
+            "is_init": 0,
+            "story_list": []
+          }
+        },
+        {
+          "cmd": 12105,
+          "payload_hex": "000000",
+          "decoded": {
+            "is_init": 0,
+            "world_list": []
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d70000",
+          "decoded": {
+            "id_list": [],
+            "type": 215
+          }
+        },
+        {
+          "cmd": 12104,
+          "payload_hex": "000000",
+          "decoded": {
+            "is_init": 0,
+            "story_list": []
+          }
+        },
+        {
+          "cmd": 12105,
+          "payload_hex": "000000",
+          "decoded": {
+            "is_init": 0,
+            "world_list": []
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d70000",
+          "decoded": {
+            "id_list": [],
+            "type": 215
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d3000100000001",
+          "decoded": {
+            "id_list": [
+              1
+            ],
+            "type": 211
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d20000",
+          "decoded": {
+            "id_list": [],
+            "type": 210
+          }
+        },
+        {
+          "cmd": 17001,
+          "payload_hex": "0100010000032100002ced0000000b6ac4bbe60000000002000000000000000000000000000000000000000000000000000000000000000000",
+          "decoded": {
+            "delList": [],
+            "type": 1,
+            "updateList": [
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 2,
+                "count": 11,
+                "createdTime": 1791278054,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 801,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 11501
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 12003,
+          "payload_hex": "00010264000000000001a388",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 612,
+                "value": "107400"
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 12003,
+          "payload_hex": "00010263000000000000019a",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 611,
+                "value": "410"
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 18000,
+          "payload_hex": "0001000003f20009000003f1000003f0000003ef000003ee000003ed000003ec000003eb000003ea000003e90000000000010001",
+          "decoded": {
+            "now_stage_list": [
+              1010
+            ],
+            "ongoing_stage_id": 0,
+            "pass_stage_list": [
+              1009,
+              1008,
+              1007,
+              1006,
+              1005,
+              1004,
+              1003,
+              1002,
+              1001
+            ],
+            "play_chapter_pic_list": [
+              1
+            ]
+          }
+        },
+        {
+          "cmd": 18013,
+          "payload_hex": "00000002000003f10001000300000001000004b002000000000000000000000000000000000000000000030000001e0400000000000000000000000000000000000000002ced0000000402000000000000000000000000000000000000",
+          "decoded": {
+            "award": [
+              {
+                "break_add_attr": [],
+                "color": 2,
+                "count": 1200,
+                "expiredOddTime": 0,
+                "expiredTime": 0,
+                "refine_lv": 0,
+                "skill_effect": [],
+                "tid": 1,
+                "total_attr": []
+              },
+              {
+                "break_add_attr": [],
+                "color": 4,
+                "count": 30,
+                "expiredOddTime": 0,
+                "expiredTime": 0,
+                "refine_lv": 0,
+                "skill_effect": [],
+                "tid": 3,
+                "total_attr": []
+              },
+              {
+                "break_add_attr": [],
+                "color": 2,
+                "count": 4,
+                "expiredOddTime": 0,
+                "expiredTime": 0,
+                "refine_lv": 0,
+                "skill_effect": [],
+                "tid": 11501,
+                "total_attr": []
+              }
+            ],
+            "battle_type": 2,
+            "field_id": 1009,
+            "result": 1
+          }
+        }
+      ]
+    }
+  ]
+}

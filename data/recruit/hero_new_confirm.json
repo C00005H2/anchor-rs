@@ -1,0 +1,6266 @@
+{
+  "groups": [
+    {
+      "responses": [
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d20001000006a9",
+          "decoded": {
+            "id_list": [
+              1705
+            ],
+            "type": 210
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d20001000006ac",
+          "decoded": {
+            "id_list": [
+              1708
+            ],
+            "type": 210
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d20000",
+          "decoded": {
+            "id_list": [],
+            "type": 210
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d20000",
+          "decoded": {
+            "id_list": [],
+            "type": 210
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d20000",
+          "decoded": {
+            "id_list": [],
+            "type": 210
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d20000",
+          "decoded": {
+            "id_list": [],
+            "type": 210
+          }
+        },
+        {
+          "cmd": 17001,
+          "payload_hex": "030006000000670000070d0000000a6ac4c5bf000000000200000000000000000000000000000000000000000000000000000000000000000000cb000006ac000000056ac4c620000000000200000000000000000000000000000000000000000000000000000000000000000000cb000006ac0000000a6ac4c6200000000002000000000000000000000000000000000000000000000000000000000000000000012f000006a9000000056ac4c620000000000200000000000000000000000000000000000000000000000000000000000000000000cb000006ac0000000f6ac4c6200000000002000000000000000000000000000000000000000000000000000000000000000000012f000006a90000000a6ac4c6200000000002000000000000000000000000000000000000000000000000000000000000000000",
+          "decoded": {
+            "delList": [],
+            "type": 3,
+            "updateList": [
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 2,
+                "count": 10,
+                "createdTime": 1791280575,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 103,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 1805
+              },
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 2,
+                "count": 5,
+                "createdTime": 1791280672,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 203,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 1708
+              },
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 2,
+                "count": 10,
+                "createdTime": 1791280672,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 203,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 1708
+              },
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 2,
+                "count": 5,
+                "createdTime": 1791280672,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 303,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 1705
+              },
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 2,
+                "count": 15,
+                "createdTime": 1791280672,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 203,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 1708
+              },
+              {
+                "bracelet_remake_attr": [],
+                "breakup_rank": 0,
+                "color": 2,
+                "count": 10,
+                "createdTime": 1791280672,
+                "empower_slot_info": [],
+                "expiredTime": 0,
+                "filter_base_attr": [],
+                "filter_subjoin_attr": [],
+                "hero_id": 0,
+                "id": 303,
+                "is_lock": 0,
+                "refine_lv": 0,
+                "remake_attr": [],
+                "strength_exp": 0,
+                "strength_lv": 0,
+                "tid": 1705
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 13001,
+          "payload_hex": "000400000007000004b80001000000000000007800010000000000000000000200000000000000010000001a008e00000000007d00000000007400000000007300000000019500000000019400000000019300000000019200000000019100000000007500000000006e00000000006d00000000006c00000000006b00000000013700000000007700000000009a0000000000990000000000a20000000000a100000000006700000000006500000000000e00000000000d00000000000c00000000000b0000000000000003000004b8000100000001d7e1000100000001d7e40001000000010001d8300001000000030001d7e402010001d7e10101000004b80301000000000000000000010000000000000000034172630100000006000004b50001000000000000007800010000000000000000000200000000000000010000001a008e00000000007d00000000007400000000007300000000019500000000019400000000019300000000019200000000019100000000007500000000006e00000000006d00000000006c00000000006b00000000013700000000007700000000009a0000000000990000000000a20000000000a100000000006700000000006500000000000e00000000000d00000000000c00000000000b0000000000000003000004b5000100000001d6b5000100000001d6b80001000000010001d7040001000000030001d6b802010001d6b50101000004b50301000000000000000000010000000000000000054b6f72617a0100000005000003ee0001000000000000009600010000000000000000000400000000000000010000001a008e00000000007d00000000007400000000007300000000019500000000019400000000019300000000019200000000019100000000007500000000006e00000000006d00000000006c00000000006b00000000013700000000007700000000009a0000000000990000000000a20000000000a100000000006700000000006500000000000e00000000000d00000000000c00000000000b0000000000000003000003ee00010000000188f900010000000188fc00010000000100018948000100000003000188fc0201000188f90101000003ee0301000000000000000000010000000000000000044461776e0100000004000004b60001000000000000008200010000000000000000000300000000000000010000001a008e00000000007d00000000007400000000007300000000019500000000019400000000019300000000019200000000019100000000007500000000006e00000000006d00000000006c00000000006b00000000013700000000007700000000009a0000000000990000000000a20000000000a100000000006700000000006500000000000e00000000000d00000000000c00000000000b0000000000000003000004b6000100000001d719000100000001d71c0001000000010001d7680001000000030001d71c02010001d7190101000004b60301000000000000000000010000000000000000074172746973616e010000",
+          "decoded": {
+            "add_hero_list": [
+              {
+                "active_skill_list": [
+                  {
+                    "extra_lv": 0,
+                    "id": 1208,
+                    "lv": 1
+                  },
+                  {
+                    "extra_lv": 0,
+                    "id": 120801,
+                    "lv": 1
+                  },
+                  {
+                    "extra_lv": 0,
+                    "id": 120804,
+                    "lv": 1
+                  }
+                ],
+                "attr_list": [
+                  {
+                    "key": 142,
+                    "value": 0
+                  },
+                  {
+                    "key": 125,
+                    "value": 0
+                  },
+                  {
+                    "key": 116,
+                    "value": 0
+                  },
+                  {
+                    "key": 115,
+                    "value": 0
+                  },
+                  {
+                    "key": 405,
+                    "value": 0
+                  },
+                  {
+                    "key": 404,
+                    "value": 0
+                  },
+                  {
+                    "key": 403,
+                    "value": 0
+                  },
+                  {
+                    "key": 402,
+                    "value": 0
+                  },
+                  {
+                    "key": 401,
+                    "value": 0
+                  },
+                  {
+                    "key": 117,
+                    "value": 0
+                  },
+                  {
+                    "key": 110,
+                    "value": 0
+                  },
+                  {
+                    "key": 109,
+                    "value": 0
+                  },
+                  {
+                    "key": 108,
+                    "value": 0
+                  },
+                  {
+                    "key": 107,
+                    "value": 0
+                  },
+                  {
+                    "key": 311,
+                    "value": 0
+                  },
+                  {
+                    "key": 119,
+                    "value": 0
+                  },
+                  {
+                    "key": 154,
+                    "value": 0
+                  },
+                  {
+                    "key": 153,
+                    "value": 0
+                  },
+                  {
+                    "key": 162,
+                    "value": 0
+                  },
+                  {
+                    "key": 161,
+                    "value": 0
+                  },
+                  {
+                    "key": 103,
+                    "value": 0
+                  },
+                  {
+                    "key": 101,
+                    "value": 0
+                  },
+                  {
+                    "key": 14,
+                    "value": 0
+                  },
+                  {
+                    "key": 13,
+                    "value": 0
+                  },
+                  {
+                    "key": 12,
+                    "value": 0
+                  },
+                  {
+                    "key": 11,
+                    "value": 0
+                  }
+                ],
+                "color": 2,
+                "equip_attr_list": [],
+                "equip_list": [],
+                "evolution": 0,
+                "exp": 0,
+                "exp_max": 120,
+                "fight_skill_list": [
+                  {
+                    "id": 120804,
+                    "is_unlock": 1,
+                    "pos": 2
+                  },
+                  {
+                    "id": 120801,
+                    "is_unlock": 1,
+                    "pos": 1
+                  },
+                  {
+                    "id": 1208,
+                    "is_unlock": 1,
+                    "pos": 3
+                  }
+                ],
+                "id": 7,
+                "increases_lv": 1,
+                "is_like": 0,
+                "is_lock": 0,
+                "level": 1,
+                "military_rank": 1,
+                "passive_skill_list": [
+                  {
+                    "extra_lv": 0,
+                    "id": 120880,
+                    "lv": 1
+                  }
+                ],
+                "power": 0,
+                "relation_exp": 0,
+                "relation_level": 0,
+                "resonance_id_list": [],
+                "tid": 1208
+              },
+              {
+                "active_skill_list": [],
+                "attr_list": [],
+                "color": -19200,
+                "equip_attr_list": [],
+                "equip_list": [
+                  {
+                    "equip_id": 0,
+                    "pos": 16777216
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 512
+                  },
+                  {
+                    "equip_id": 6656,
+                    "pos": 256
+                  },
+                  {
+                    "equip_id": 32000,
+                    "pos": -1912602624
+                  },
+                  {
+                    "equip_id": 1946157056,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 1,
+                    "pos": 29440
+                  },
+                  {
+                    "equip_id": 103424,
+                    "pos": -1795162112
+                  },
+                  {
+                    "equip_id": -1828716544,
+                    "pos": 1
+                  },
+                  {
+                    "equip_id": 1,
+                    "pos": 102912
+                  },
+                  {
+                    "equip_id": 29952,
+                    "pos": -1862270976
+                  },
+                  {
+                    "equip_id": 1845493760,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 27904
+                  },
+                  {
+                    "equip_id": 27392,
+                    "pos": 1811939328
+                  },
+                  {
+                    "equip_id": 922746880,
+                    "pos": 1
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 30464
+                  },
+                  {
+                    "equip_id": 39168,
+                    "pos": -1711276032
+                  },
+                  {
+                    "equip_id": -1577058304,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 41216
+                  },
+                  {
+                    "equip_id": 25856,
+                    "pos": 1728053248
+                  },
+                  {
+                    "equip_id": 234881024,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 3328
+                  },
+                  {
+                    "equip_id": 2816,
+                    "pos": 201326592
+                  },
+                  {
+                    "equip_id": 768,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 16777216,
+                    "pos": 308480
+                  },
+                  {
+                    "equip_id": 16777216,
+                    "pos": 30848256
+                  },
+                  {
+                    "equip_id": 16777216,
+                    "pos": 30849024
+                  },
+                  {
+                    "equip_id": 67109120,
+                    "pos": 16777687
+                  },
+                  {
+                    "equip_id": 30849026,
+                    "pos": 768
+                  },
+                  {
+                    "equip_id": -1258225408,
+                    "pos": 16777686
+                  },
+                  {
+                    "equip_id": 16777216,
+                    "pos": 308483
+                  },
+                  {
+                    "equip_id": 256,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 5,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 2046885888,
+                    "pos": 1265594977
+                  },
+                  {
+                    "equip_id": 65929217,
+                    "pos": 327680
+                  },
+                  {
+                    "equip_id": 150,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 65536
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 4
+                  },
+                  {
+                    "equip_id": 26,
+                    "pos": 1
+                  },
+                  {
+                    "equip_id": 125,
+                    "pos": 9306112
+                  },
+                  {
+                    "equip_id": 7602176,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 115
+                  },
+                  {
+                    "equip_id": 404,
+                    "pos": 26542080
+                  },
+                  {
+                    "equip_id": 26411008,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 402
+                  },
+                  {
+                    "equip_id": 117,
+                    "pos": 26279936
+                  },
+                  {
+                    "equip_id": 7208960,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 109
+                  },
+                  {
+                    "equip_id": 107,
+                    "pos": 7077888
+                  },
+                  {
+                    "equip_id": 20381696,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 119
+                  },
+                  {
+                    "equip_id": 153,
+                    "pos": 10092544
+                  },
+                  {
+                    "equip_id": 10616832,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 161
+                  },
+                  {
+                    "equip_id": 101,
+                    "pos": 6750208
+                  },
+                  {
+                    "equip_id": 917504,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 13
+                  },
+                  {
+                    "equip_id": 11,
+                    "pos": 786432
+                  },
+                  {
+                    "equip_id": 3,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 65536,
+                    "pos": 1006
+                  },
+                  {
+                    "equip_id": 65536,
+                    "pos": 100601
+                  },
+                  {
+                    "equip_id": 65536,
+                    "pos": 100604
+                  },
+                  {
+                    "equip_id": -1991770111,
+                    "pos": 65537
+                  },
+                  {
+                    "equip_id": 100604,
+                    "pos": 3
+                  },
+                  {
+                    "equip_id": -1996947199,
+                    "pos": 33619969
+                  },
+                  {
+                    "equip_id": 50397184,
+                    "pos": 1006
+                  },
+                  {
+                    "equip_id": 1,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 1845559296,
+                    "pos": 71590263
+                  },
+                  {
+                    "equip_id": 79036417,
+                    "pos": 262144
+                  },
+                  {
+                    "equip_id": 130,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 65536
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 3
+                  },
+                  {
+                    "equip_id": 26,
+                    "pos": 1
+                  },
+                  {
+                    "equip_id": 125,
+                    "pos": 9306112
+                  },
+                  {
+                    "equip_id": 7602176,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 115
+                  },
+                  {
+                    "equip_id": 404,
+                    "pos": 26542080
+                  },
+                  {
+                    "equip_id": 26411008,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 402
+                  },
+                  {
+                    "equip_id": 117,
+                    "pos": 26279936
+                  },
+                  {
+                    "equip_id": 7208960,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 109
+                  },
+                  {
+                    "equip_id": 107,
+                    "pos": 7077888
+                  },
+                  {
+                    "equip_id": 20381696,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 119
+                  },
+                  {
+                    "equip_id": 153,
+                    "pos": 10092544
+                  },
+                  {
+                    "equip_id": 10616832,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 161
+                  },
+                  {
+                    "equip_id": 101,
+                    "pos": 6750208
+                  },
+                  {
+                    "equip_id": 917504,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 13
+                  },
+                  {
+                    "equip_id": 11,
+                    "pos": 786432
+                  },
+                  {
+                    "equip_id": 3,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 65536,
+                    "pos": 1206
+                  },
+                  {
+                    "equip_id": 65536,
+                    "pos": 120601
+                  },
+                  {
+                    "equip_id": 65536,
+                    "pos": 120604
+                  },
+                  {
+                    "equip_id": -681050111,
+                    "pos": 65537
+                  },
+                  {
+                    "equip_id": 120604,
+                    "pos": 3
+                  },
+                  {
+                    "equip_id": -686227199,
+                    "pos": 33619969
+                  },
+                  {
+                    "equip_id": 50397184,
+                    "pos": 1206
+                  },
+                  {
+                    "equip_id": 1,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 1769169262,
+                    "pos": 121729652
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 16777216
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  },
+                  {
+                    "equip_id": 0,
+                    "pos": 0
+                  }
+                ],
+                "evolution": 256,
+                "exp": 0,
+                "exp_max": 833,
+                "fight_skill_list": [],
+                "id": 0,
+                "increases_lv": 0,
+                "is_like": 4,
+                "is_lock": 0,
+                "level": 0,
+                "military_rank": 29283,
+                "passive_skill_list": [],
+                "power": 1536,
+                "relation_exp": 0,
+                "relation_level": 256,
+                "resonance_id_list": [],
+                "tid": 1
+              },
+              {
+                "active_skill_list": [],
+                "attr_list": [],
+                "color": 0,
+                "equip_attr_list": [],
+                "equip_list": [],
+                "evolution": 0,
+                "exp": 0,
+                "exp_max": 0,
+                "fight_skill_list": [],
+                "id": 0,
+                "increases_lv": 0,
+                "is_like": 0,
+                "is_lock": 0,
+                "level": 0,
+                "military_rank": 0,
+                "passive_skill_list": [],
+                "power": 0,
+                "relation_exp": 0,
+                "relation_level": 0,
+                "resonance_id_list": [],
+                "tid": 0
+              },
+              {
+                "active_skill_list": [],
+                "attr_list": [],
+                "color": 0,
+                "equip_attr_list": [],
+                "equip_list": [],
+                "evolution": 0,
+                "exp": 0,
+                "exp_max": 0,
+                "fight_skill_list": [],
+                "id": 0,
+                "increases_lv": 0,
+                "is_like": 0,
+                "is_lock": 0,
+                "level": 0,
+                "military_rank": 0,
+                "passive_skill_list": [],
+                "power": 0,
+                "relation_exp": 0,
+                "relation_level": 0,
+                "resonance_id_list": [],
+                "tid": 0
+              }
+            ],
+            "del_hero_list": []
+          }
+        },
+        {
+          "cmd": 13107,
+          "payload_hex": "00010000000700020001010200010101",
+          "decoded": {
+            "hero_fashion_info": [
+              {
+                "fashion_info": [
+                  {
+                    "fashion_id": 1,
+                    "fashion_type": 2,
+                    "is_wear": 1
+                  },
+                  {
+                    "fashion_id": 1,
+                    "fashion_type": 1,
+                    "is_wear": 1
+                  }
+                ],
+                "hero_id": 7
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 13011,
+          "payload_hex": "0000000700000007000004b80001000000000000007800010000000000000000000200010000000000010000001a008e00000000007d00000000007400000000007300000000019500000000019400000000019300000000019200000000019100000000007500000000006e00000000006d00000000006c00000000006b00000000013700000000007700000000009a0000000000990000000000a20000000000a100000000006700000000006500000000000e00000000000d00000000000c00000000000b0000000000000003000004b8000100000001d7e1000100000001d7e40001000000010001d8300001000000030001d7e402010001d7e10101000004b803010000000000000000000100000000000000000341726301",
+          "decoded": {
+            "hero_info": {
+              "active_skill_list": [
+                {
+                  "extra_lv": 0,
+                  "id": 1208,
+                  "lv": 1
+                },
+                {
+                  "extra_lv": 0,
+                  "id": 120801,
+                  "lv": 1
+                },
+                {
+                  "extra_lv": 0,
+                  "id": 120804,
+                  "lv": 1
+                }
+              ],
+              "attr_list": [
+                {
+                  "key": 142,
+                  "value": 0
+                },
+                {
+                  "key": 125,
+                  "value": 0
+                },
+                {
+                  "key": 116,
+                  "value": 0
+                },
+                {
+                  "key": 115,
+                  "value": 0
+                },
+                {
+                  "key": 405,
+                  "value": 0
+                },
+                {
+                  "key": 404,
+                  "value": 0
+                },
+                {
+                  "key": 403,
+                  "value": 0
+                },
+                {
+                  "key": 402,
+                  "value": 0
+                },
+                {
+                  "key": 401,
+                  "value": 0
+                },
+                {
+                  "key": 117,
+                  "value": 0
+                },
+                {
+                  "key": 110,
+                  "value": 0
+                },
+                {
+                  "key": 109,
+                  "value": 0
+                },
+                {
+                  "key": 108,
+                  "value": 0
+                },
+                {
+                  "key": 107,
+                  "value": 0
+                },
+                {
+                  "key": 311,
+                  "value": 0
+                },
+                {
+                  "key": 119,
+                  "value": 0
+                },
+                {
+                  "key": 154,
+                  "value": 0
+                },
+                {
+                  "key": 153,
+                  "value": 0
+                },
+                {
+                  "key": 162,
+                  "value": 0
+                },
+                {
+                  "key": 161,
+                  "value": 0
+                },
+                {
+                  "key": 103,
+                  "value": 0
+                },
+                {
+                  "key": 101,
+                  "value": 0
+                },
+                {
+                  "key": 14,
+                  "value": 0
+                },
+                {
+                  "key": 13,
+                  "value": 0
+                },
+                {
+                  "key": 12,
+                  "value": 0
+                },
+                {
+                  "key": 11,
+                  "value": 0
+                }
+              ],
+              "color": 2,
+              "equip_attr_list": [],
+              "equip_list": [],
+              "evolution": 0,
+              "exp": 0,
+              "exp_max": 120,
+              "fight_skill_list": [
+                {
+                  "id": 120804,
+                  "is_unlock": 1,
+                  "pos": 2
+                },
+                {
+                  "id": 120801,
+                  "is_unlock": 1,
+                  "pos": 1
+                },
+                {
+                  "id": 1208,
+                  "is_unlock": 1,
+                  "pos": 3
+                }
+              ],
+              "id": 7,
+              "increases_lv": 1,
+              "is_like": 0,
+              "is_lock": 0,
+              "level": 1,
+              "military_rank": 1,
+              "passive_skill_list": [
+                {
+                  "extra_lv": 0,
+                  "id": 120880,
+                  "lv": 1
+                }
+              ],
+              "power": 0,
+              "relation_exp": 0,
+              "relation_level": 1,
+              "resonance_id_list": [],
+              "tid": 1208
+            },
+            "id": 7
+          }
+        },
+        {
+          "cmd": 13003,
+          "payload_hex": "00000007001a008e00000000007d00000000007400000000007300000000019500000000019400000000019300000000019200000000019100000000007500000000006e00000000006d00000000006c00000000006b00000000013700000000007700000000009a0000000000990000000000a20000000000a100000000006700003a98006500000226000e00000037000d00000003000c00000036000b000001af",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 142,
+                "value": 0
+              },
+              {
+                "key": 125,
+                "value": 0
+              },
+              {
+                "key": 116,
+                "value": 0
+              },
+              {
+                "key": 115,
+                "value": 0
+              },
+              {
+                "key": 405,
+                "value": 0
+              },
+              {
+                "key": 404,
+                "value": 0
+              },
+              {
+                "key": 403,
+                "value": 0
+              },
+              {
+                "key": 402,
+                "value": 0
+              },
+              {
+                "key": 401,
+                "value": 0
+              },
+              {
+                "key": 117,
+                "value": 0
+              },
+              {
+                "key": 110,
+                "value": 0
+              },
+              {
+                "key": 109,
+                "value": 0
+              },
+              {
+                "key": 108,
+                "value": 0
+              },
+              {
+                "key": 107,
+                "value": 0
+              },
+              {
+                "key": 311,
+                "value": 0
+              },
+              {
+                "key": 119,
+                "value": 0
+              },
+              {
+                "key": 154,
+                "value": 0
+              },
+              {
+                "key": 153,
+                "value": 0
+              },
+              {
+                "key": 162,
+                "value": 0
+              },
+              {
+                "key": 161,
+                "value": 0
+              },
+              {
+                "key": 103,
+                "value": 15000
+              },
+              {
+                "key": 101,
+                "value": 550
+              },
+              {
+                "key": 14,
+                "value": 55
+              },
+              {
+                "key": 13,
+                "value": 3
+              },
+              {
+                "key": 12,
+                "value": 54
+              },
+              {
+                "key": 11,
+                "value": 431
+              }
+            ],
+            "id": 7
+          }
+        },
+        {
+          "cmd": 13090,
+          "payload_hex": "000000070001006a0000000000000323",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 106,
+                "value": "803"
+              }
+            ],
+            "id": 7
+          }
+        },
+        {
+          "cmd": 12018,
+          "payload_hex": "0001000007f20000000000",
+          "decoded": {
+            "avatar_list": [
+              {
+                "avatar_id": 2034,
+                "expired_time": 0,
+                "is_like": 0
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000c90001000007f2",
+          "decoded": {
+            "id_list": [
+              2034
+            ],
+            "type": 201
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d80001000004b8",
+          "decoded": {
+            "id_list": [
+              1208
+            ],
+            "type": 216
+          }
+        },
+        {
+          "cmd": 19456,
+          "payload_hex": "0001000004b800000000c800000000000000012f3101",
+          "decoded": {
+            "hero_list": [
+              {
+                "building_id": 0,
+                "hero_tid": 1208,
+                "pos": 0,
+                "skill_list": [
+                  {
+                    "skill_id": 12081,
+                    "skill_lv": 1
+                  }
+                ],
+                "speed": 0,
+                "stamina": 200,
+                "stamina_time": 0
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 13107,
+          "payload_hex": "00010000000600020001010200010101",
+          "decoded": {
+            "hero_fashion_info": [
+              {
+                "fashion_info": [
+                  {
+                    "fashion_id": 1,
+                    "fashion_type": 2,
+                    "is_wear": 1
+                  },
+                  {
+                    "fashion_id": 1,
+                    "fashion_type": 1,
+                    "is_wear": 1
+                  }
+                ],
+                "hero_id": 6
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 13011,
+          "payload_hex": "0000000600000006000004b50001000000000000007800010000000000000000000200010000000000010000001a008e00000000007d00000000007400000000007300000000019500000000019400000000019300000000019200000000019100000000007500000000006e00000000006d00000000006c00000000006b00000000013700000000007700000000009a0000000000990000000000a20000000000a100000000006700000000006500000000000e00000000000d00000000000c00000000000b0000000000000003000004b5000100000001d6b5000100000001d6b80001000000010001d7040001000000030001d6b802010001d6b50101000004b50301000000000000000000010000000000000000054b6f72617a01",
+          "decoded": {
+            "hero_info": {
+              "active_skill_list": [
+                {
+                  "extra_lv": 0,
+                  "id": 1205,
+                  "lv": 1
+                },
+                {
+                  "extra_lv": 0,
+                  "id": 120501,
+                  "lv": 1
+                },
+                {
+                  "extra_lv": 0,
+                  "id": 120504,
+                  "lv": 1
+                }
+              ],
+              "attr_list": [
+                {
+                  "key": 142,
+                  "value": 0
+                },
+                {
+                  "key": 125,
+                  "value": 0
+                },
+                {
+                  "key": 116,
+                  "value": 0
+                },
+                {
+                  "key": 115,
+                  "value": 0
+                },
+                {
+                  "key": 405,
+                  "value": 0
+                },
+                {
+                  "key": 404,
+                  "value": 0
+                },
+                {
+                  "key": 403,
+                  "value": 0
+                },
+                {
+                  "key": 402,
+                  "value": 0
+                },
+                {
+                  "key": 401,
+                  "value": 0
+                },
+                {
+                  "key": 117,
+                  "value": 0
+                },
+                {
+                  "key": 110,
+                  "value": 0
+                },
+                {
+                  "key": 109,
+                  "value": 0
+                },
+                {
+                  "key": 108,
+                  "value": 0
+                },
+                {
+                  "key": 107,
+                  "value": 0
+                },
+                {
+                  "key": 311,
+                  "value": 0
+                },
+                {
+                  "key": 119,
+                  "value": 0
+                },
+                {
+                  "key": 154,
+                  "value": 0
+                },
+                {
+                  "key": 153,
+                  "value": 0
+                },
+                {
+                  "key": 162,
+                  "value": 0
+                },
+                {
+                  "key": 161,
+                  "value": 0
+                },
+                {
+                  "key": 103,
+                  "value": 0
+                },
+                {
+                  "key": 101,
+                  "value": 0
+                },
+                {
+                  "key": 14,
+                  "value": 0
+                },
+                {
+                  "key": 13,
+                  "value": 0
+                },
+                {
+                  "key": 12,
+                  "value": 0
+                },
+                {
+                  "key": 11,
+                  "value": 0
+                }
+              ],
+              "color": 2,
+              "equip_attr_list": [],
+              "equip_list": [],
+              "evolution": 0,
+              "exp": 0,
+              "exp_max": 120,
+              "fight_skill_list": [
+                {
+                  "id": 120504,
+                  "is_unlock": 1,
+                  "pos": 2
+                },
+                {
+                  "id": 120501,
+                  "is_unlock": 1,
+                  "pos": 1
+                },
+                {
+                  "id": 1205,
+                  "is_unlock": 1,
+                  "pos": 3
+                }
+              ],
+              "id": 6,
+              "increases_lv": 1,
+              "is_like": 0,
+              "is_lock": 0,
+              "level": 1,
+              "military_rank": 1,
+              "passive_skill_list": [
+                {
+                  "extra_lv": 0,
+                  "id": 120580,
+                  "lv": 1
+                }
+              ],
+              "power": 0,
+              "relation_exp": 0,
+              "relation_level": 1,
+              "resonance_id_list": [],
+              "tid": 1205
+            },
+            "id": 6
+          }
+        },
+        {
+          "cmd": 13003,
+          "payload_hex": "00000006001a008e00000000007d00000000007400000000007300000000019500000000019400000000019300000000019200000000019100000000007500000000006e00000000006d00000000006c00000000006b00000000013700000000007700000000009a0000000000990000000000a20000000000a100000000006700003a9800650000015e000e00000039000d00000005000c00000030000b000001ec",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 142,
+                "value": 0
+              },
+              {
+                "key": 125,
+                "value": 0
+              },
+              {
+                "key": 116,
+                "value": 0
+              },
+              {
+                "key": 115,
+                "value": 0
+              },
+              {
+                "key": 405,
+                "value": 0
+              },
+              {
+                "key": 404,
+                "value": 0
+              },
+              {
+                "key": 403,
+                "value": 0
+              },
+              {
+                "key": 402,
+                "value": 0
+              },
+              {
+                "key": 401,
+                "value": 0
+              },
+              {
+                "key": 117,
+                "value": 0
+              },
+              {
+                "key": 110,
+                "value": 0
+              },
+              {
+                "key": 109,
+                "value": 0
+              },
+              {
+                "key": 108,
+                "value": 0
+              },
+              {
+                "key": 107,
+                "value": 0
+              },
+              {
+                "key": 311,
+                "value": 0
+              },
+              {
+                "key": 119,
+                "value": 0
+              },
+              {
+                "key": 154,
+                "value": 0
+              },
+              {
+                "key": 153,
+                "value": 0
+              },
+              {
+                "key": 162,
+                "value": 0
+              },
+              {
+                "key": 161,
+                "value": 0
+              },
+              {
+                "key": 103,
+                "value": 15000
+              },
+              {
+                "key": 101,
+                "value": 350
+              },
+              {
+                "key": 14,
+                "value": 57
+              },
+              {
+                "key": 13,
+                "value": 5
+              },
+              {
+                "key": 12,
+                "value": 48
+              },
+              {
+                "key": 11,
+                "value": 492
+              }
+            ],
+            "id": 6
+          }
+        },
+        {
+          "cmd": 13090,
+          "payload_hex": "000000060001006a00000000000002e0",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 106,
+                "value": "736"
+              }
+            ],
+            "id": 6
+          }
+        },
+        {
+          "cmd": 12018,
+          "payload_hex": "0001000007ef0000000000",
+          "decoded": {
+            "avatar_list": [
+              {
+                "avatar_id": 2031,
+                "expired_time": 0,
+                "is_like": 0
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000c90001000007ef",
+          "decoded": {
+            "id_list": [
+              2031
+            ],
+            "type": 201
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d80001000004b5",
+          "decoded": {
+            "id_list": [
+              1205
+            ],
+            "type": 216
+          }
+        },
+        {
+          "cmd": 19456,
+          "payload_hex": "0001000004b500000000c800000000000000012f1301",
+          "decoded": {
+            "hero_list": [
+              {
+                "building_id": 0,
+                "hero_tid": 1205,
+                "pos": 0,
+                "skill_list": [
+                  {
+                    "skill_id": 12051,
+                    "skill_lv": 1
+                  }
+                ],
+                "speed": 0,
+                "stamina": 200,
+                "stamina_time": 0
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 13107,
+          "payload_hex": "00010000000500020001010200010101",
+          "decoded": {
+            "hero_fashion_info": [
+              {
+                "fashion_info": [
+                  {
+                    "fashion_id": 1,
+                    "fashion_type": 2,
+                    "is_wear": 1
+                  },
+                  {
+                    "fashion_id": 1,
+                    "fashion_type": 1,
+                    "is_wear": 1
+                  }
+                ],
+                "hero_id": 5
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 13011,
+          "payload_hex": "0000000500000005000003ee0001000000000000009600010000000000000000000400010000000000010000001a008e00000000007d00000000007400000000007300000000019500000000019400000000019300000000019200000000019100000000007500000000006e00000000006d00000000006c00000000006b00000000013700000000007700000000009a0000000000990000000000a20000000000a100000000006700000000006500000000000e00000000000d00000000000c00000000000b0000000000000003000003ee00010000000188f900010000000188fc00010000000100018948000100000003000188fc0201000188f90101000003ee0301000000000000000000010000000000000000044461776e01",
+          "decoded": {
+            "hero_info": {
+              "active_skill_list": [
+                {
+                  "extra_lv": 0,
+                  "id": 1006,
+                  "lv": 1
+                },
+                {
+                  "extra_lv": 0,
+                  "id": 100601,
+                  "lv": 1
+                },
+                {
+                  "extra_lv": 0,
+                  "id": 100604,
+                  "lv": 1
+                }
+              ],
+              "attr_list": [
+                {
+                  "key": 142,
+                  "value": 0
+                },
+                {
+                  "key": 125,
+                  "value": 0
+                },
+                {
+                  "key": 116,
+                  "value": 0
+                },
+                {
+                  "key": 115,
+                  "value": 0
+                },
+                {
+                  "key": 405,
+                  "value": 0
+                },
+                {
+                  "key": 404,
+                  "value": 0
+                },
+                {
+                  "key": 403,
+                  "value": 0
+                },
+                {
+                  "key": 402,
+                  "value": 0
+                },
+                {
+                  "key": 401,
+                  "value": 0
+                },
+                {
+                  "key": 117,
+                  "value": 0
+                },
+                {
+                  "key": 110,
+                  "value": 0
+                },
+                {
+                  "key": 109,
+                  "value": 0
+                },
+                {
+                  "key": 108,
+                  "value": 0
+                },
+                {
+                  "key": 107,
+                  "value": 0
+                },
+                {
+                  "key": 311,
+                  "value": 0
+                },
+                {
+                  "key": 119,
+                  "value": 0
+                },
+                {
+                  "key": 154,
+                  "value": 0
+                },
+                {
+                  "key": 153,
+                  "value": 0
+                },
+                {
+                  "key": 162,
+                  "value": 0
+                },
+                {
+                  "key": 161,
+                  "value": 0
+                },
+                {
+                  "key": 103,
+                  "value": 0
+                },
+                {
+                  "key": 101,
+                  "value": 0
+                },
+                {
+                  "key": 14,
+                  "value": 0
+                },
+                {
+                  "key": 13,
+                  "value": 0
+                },
+                {
+                  "key": 12,
+                  "value": 0
+                },
+                {
+                  "key": 11,
+                  "value": 0
+                }
+              ],
+              "color": 4,
+              "equip_attr_list": [],
+              "equip_list": [],
+              "evolution": 0,
+              "exp": 0,
+              "exp_max": 150,
+              "fight_skill_list": [
+                {
+                  "id": 100604,
+                  "is_unlock": 1,
+                  "pos": 2
+                },
+                {
+                  "id": 100601,
+                  "is_unlock": 1,
+                  "pos": 1
+                },
+                {
+                  "id": 1006,
+                  "is_unlock": 1,
+                  "pos": 3
+                }
+              ],
+              "id": 5,
+              "increases_lv": 1,
+              "is_like": 0,
+              "is_lock": 0,
+              "level": 1,
+              "military_rank": 1,
+              "passive_skill_list": [
+                {
+                  "extra_lv": 0,
+                  "id": 100680,
+                  "lv": 1
+                }
+              ],
+              "power": 0,
+              "relation_exp": 0,
+              "relation_level": 1,
+              "resonance_id_list": [],
+              "tid": 1006
+            },
+            "id": 5
+          }
+        },
+        {
+          "cmd": 13003,
+          "payload_hex": "00000005001a008e00000000007d00000000007400000000007300000000019500000000019400000000019300000000019200000000019100000000007500000000006e00000000006d00000000006c00000000006b00000000013700000000007700000000009a0000000000990000000000a20000000000a100000000006700003a980065000003e8000e00000035000d00000005000c00000040000b00000211",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 142,
+                "value": 0
+              },
+              {
+                "key": 125,
+                "value": 0
+              },
+              {
+                "key": 116,
+                "value": 0
+              },
+              {
+                "key": 115,
+                "value": 0
+              },
+              {
+                "key": 405,
+                "value": 0
+              },
+              {
+                "key": 404,
+                "value": 0
+              },
+              {
+                "key": 403,
+                "value": 0
+              },
+              {
+                "key": 402,
+                "value": 0
+              },
+              {
+                "key": 401,
+                "value": 0
+              },
+              {
+                "key": 117,
+                "value": 0
+              },
+              {
+                "key": 110,
+                "value": 0
+              },
+              {
+                "key": 109,
+                "value": 0
+              },
+              {
+                "key": 108,
+                "value": 0
+              },
+              {
+                "key": 107,
+                "value": 0
+              },
+              {
+                "key": 311,
+                "value": 0
+              },
+              {
+                "key": 119,
+                "value": 0
+              },
+              {
+                "key": 154,
+                "value": 0
+              },
+              {
+                "key": 153,
+                "value": 0
+              },
+              {
+                "key": 162,
+                "value": 0
+              },
+              {
+                "key": 161,
+                "value": 0
+              },
+              {
+                "key": 103,
+                "value": 15000
+              },
+              {
+                "key": 101,
+                "value": 1000
+              },
+              {
+                "key": 14,
+                "value": 53
+              },
+              {
+                "key": 13,
+                "value": 5
+              },
+              {
+                "key": 12,
+                "value": 64
+              },
+              {
+                "key": 11,
+                "value": 529
+              }
+            ],
+            "id": 5
+          }
+        },
+        {
+          "cmd": 13090,
+          "payload_hex": "000000050001006a00000000000003d7",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 106,
+                "value": "983"
+              }
+            ],
+            "id": 5
+          }
+        },
+        {
+          "cmd": 12018,
+          "payload_hex": "0001000007d60000000000",
+          "decoded": {
+            "avatar_list": [
+              {
+                "avatar_id": 2006,
+                "expired_time": 0,
+                "is_like": 0
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000c90001000007d6",
+          "decoded": {
+            "id_list": [
+              2006
+            ],
+            "type": 201
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d80001000003ee",
+          "decoded": {
+            "id_list": [
+              1006
+            ],
+            "type": 216
+          }
+        },
+        {
+          "cmd": 19456,
+          "payload_hex": "0001000003ee00000000c80000000000000001274d01",
+          "decoded": {
+            "hero_list": [
+              {
+                "building_id": 0,
+                "hero_tid": 1006,
+                "pos": 0,
+                "skill_list": [
+                  {
+                    "skill_id": 10061,
+                    "skill_lv": 1
+                  }
+                ],
+                "speed": 0,
+                "stamina": 200,
+                "stamina_time": 0
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 13107,
+          "payload_hex": "00010000000400020001010200010101",
+          "decoded": {
+            "hero_fashion_info": [
+              {
+                "fashion_info": [
+                  {
+                    "fashion_id": 1,
+                    "fashion_type": 2,
+                    "is_wear": 1
+                  },
+                  {
+                    "fashion_id": 1,
+                    "fashion_type": 1,
+                    "is_wear": 1
+                  }
+                ],
+                "hero_id": 4
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 13011,
+          "payload_hex": "0000000400000004000004b60001000000000000008200010000000000000000000300010000000000010000001a008e00000000007d00000000007400000000007300000000019500000000019400000000019300000000019200000000019100000000007500000000006e00000000006d00000000006c00000000006b00000000013700000000007700000000009a0000000000990000000000a20000000000a100000000006700000000006500000000000e00000000000d00000000000c00000000000b0000000000000003000004b6000100000001d719000100000001d71c0001000000010001d7680001000000030001d71c02010001d7190101000004b60301000000000000000000010000000000000000074172746973616e01",
+          "decoded": {
+            "hero_info": {
+              "active_skill_list": [
+                {
+                  "extra_lv": 0,
+                  "id": 1206,
+                  "lv": 1
+                },
+                {
+                  "extra_lv": 0,
+                  "id": 120601,
+                  "lv": 1
+                },
+                {
+                  "extra_lv": 0,
+                  "id": 120604,
+                  "lv": 1
+                }
+              ],
+              "attr_list": [
+                {
+                  "key": 142,
+                  "value": 0
+                },
+                {
+                  "key": 125,
+                  "value": 0
+                },
+                {
+                  "key": 116,
+                  "value": 0
+                },
+                {
+                  "key": 115,
+                  "value": 0
+                },
+                {
+                  "key": 405,
+                  "value": 0
+                },
+                {
+                  "key": 404,
+                  "value": 0
+                },
+                {
+                  "key": 403,
+                  "value": 0
+                },
+                {
+                  "key": 402,
+                  "value": 0
+                },
+                {
+                  "key": 401,
+                  "value": 0
+                },
+                {
+                  "key": 117,
+                  "value": 0
+                },
+                {
+                  "key": 110,
+                  "value": 0
+                },
+                {
+                  "key": 109,
+                  "value": 0
+                },
+                {
+                  "key": 108,
+                  "value": 0
+                },
+                {
+                  "key": 107,
+                  "value": 0
+                },
+                {
+                  "key": 311,
+                  "value": 0
+                },
+                {
+                  "key": 119,
+                  "value": 0
+                },
+                {
+                  "key": 154,
+                  "value": 0
+                },
+                {
+                  "key": 153,
+                  "value": 0
+                },
+                {
+                  "key": 162,
+                  "value": 0
+                },
+                {
+                  "key": 161,
+                  "value": 0
+                },
+                {
+                  "key": 103,
+                  "value": 0
+                },
+                {
+                  "key": 101,
+                  "value": 0
+                },
+                {
+                  "key": 14,
+                  "value": 0
+                },
+                {
+                  "key": 13,
+                  "value": 0
+                },
+                {
+                  "key": 12,
+                  "value": 0
+                },
+                {
+                  "key": 11,
+                  "value": 0
+                }
+              ],
+              "color": 3,
+              "equip_attr_list": [],
+              "equip_list": [],
+              "evolution": 0,
+              "exp": 0,
+              "exp_max": 130,
+              "fight_skill_list": [
+                {
+                  "id": 120604,
+                  "is_unlock": 1,
+                  "pos": 2
+                },
+                {
+                  "id": 120601,
+                  "is_unlock": 1,
+                  "pos": 1
+                },
+                {
+                  "id": 1206,
+                  "is_unlock": 1,
+                  "pos": 3
+                }
+              ],
+              "id": 4,
+              "increases_lv": 1,
+              "is_like": 0,
+              "is_lock": 0,
+              "level": 1,
+              "military_rank": 1,
+              "passive_skill_list": [
+                {
+                  "extra_lv": 0,
+                  "id": 120680,
+                  "lv": 1
+                }
+              ],
+              "power": 0,
+              "relation_exp": 0,
+              "relation_level": 1,
+              "resonance_id_list": [],
+              "tid": 1206
+            },
+            "id": 4
+          }
+        },
+        {
+          "cmd": 13003,
+          "payload_hex": "00000004001a008e00000000007d00000000007400000000007300000000019500000000019400000000019300000000019200000000019100000000007500000000006e00000000006d00000000006c00000000006b00000000013700000000007700000000009a0000000000990000000000a20000000000a100000000006700003a98006500000226000e0000003b000d00000006000c00000035000b0000021d",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 142,
+                "value": 0
+              },
+              {
+                "key": 125,
+                "value": 0
+              },
+              {
+                "key": 116,
+                "value": 0
+              },
+              {
+                "key": 115,
+                "value": 0
+              },
+              {
+                "key": 405,
+                "value": 0
+              },
+              {
+                "key": 404,
+                "value": 0
+              },
+              {
+                "key": 403,
+                "value": 0
+              },
+              {
+                "key": 402,
+                "value": 0
+              },
+              {
+                "key": 401,
+                "value": 0
+              },
+              {
+                "key": 117,
+                "value": 0
+              },
+              {
+                "key": 110,
+                "value": 0
+              },
+              {
+                "key": 109,
+                "value": 0
+              },
+              {
+                "key": 108,
+                "value": 0
+              },
+              {
+                "key": 107,
+                "value": 0
+              },
+              {
+                "key": 311,
+                "value": 0
+              },
+              {
+                "key": 119,
+                "value": 0
+              },
+              {
+                "key": 154,
+                "value": 0
+              },
+              {
+                "key": 153,
+                "value": 0
+              },
+              {
+                "key": 162,
+                "value": 0
+              },
+              {
+                "key": 161,
+                "value": 0
+              },
+              {
+                "key": 103,
+                "value": 15000
+              },
+              {
+                "key": 101,
+                "value": 550
+              },
+              {
+                "key": 14,
+                "value": 59
+              },
+              {
+                "key": 13,
+                "value": 6
+              },
+              {
+                "key": 12,
+                "value": 53
+              },
+              {
+                "key": 11,
+                "value": 541
+              }
+            ],
+            "id": 4
+          }
+        },
+        {
+          "cmd": 13090,
+          "payload_hex": "000000040001006a0000000000000333",
+          "decoded": {
+            "attr_list": [
+              {
+                "key": 106,
+                "value": "819"
+              }
+            ],
+            "id": 4
+          }
+        },
+        {
+          "cmd": 12018,
+          "payload_hex": "0001000007f00000000000",
+          "decoded": {
+            "avatar_list": [
+              {
+                "avatar_id": 2032,
+                "expired_time": 0,
+                "is_like": 0
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000c90001000007f0",
+          "decoded": {
+            "id_list": [
+              2032
+            ],
+            "type": 201
+          }
+        },
+        {
+          "cmd": 10059,
+          "payload_hex": "000000d80001000004b6",
+          "decoded": {
+            "id_list": [
+              1206
+            ],
+            "type": 216
+          }
+        },
+        {
+          "cmd": 19456,
+          "payload_hex": "0001000004b600000000c800000000000000012f1d01",
+          "decoded": {
+            "hero_list": [
+              {
+                "building_id": 0,
+                "hero_tid": 1206,
+                "pos": 0,
+                "skill_list": [
+                  {
+                    "skill_id": 12061,
+                    "skill_lv": 1
+                  }
+                ],
+                "speed": 0,
+                "stamina": 200,
+                "stamina_time": 0
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 13295,
+          "payload_hex": "01",
+          "decoded": {
+            "result": 1
+          }
+        },
+        {
+          "cmd": 13050,
+          "payload_hex": "000d0000000a0000000a00000000000000000000000a0000000000000000000003f3000000020000000000000002000000000000000000000200000003fd000000000000000000000000000000000000000000000000000004070000000000000000000000000000000200000003fe00000000000411000000000000000000000000000000020000001d010000000000006500000000000000000000000000000002000000040c00000000000066000000000000000000000000000000020000001d120000000000006f0000000000000000000000000000000200000003f700000000000070000000000000000000000000000000020000001cf0000000000000790000000000000000000000000000000200000003f90000000000007a000000000000000000000000000000020000001cf5000000000000830000000000000000000000000000000200000003fd00000000000084000000000000000000000000000000020000001d00000000",
+          "decoded": {
+            "recruit_list": [
+              {
+                "first_week": 0,
+                "free_times": 2560,
+                "guaranteed_limit": 0,
+                "guaranteed_times": 0,
+                "id": 0,
+                "is_guaranteed_award": 0,
+                "recruit_activity_times": 655360,
+                "recruit_daily_times": 655360,
+                "select_tid": 0,
+                "total_count": 0
+              },
+              {
+                "first_week": 0,
+                "free_times": 0,
+                "guaranteed_limit": 2,
+                "guaranteed_times": 0,
+                "id": 0,
+                "is_guaranteed_award": 0,
+                "recruit_activity_times": 2,
+                "recruit_daily_times": 1011,
+                "select_tid": 0,
+                "total_count": 0
+              },
+              {
+                "first_week": 0,
+                "free_times": 0,
+                "guaranteed_limit": 0,
+                "guaranteed_times": 0,
+                "id": 0,
+                "is_guaranteed_award": 0,
+                "recruit_activity_times": 66912256,
+                "recruit_daily_times": 33554432,
+                "select_tid": 0,
+                "total_count": 0
+              },
+              {
+                "first_week": 2,
+                "free_times": 0,
+                "guaranteed_limit": 0,
+                "guaranteed_times": 0,
+                "id": 0,
+                "is_guaranteed_award": 0,
+                "recruit_activity_times": 1031,
+                "recruit_daily_times": 0,
+                "select_tid": 0,
+                "total_count": 0
+              },
+              {
+                "first_week": 0,
+                "free_times": 0,
+                "guaranteed_limit": 0,
+                "guaranteed_times": 68222976,
+                "id": 0,
+                "is_guaranteed_award": 0,
+                "recruit_activity_times": 0,
+                "recruit_daily_times": 261632,
+                "select_tid": 0,
+                "total_count": 0
+              },
+              {
+                "first_week": 0,
+                "free_times": 0,
+                "guaranteed_limit": 0,
+                "guaranteed_times": 101,
+                "id": 2,
+                "is_guaranteed_award": 0,
+                "recruit_activity_times": 16777216,
+                "recruit_daily_times": 29,
+                "select_tid": 0,
+                "total_count": 0
+              },
+              {
+                "first_week": 0,
+                "free_times": 0,
+                "guaranteed_limit": 6684672,
+                "guaranteed_times": 0,
+                "id": 0,
+                "is_guaranteed_award": 0,
+                "recruit_activity_times": 265216,
+                "recruit_daily_times": 131072,
+                "select_tid": 0,
+                "total_count": 0
+              },
+              {
+                "first_week": 0,
+                "free_times": 0,
+                "guaranteed_limit": 111,
+                "guaranteed_times": 301989888,
+                "id": 0,
+                "is_guaranteed_award": 0,
+                "recruit_activity_times": 29,
+                "recruit_daily_times": 2,
+                "select_tid": 0,
+                "total_count": 0
+              },
+              {
+                "first_week": 0,
+                "free_times": 28672,
+                "guaranteed_limit": 0,
+                "guaranteed_times": 259840,
+                "id": 0,
+                "is_guaranteed_award": 0,
+                "recruit_activity_times": 131072,
+                "recruit_daily_times": 0,
+                "select_tid": 0,
+                "total_count": 0
+              },
+              {
+                "first_week": 0,
+                "free_times": 0,
+                "guaranteed_limit": -268435456,
+                "guaranteed_times": 28,
+                "id": 0,
+                "is_guaranteed_award": 0,
+                "recruit_activity_times": 2,
+                "recruit_daily_times": 0,
+                "select_tid": 30976,
+                "total_count": 0
+              },
+              {
+                "first_week": 0,
+                "free_times": 0,
+                "guaranteed_limit": 260352,
+                "guaranteed_times": 131072,
+                "id": 0,
+                "is_guaranteed_award": 0,
+                "recruit_activity_times": 0,
+                "recruit_daily_times": 0,
+                "select_tid": 0,
+                "total_count": 31232
+              },
+              {
+                "first_week": -125,
+                "free_times": 0,
+                "guaranteed_limit": 28,
+                "guaranteed_times": 2,
+                "id": 0,
+                "is_guaranteed_award": -11,
+                "recruit_activity_times": 0,
+                "recruit_daily_times": 0,
+                "select_tid": 0,
+                "total_count": 0
+              },
+              {
+                "first_week": 0,
+                "free_times": 1021,
+                "guaranteed_limit": 131072,
+                "guaranteed_times": 0,
+                "id": 0,
+                "is_guaranteed_award": 0,
+                "recruit_activity_times": 0,
+                "recruit_daily_times": 0,
+                "select_tid": 0,
+                "total_count": 0
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 24027,
+          "payload_hex": "00040000000100000003000000000000000400000000000000020000000000000001",
+          "decoded": {
+            "complete_achieve_info": [
+              {
+                "draw_times": 0,
+                "gain_point": 1,
+                "type": 3
+              },
+              {
+                "draw_times": 0,
+                "gain_point": 0,
+                "type": 4
+              },
+              {
+                "draw_times": 0,
+                "gain_point": 0,
+                "type": 2
+              },
+              {
+                "draw_times": 0,
+                "gain_point": 0,
+                "type": 1
+              }
+            ]
+          }
+        },
+        {
+          "cmd": 24024,
+          "payload_hex": "00000191010000000c010000",
+          "decoded": {
+            "achievement_info": {
+              "count": 12,
+              "finish_info": [],
+              "id": 401,
+              "stage": 1,
+              "state": 1
+            }
+          }
+        },
+        {
+          "cmd": 24117,
+          "payload_hex": "00030000000a00",
+          "decoded": {
+            "task_info": {
+              "count": 10,
+              "id": 3,
+              "state": 0
+            }
+          }
+        },
+        {
+          "cmd": 24220,
+          "payload_hex": "000c00010001",
+          "decoded": {
+            "received_list": [
+              1
+            ],
+            "recruit_times": 12
+          }
+        }
+      ]
+    }
+  ]
+}
