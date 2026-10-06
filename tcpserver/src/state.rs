@@ -93,6 +93,12 @@ pub struct ConnectionContext {
     /// Sync word whose next video-end request was already answered when auto
     /// mode proactively pushed the next recorded action.
     pub battle_auto_resume_sync_word: Option<i32>,
+    /// Last scripted action packet served, with its sync word, so a sync
+    /// poll can re-send the current action like the official server does.
+    pub battle_last_action: Option<(Vec<u8>, i32)>,
+    /// Sync word already re-served on a sync poll; further polls stay quiet
+    /// until a newer action is served.
+    pub battle_last_repeat_sync: Option<i32>,
     /// Stage ids claimed via CS_MAIN_STORY_STAGE_AWARD this connection.
     pub story_award_claimed: Vec<i32>,
     /// Indices of story-pass recordings already consumed this connection.
@@ -138,6 +144,8 @@ impl ConnectionContext {
             recruit_save_index: 0,
             battle_sync_word: 0,
             battle_auto_resume_sync_word: None,
+            battle_last_action: None,
+            battle_last_repeat_sync: None,
             story_award_claimed: Vec::new(),
             story_pass_taken: Vec::new(),
             hero_evolution: HashMap::new(),
@@ -163,6 +171,8 @@ impl ConnectionContext {
         self.battle_round = 0;
         self.battle_sync_word = 0;
         self.battle_auto_resume_sync_word = None;
+        self.battle_last_action = None;
+        self.battle_last_repeat_sync = None;
     }
 
     pub fn update_heartbeat(&mut self) {

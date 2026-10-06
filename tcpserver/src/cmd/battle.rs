@@ -725,6 +725,22 @@ async fn encode_group(
     {
         let mut connection = ctx.lock().await;
         absorb_attr_updates(&mut connection, &group);
+        if group.responses.iter().any(|response| response.cmd == 20103) {
+            // Remember the last served action so a sync poll can re-send it:
+            // the official server repeats the current action on 20120.
+            if let Some(action) = packets
+                .iter()
+                .rev()
+                .find(|packet| {
+                    packet.len() >= 6
+                        && u32::from_be_bytes([packet[2], packet[3], packet[4], packet[5]])
+                            == 20103
+                })
+                .cloned()
+            {
+                connection.battle_last_action = Some((action, connection.battle_sync_word));
+            }
+        }
         if applied_pending_skill {
             connection.battle_pending_skills.pop_front();
         }
@@ -1320,7 +1336,12 @@ pub async fn handle_battle_use_skill(
         });
         if !has_skill_ack && contains_player_action {
             if let Some(skill) = requested_skill {
-                ctx.lock().await.battle_pending_skills.push_back(skill);
+                // Mashed taps must not queue the same skill twice; each
+                // queued copy would eat one future player action.
+                let mut connection = ctx.lock().await;
+                if !connection.battle_pending_skills.contains(&skill) {
+                    connection.battle_pending_skills.push_back(skill);
+                }
             }
         }
         let packets = encode_step(&ctx, &step).await?;
@@ -1353,9 +1374,14 @@ pub async fn handle_battle_use_skill(
 
     // A manual client needs an acknowledgement even when its battle was not
     // captured in manual mode. Queue the chosen skill for the next player
-    // action batch so the scripted action actually uses it.
+    // action batch so the scripted action actually uses it. The queue holds
+    // each skill once: a mashed button must not pile up copies that each
+    // eat one future player action.
     if let Some(skill) = requested_skill {
-        ctx.lock().await.battle_pending_skills.push_back(skill);
+        let mut connection = ctx.lock().await;
+        if !connection.battle_pending_skills.contains(&skill) {
+            connection.battle_pending_skills.push_back(skill);
+        }
     }
     info!(
         hero_id,
@@ -1381,12 +1407,54 @@ pub async fn handle_battle_use_skill(
 /// Handle CS_BATTLE_SYNC (20120): replay the recorded sync batch, if any.
 pub async fn handle_battle_sync(
     ctx: Arc<Mutex<ConnectionContext>>,
-    _request: CS_BATTLE_SYNC,
+    request: CS_BATTLE_SYNC,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     if let Some(step) = take_step(&ctx, 20120).await {
         let packets = encode_step(&ctx, &step).await?;
         if !packets.is_empty() {
             return Ok(packets);
+        }
+    }
+    // Awaiting skill execution: the client polls sync until its tap turns
+    // into an action, and the official server answers the poll with the
+    // action itself (session_3 step30). Serve the next action step instead
+    // of an empty NONE the client just retries around until it gives up on
+    // a loading screen.
+    if !ctx.lock().await.battle_pending_skills.is_empty() {
+        loop {
+            let Some(step) = take_step(&ctx, 20104).await else {
+                break;
+            };
+            let packets = encode_step(&ctx, &step).await?;
+            if !packets.is_empty() {
+                info!(
+                    sync_word = request.sync_word,
+                    "Battle sync served pending skill execution"
+                );
+                return Ok(packets);
+            }
+            if !ctx.lock().await.battle_active {
+                return Ok(packets);
+            }
+        }
+    }
+    // Otherwise re-send the last action once per sync word so the client can
+    // confirm it is in step; further polls stay quiet until a newer action
+    // is served (session_3 steps 30-31).
+    {
+        let mut connection = ctx.lock().await;
+        if connection.battle_active && !connection.battle_result_served {
+            if let Some((packet, sync)) = connection.battle_last_action.clone() {
+                if connection.battle_last_repeat_sync != Some(sync) {
+                    connection.battle_last_repeat_sync = Some(sync);
+                    info!(
+                        sync_word = request.sync_word,
+                        repeated = sync,
+                        "Battle sync repeated last action"
+                    );
+                    return Ok(vec![packet]);
+                }
+            }
         }
     }
     if ctx.lock().await.battle_active {
@@ -2351,5 +2419,63 @@ mod tests {
         let back = crate::messages::pt_attr_int_list::decode(&mut reader);
         assert_eq!(back.key, 3);
         assert_eq!(back.value, message.value);
+    }
+
+    fn packet_cmd(packet: &[u8]) -> u32 {
+        u32::from_be_bytes([packet[2], packet[3], packet[4], packet[5]])
+    }
+
+    #[tokio::test]
+    async fn battle_sync_poll_serves_pending_skill_then_repeats_once() {
+        // Regression test for the mid-battle loading stall: the client polls
+        // 20120 until a tapped skill turns into an action (the official
+        // server answers the poll with the action itself), then expects the
+        // current action re-sent once as a sync confirmation (session_3
+        // steps 30-31). Answering NONE to every poll made the client retry
+        // its tap and eventually give up on a loading screen.
+        let mut connection = ConnectionContext::new("test".to_owned());
+        let steps = load_session(0).map(|data| data.steps.len()).unwrap_or(13);
+        connection.battle_active = true;
+        connection.battle_session_chosen = Some(0);
+        connection.battle_step_consumed = vec![false; steps];
+        connection.battle_result_served = false;
+        connection.battle_active_heroes = vec![(1, 1110, 1), (3, 1202, 2)];
+        connection.battle_actor_map.insert(1, (1, 1110, 1110));
+        connection.battle_actor_map.insert(2, (3, 1305, 1202));
+        connection
+            .battle_pending_skills
+            .push_back(crate::state::BattlePendingSkill {
+                hero_id: 3,
+                skill_id: 120204,
+            });
+        let ctx = Arc::new(Mutex::new(connection));
+
+        // First poll carries a pending skill: the next action step is served
+        // with the skill applied, and the queue is consumed.
+        let first = handle_battle_sync(ctx.clone(), CS_BATTLE_SYNC { sync_word: 0 })
+            .await
+            .expect("sync poll must serve the pending execution");
+        assert!(!first.is_empty());
+        assert_eq!(packet_cmd(&first[0]), 20103);
+        assert!(ctx.lock().await.battle_pending_skills.is_empty());
+
+        // Second poll has nothing pending: the last action is repeated once
+        // so the client can confirm it is in step.
+        let second = handle_battle_sync(ctx.clone(), CS_BATTLE_SYNC {
+            sync_word: 41219004,
+        })
+        .await
+        .expect("sync poll must repeat the last action");
+        assert_eq!(second.len(), 1);
+        assert_eq!(second[0], first[0]);
+
+        // Third poll: already repeated, so the server stays quiet with NONE.
+        let third = handle_battle_sync(ctx.clone(), CS_BATTLE_SYNC {
+            sync_word: 41219004,
+        })
+        .await
+        .expect("sync poll must answer");
+        assert_eq!(third.len(), 1);
+        assert_eq!(packet_cmd(&third[0]), 20116);
     }
 }
