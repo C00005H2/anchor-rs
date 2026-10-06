@@ -74,22 +74,30 @@ async fn handle_client(
                             .map(|id| id.to_string())
                             .unwrap_or_else(|_| format!("UNKNOWN({})", cmd_id));
 
+                        let mut decoded_val = dispatch_cmd(cmd_id, &decrypted_data);
+                        if let Some(val) = decoded_val.as_mut() {
+                            redact_capture_value(cmd_id, val);
+                        }
+
+                        let decoded_str = decoded_val
+                            .as_ref()
+                            .map(|v| v.to_string())
+                            .unwrap_or_else(|| "<no schema>".to_string());
+
+                        let preview = if matches!(cmd_id, 11000 | 11007) {
+                            "<redacted>".to_string()
+                        } else {
+                            hex_preview(&decrypted_data, 32)
+                        };
+
                         info!(
                             cmd = cmd_id,
                             name = %name,
                             payload_len = decrypted_data.len(),
+                            decoded = %decoded_str,
+                            preview = %preview,
                             "Received client packet"
                         );
-                        if matches!(cmd_id, 11000 | 11007) {
-                            tracing::debug!("Omitting raw authentication packet preview");
-                        } else {
-                            tracing::debug!(preview = %hex_preview(&decrypted_data, 32), "Client packet preview");
-                        }
-
-                        if let Some(mut val) = dispatch_cmd(cmd_id, &decrypted_data) {
-                            redact_capture_value(cmd_id, &mut val);
-                            tracing::debug!(decoded = %val, "Decoded client packet");
-                        }
 
                         if let Err(e) = dispatch_packet_with_replay(
                             Arc::clone(&ctx),
@@ -100,10 +108,14 @@ async fn handle_client(
                         )
                         .await
                         {
-                            error!("[!] Command processing error: {:#}", e);
+                            error!("[!] Command processing error for cmd={cmd_id} ({name}): {:#}", e);
                         }
                     } else {
-                        warn!("[!] Failed to parse client packet");
+                        warn!(
+                            packet_len = pkt.len(),
+                            preview = %hex_preview(&pkt, 32),
+                            "[!] Failed to parse client packet"
+                        );
                     }
                 }
             }

@@ -29,7 +29,12 @@ pub fn init_tracing() {
     #[cfg(target_os = "windows")]
     let _ = ansi_term::enable_ansi_support();
 
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("tcpserver=debug,common=debug,info"));
+
     // Tests, embedded callers, and multiple services may already have installed
     // a global subscriber; initialization should not panic in those cases.
-    let _ = tracing_subscriber::fmt().try_init();
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(env_filter)
+        .try_init();
 }

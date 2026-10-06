@@ -601,6 +601,13 @@ async fn encode_group(
             let Some(skill) = skill else {
                 continue;
             };
+            info!(
+                actor = actor,
+                original_skill = skill_id,
+                queued_hero = skill.hero_id,
+                applied_skill = skill.skill_id,
+                "Queued manual skill applied to hero turn action"
+            );
             if let Some(decoded) = response.decoded.as_mut() {
                 if let Some(object) = decoded.as_object_mut() {
                     object.insert("hero_id".to_owned(), json!(skill.hero_id));
@@ -747,6 +754,10 @@ async fn encode_group(
         if group.responses.iter().any(|response| response.cmd == 20106) {
             connection.battle_result_served = true;
             connection.battle_active = false;
+            info!(
+                round = connection.battle_round,
+                "Battle finished: SC_BATTLE_RESULT (20106) encoded and served"
+            );
         }
     }
     Ok(packets)
@@ -804,6 +815,20 @@ async fn take_step(
         if step.responses.is_empty() {
             continue;
         }
+        let remaining = connection
+            .battle_step_consumed
+            .iter()
+            .filter(|c| !**c)
+            .count();
+        info!(
+            step_index = index,
+            total_steps = session.steps.len(),
+            remaining_steps = remaining,
+            step_req_cmd = step.request_cmd,
+            caller_req_cmd = request_cmd,
+            responses_in_step = step.responses.len(),
+            "Taking battle script step"
+        );
         return Some(step.clone());
     }
     None
@@ -938,6 +963,15 @@ pub async fn handle_battle_field_enter(
         connection.battle_active_heroes = recorded;
     }
 
+    {
+        let connection = ctx.lock().await;
+        info!(
+            active_heroes = ?connection.battle_active_heroes,
+            actor_map = ?connection.battle_actor_map,
+            "Battle roster and actor mapping configured"
+        );
+    }
+
     encode_group(&ctx, group, None).await
 }
 
@@ -1022,7 +1056,12 @@ pub async fn handle_battle_start(
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     let mut connection = ctx.lock().await;
     connection.battle_active = true;
-    info!("Battle started");
+    info!(
+        active = connection.battle_active,
+        sync_word = connection.battle_sync_word,
+        session = connection.battle_session_chosen,
+        "Battle started (CS_BATTLE_START; 0 responses expected)"
+    );
     Ok(Vec::new())
 }
 
@@ -1032,6 +1071,10 @@ pub async fn handle_battle_auto(
     request: CS_BATTLE_AUTO,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     if !ctx.lock().await.battle_active {
+        warn!(
+            is_auto = request.is_auto,
+            "CS_BATTLE_AUTO received while battle is inactive"
+        );
         return Ok(Vec::new());
     }
     let mut group = {
@@ -1157,24 +1200,54 @@ pub async fn handle_battle_video_end(
     // commands); process it like any other video-end so a client quirk can
     // never end the battle prematurely.
     if request.sync_word == 0 {
-        info!("Battle video ended without a sync word; serving the next action");
+        info!("Battle video ended without a sync word (sync_word=0); serving next action");
     }
-    if !ctx.lock().await.battle_active {
+    let (active, current_sync, pending_len) = {
+        let connection = ctx.lock().await;
+        (
+            connection.battle_active,
+            connection.battle_sync_word,
+            connection.battle_pending_skills.len(),
+        )
+    };
+    if !active {
+        warn!(
+            client_sync_word = request.sync_word,
+            server_sync_word = current_sync,
+            "CS_BATTLE_VIDEO_END received while battle is inactive"
+        );
         return Ok(Vec::new());
     }
+
+    info!(
+        client_sync_word = request.sync_word,
+        server_sync_word = current_sync,
+        pending_skills_queued = pending_len,
+        "Processing CS_BATTLE_VIDEO_END"
+    );
 
     // A benched hero's turn encodes to zero packets once roster filtering
     // removes it; skip ahead to the next batch with visible actions instead of
     // stalling the match with an empty reply.
+    let mut skipped_benched = 0;
     loop {
         let Some(step) = take_step(&ctx, 20104).await else {
             break;
         };
         let packets = encode_step(&ctx, &step).await?;
         if !packets.is_empty() {
+            info!(
+                client_sync_word = request.sync_word,
+                new_server_sync_word = ctx.lock().await.battle_sync_word,
+                packets_served = packets.len(),
+                skipped_benched_steps = skipped_benched,
+                "Battle video-end served action step"
+            );
             return Ok(packets);
         }
+        skipped_benched += 1;
         if !ctx.lock().await.battle_active {
+            info!(skipped_benched, "Battle finished while filtering steps");
             return Ok(packets);
         }
     }
@@ -1194,9 +1267,17 @@ pub async fn handle_battle_video_end(
         )
     };
     if result_served {
+        info!(
+            client_sync_word = request.sync_word,
+            "Battle video-end after result already served; staying quiet"
+        );
         return Ok(Vec::new());
     }
     if let Some(reward) = reward {
+        info!(
+            client_sync_word = request.sync_word,
+            "Battle steps exhausted, re-serving recorded result/reward batch"
+        );
         return encode_step(&ctx, &reward).await;
     }
 
@@ -1272,9 +1353,13 @@ pub async fn handle_battle_use_skill(
     request: CS_BATTLE_USE_SKILL,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     if !ctx.lock().await.battle_active {
+        warn!(
+            skill_id = request.skill_id,
+            "CS_BATTLE_USE_SKILL received while battle is inactive"
+        );
         return Ok(Vec::new());
     }
-    let (hero_id, tid, sync_word) = {
+    let (hero_id, tid, sync_word, is_duplicate) = {
         let mut connection = ctx.lock().await;
         let selected = connection
             .battle_active_heroes
@@ -1286,27 +1371,59 @@ pub async fn handle_battle_use_skill(
         let (hero_id, tid) = selected
             .map(|(hero_id, tid, _)| (*hero_id, *tid))
             .unwrap_or_default();
+        let mut is_duplicate = false;
         if let Some(skill) = (hero_id != 0).then_some(BattlePendingSkill {
             hero_id,
             skill_id: request.skill_id,
         }) {
             if connection.battle_pending_skills.contains(&skill) {
-                // Duplicate mashes of the same pending skill stay quiet like
-                // the official server (requests_20261006_new4 lines 138, 145, 172-177).
-                return Ok(Vec::new());
+                is_duplicate = true;
+            } else {
+                connection.battle_pending_skills.push_back(skill);
+                // Advance sync word so the client receives a distinct sync token for
+                // this skill ack, matching official captures (requests_20261006_new4
+                // lines 137, 141, 144, 222, 230).
+                connection.battle_sync_word = connection.battle_sync_word.wrapping_add(1);
             }
-            connection.battle_pending_skills.push_back(skill);
         }
-        // Advance sync word so the client receives a distinct sync token for
-        // this skill ack, matching official captures (requests_20261006_new4
-        // lines 137, 141, 144, 222, 230).
-        connection.battle_sync_word = connection.battle_sync_word.wrapping_add(1);
-        (hero_id, tid, connection.battle_sync_word)
+        (hero_id, tid, connection.battle_sync_word, is_duplicate)
     };
+
+    if is_duplicate {
+        info!(
+            hero_id,
+            tid,
+            skill_id = request.skill_id,
+            sync_word,
+            "Battle skill duplicate mash acknowledged (already queued; returning SC_BATTLE_USE_SKILL ack to prevent client RPC timeout)"
+        );
+        return Ok(vec![build_server_packet(
+            20115,
+            &SC_BATTLE_USE_SKILL {
+                hero_id,
+                skill_id: request.skill_id,
+                result: 1,
+                skill_soul: 0,
+                rage: 10000,
+                sync_word,
+            }
+            .encode(),
+        )?]);
+    }
+
     let requested_skill = (hero_id != 0).then_some(BattlePendingSkill {
         hero_id,
         skill_id: request.skill_id,
     });
+
+    info!(
+        hero_id,
+        tid,
+        skill_id = request.skill_id,
+        sync_word,
+        pending_queue_size = ctx.lock().await.battle_pending_skills.len(),
+        "Battle skill requested; checking recorded script"
+    );
 
     if let Some(mut step) = take_step(&ctx, 20108).await {
         let has_skill_ack = step.responses.iter().any(|response| response.cmd == 20115);
@@ -1352,6 +1469,12 @@ pub async fn handle_battle_use_skill(
 
         let packets = encode_step(&ctx, &step).await?;
         if !packets.is_empty() {
+            info!(
+                hero_id,
+                skill_id = request.skill_id,
+                packets = packets.len(),
+                "Battle skill executed via recorded script step"
+            );
             return Ok(packets);
         }
         // The recorded batch was filtered away (e.g. it belonged to a benched
@@ -1383,7 +1506,8 @@ pub async fn handle_battle_use_skill(
         tid,
         skill_id = request.skill_id,
         sync_word,
-        "Battle skill acknowledged (no recorded batch)"
+        pending_queue_len = ctx.lock().await.battle_pending_skills.len(),
+        "Battle skill acknowledged with synthesized ack (no recorded batch, queued for hero's next turn)"
     );
     Ok(vec![build_server_packet(
         20115,
@@ -1411,16 +1535,35 @@ pub async fn handle_battle_sync(
     request: CS_BATTLE_SYNC,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     ctx.lock().await.update_heartbeat();
+    let (current_sync, pending_len, active) = {
+        let connection = ctx.lock().await;
+        (
+            connection.battle_sync_word,
+            connection.battle_pending_skills.len(),
+            connection.battle_active,
+        )
+    };
+
     if let Some(step) = take_step(&ctx, 20120).await {
         let packets = encode_step(&ctx, &step).await?;
         if !packets.is_empty() {
             info!(
-                sync_word = request.sync_word,
+                client_sync_word = request.sync_word,
+                server_sync_word = current_sync,
+                packets_served = packets.len(),
                 "Battle sync served recorded batch"
             );
             return Ok(packets);
         }
     }
+
+    info!(
+        client_sync_word = request.sync_word,
+        server_sync_word = current_sync,
+        battle_active = active,
+        pending_skills_queued = pending_len,
+        "Battle sync poll received (no recorded sync batch, staying quiet as expected)"
+    );
     Ok(Vec::new())
 }
 
@@ -1434,7 +1577,8 @@ pub async fn handle_battle_forces_skill(
     let sync_word = ctx.lock().await.battle_sync_word;
     info!(
         skill_id = request.skill_id,
-        sync_word, "Battle forces skill requested"
+        sync_word,
+        "Battle forces skill requested (synthesizing energy ack)"
     );
     Ok(vec![build_server_packet(
         20122,
@@ -2421,13 +2565,15 @@ mod tests {
         assert_eq!(packet_cmd(&ack[0]), 20115);
         assert_eq!(ctx.lock().await.battle_pending_skills.len(), 1);
 
-        // Duplicate mash of the same skill: stays quiet with an empty response.
+        // Duplicate mash of the same skill: returns an ack so the client RPC does not
+        // time out, without queueing multiple copies of the skill.
         let mash = handle_battle_use_skill(ctx.clone(), CS_BATTLE_USE_SKILL {
             skill_id: 120201,
         })
         .await
         .expect("mash must succeed");
-        assert!(mash.is_empty(), "duplicate mash must receive an empty response");
+        assert_eq!(mash.len(), 1, "duplicate mash must receive an ack to prevent RPC timeout");
+        assert_eq!(packet_cmd(&mash[0]), 20115);
         assert_eq!(ctx.lock().await.battle_pending_skills.len(), 1);
 
         // A sync poll stays quiet with empty bytes, never advancing or corrupting.

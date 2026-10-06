@@ -39,8 +39,12 @@ use crate::{
 #[macro_export]
 macro_rules! send_responses {
     ($writer:expr, $responses:expr) => {
-        for pkt in $responses {
-            let pkt = crate::cmd::story::maybe_expand_story_unlock(pkt);
+        let total = $responses.len();
+        if total == 0 {
+            tracing::info!("Server sending 0 response packets (empty reply)");
+        }
+        for (idx, pkt) in $responses.iter().enumerate() {
+            let pkt = crate::cmd::story::maybe_expand_story_unlock(pkt.clone());
             if pkt.len() >= 6 {
                 let cmd_id = u32::from_be_bytes([pkt[2], pkt[3], pkt[4], pkt[5]]);
                 let body = &pkt[6..];
@@ -49,22 +53,37 @@ macro_rules! send_responses {
                     .map(|id| id.to_string())
                     .unwrap_or_else(|_| format!("UNKNOWN({})", cmd_id));
 
+                let mut val = crate::dispatch::dispatch_cmd(cmd_id, body);
+                if let Some(v) = val.as_mut() {
+                    crate::capture_replay::redact_capture_value(cmd_id, v);
+                }
+                let decoded_str = val
+                    .as_ref()
+                    .map(|v| v.to_string())
+                    .unwrap_or_else(|| "<no schema>".to_string());
+
+                let preview = if matches!(cmd_id, 11001 | 11008) {
+                    "<redacted>".to_string()
+                } else {
+                    crate::packet::hex_preview(body, 32)
+                };
+
                 tracing::info!(
+                    index = format!("{}/{}", idx + 1, total),
                     cmd = cmd_id,
                     name = %name,
                     payload_len = body.len(),
+                    decoded = %decoded_str,
+                    preview = %preview,
                     "Sending server packet"
                 );
-                if matches!(cmd_id, 11001 | 11008) {
-                    tracing::debug!("Omitting raw authentication response preview");
-                } else {
-                    tracing::debug!(preview = %crate::packet::hex_preview(body, 32), "Server packet preview");
-                }
-
-                if let Some(mut val) = crate::dispatch::dispatch_cmd(cmd_id, body) {
-                    crate::capture_replay::redact_capture_value(cmd_id, &mut val);
-                    tracing::debug!(decoded = %val, "Decoded server packet");
-                }
+            } else {
+                tracing::warn!(
+                    index = format!("{}/{}", idx + 1, total),
+                    raw_len = pkt.len(),
+                    preview = %crate::packet::hex_preview(&pkt, 32),
+                    "Sending short server packet (<6 bytes)"
+                );
             }
 
             $writer.write_all(&pkt).await?;
@@ -433,7 +452,26 @@ pub async fn dispatch_packet_with_replay(
             send_responses!(writer, responses);
         }
         _ => {
-            tracing::warn!(cmd = cmd_id, "Unhandled command");
+            let name = crate::msgid::MsgId::try_from(cmd_id)
+                .map(|id| id.to_string())
+                .unwrap_or_else(|_| format!("UNKNOWN({})", cmd_id));
+            let preview = crate::packet::hex_preview(data, 64);
+            let mut val = crate::dispatch::dispatch_cmd(cmd_id, data);
+            if let Some(v) = val.as_mut() {
+                crate::capture_replay::redact_capture_value(cmd_id, v);
+            }
+            let decoded_str = val
+                .as_ref()
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "<no schema>".to_string());
+            tracing::warn!(
+                cmd = cmd_id,
+                name = %name,
+                payload_len = data.len(),
+                decoded = %decoded_str,
+                preview = %preview,
+                "Unhandled client command; 0 responses sent"
+            );
         }
     }
 
