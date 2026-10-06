@@ -1470,7 +1470,7 @@ impl SC_BATTLE_RESULT {
                 buf.write_i32(self.hero_relation);
                 buf.write_count(self.args.len());
         for v in self.args.iter().take(MAX_COLLECTION_ITEMS) {
-            buf.write_string(v);
+            buf.write_i64(v.parse::<i64>().unwrap_or_default());
         }
                 buf.write_count(self.hero_id_list.len());
         for v in self.hero_id_list.iter().take(MAX_COLLECTION_ITEMS) {
@@ -6967,7 +6967,7 @@ impl SC_FRIEND_GIFT_SEND {
         let mut buf = ProtocolByteBuf::new_write();
                 buf.write_count(self.friend_id.len());
         for v in self.friend_id.iter().take(MAX_COLLECTION_ITEMS) {
-            buf.write_string(v);
+            buf.write_i64(v.parse::<i64>().unwrap_or_default());
         }
         buf.into_bytes()
     }
@@ -7031,7 +7031,7 @@ impl SC_FRIEND_GIFT_GAIN {
         let mut buf = ProtocolByteBuf::new_write();
                 buf.write_count(self.friend_id.len());
         for v in self.friend_id.iter().take(MAX_COLLECTION_ITEMS) {
-            buf.write_string(v);
+            buf.write_i64(v.parse::<i64>().unwrap_or_default());
         }
                 buf.write_count(self.award_list.len());
         for v in self.award_list.iter().take(MAX_COLLECTION_ITEMS) {
@@ -7079,7 +7079,7 @@ impl SC_FRIEND_GIFT_PANEL {
                 buf.write_i32(self.tid);
                 buf.write_count(self.can_gain_friend_id.len());
         for v in self.can_gain_friend_id.iter().take(MAX_COLLECTION_ITEMS) {
-            buf.write_string(v);
+            buf.write_i64(v.parse::<i64>().unwrap_or_default());
         }
         buf.into_bytes()
     }
@@ -17226,7 +17226,7 @@ impl pt_attr_int_list {
                 buf.write_i16(self.key);
                 buf.write_count(self.value.len());
         for v in self.value.iter().take(MAX_COLLECTION_ITEMS) {
-            buf.write_string(v);
+            buf.write_i64(v.parse::<i64>().unwrap_or_default());
         }
         buf.into_bytes()
     }
@@ -17387,7 +17387,7 @@ impl pt_battle_hurt {
                 buf.write_i64(self.hp.parse::<i64>().unwrap_or_default());
                 buf.write_count(self.params.len());
         for v in self.params.iter().take(MAX_COLLECTION_ITEMS) {
-            buf.write_string(v);
+            buf.write_i64(v.parse::<i64>().unwrap_or_default());
         }
         buf.into_bytes()
     }
@@ -19206,7 +19206,7 @@ impl pt_battle_effect_info {
                 buf.write_i64(self.count.parse::<i64>().unwrap_or_default());
                 buf.write_count(self.count_list.len());
         for v in self.count_list.iter().take(MAX_COLLECTION_ITEMS) {
-            buf.write_string(v);
+            buf.write_i64(v.parse::<i64>().unwrap_or_default());
         }
         buf.into_bytes()
     }

@@ -21,7 +21,8 @@ use crate::{
         CS_DAILY_SIGN, CS_DIALOGUE_TALK, CS_DIRECT_GIFT_BUY, CS_DIRECT_GIFT_PANEL,
         CS_ENTER_WORLD, CS_GAIN_ACHIEVEMENT_AWARD, CS_GAIN_ALL_FUND, CS_GAIN_CONCERN_GIFT,
         CS_GAIN_OPEN_SERVER_SIGN_REWARD, CS_HERO_AUTO_RULE_CHANGE, CS_HERO_EVOLUTION,
-        CS_HERO_FORMATION, CS_MAIN_STORY_STAGE_AWARD, CS_SHOP_BUY,
+        CS_HERO_FORMATION, CS_MAIN_STORY_PLAY_CHAPTER_PIC, CS_MAIN_STORY_STAGE_AWARD,
+        CS_SHOP_BUY,
         CS_GAIN_SEVEN_DAY_REWARD, CS_GET_STORY_BATTLE_SUPPORT_HERO_LIST, CS_HERO_DETAIL,
         CS_MAIL_ENCLOSURE_REC, CS_MAIL_READ, CS_SET_STORY_BATTLE_SUPPORT_HERO_LIST,
         CS_NOVICE_TRAINING_PANEL, CS_NOVICE_TRAINING_RECEIVE_TASK, CS_PUBLIC_CHAT_SETTING,
@@ -265,6 +266,11 @@ pub async fn dispatch_packet_with_replay(
         17007 => {
             let request = CS_SHOP_BUY::decode(data);
             let responses = shop::handle_shop_buy(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        18051 => {
+            let request = CS_MAIN_STORY_PLAY_CHAPTER_PIC::decode(data);
+            let responses = story::handle_main_story_play_chapter_pic(ctx, request).await?;
             send_responses!(writer, responses);
         }
         18053 => {

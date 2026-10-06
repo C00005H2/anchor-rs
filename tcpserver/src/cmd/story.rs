@@ -10,7 +10,8 @@ use crate::{
     cmd::battle::absorb_attr_updates,
     data_loader::GameDataLoader,
     messages::{
-        CS_DUP_ONLY_STORY_PASS, CS_MAIN_STORY_STAGE_AWARD, CS_STORY_OVER, SC_MAIN_STORY_INFO,
+        CS_DUP_ONLY_STORY_PASS, CS_MAIN_STORY_PLAY_CHAPTER_PIC, CS_MAIN_STORY_STAGE_AWARD,
+        CS_STORY_OVER, SC_MAIN_STORY_INFO, SC_MAIN_STORY_PLAY_CHAPTER_PIC,
         SC_MAIN_STORY_STAGE_AWARD_LIST, SC_PROP_AWARD_SEND, pt_prop_award,
     },
     packet::build_server_packet,
@@ -50,6 +51,27 @@ pub async fn handle_story_over(
     ctx.lock().await.update_heartbeat();
     info!("Story dialogue finished");
     Ok(Vec::new())
+}
+
+/// Handle CS_MAIN_STORY_PLAY_CHAPTER_PIC (18051): acknowledge the chapter
+/// splash image so the client keeps flowing into stage select.
+pub async fn handle_main_story_play_chapter_pic(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    request: CS_MAIN_STORY_PLAY_CHAPTER_PIC,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    ctx.lock().await.update_heartbeat();
+    info!(
+        chapter_id = request.chapter_id,
+        "Main story chapter pic played"
+    );
+    Ok(vec![build_server_packet(
+        18052,
+        &SC_MAIN_STORY_PLAY_CHAPTER_PIC {
+            result: 1,
+            chapter_id: request.chapter_id,
+        }
+        .encode(),
+    )?])
 }
 
 /// Handle CS_DUP_ONLY_STORY_PASS (18012): replay the recorded skip-pass flow

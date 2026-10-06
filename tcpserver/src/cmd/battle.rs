@@ -2293,4 +2293,63 @@ mod tests {
         assert_eq!(recorded_attackers(&[]), None);
         assert_eq!(recorded_attackers(&[1, 2, 3]), None);
     }
+
+    #[test]
+    fn recorded_battle_action_round_trips_byte_exact() {
+        // Regression test: pt_battle_effect_info::encode used to write
+        // count_list elements as strings while decode reads i64s, so every
+        // re-encoded 20103 came out short and misaligned (session_1 step0:
+        // 346 recorded bytes became 255) and the client stalled mid-battle.
+        let session: Value =
+            serde_json::from_str(include_str!("../../../data/battle/session_1.json"))
+                .expect("session_1.json must parse");
+        let hex = session["steps"][0]["responses"][0]["payload_hex"]
+            .as_str()
+            .expect("step0 must carry a raw payload");
+        let raw = decode_payload_hex(hex).expect("payload_hex must decode");
+        assert_eq!(raw.len(), 346);
+        let message = crate::messages::SC_BATTLE_ACTION::decode(&raw);
+        assert_eq!(message.hero_id, 2);
+        assert_eq!(message.encode(), raw);
+    }
+
+    #[test]
+    fn battle_result_args_encode_as_i64() {
+        // SC_BATTLE_RESULT.args decodes Vec<i64>; the encoder must match or
+        // the 20106 finale packet is misaligned.
+        let message = crate::messages::SC_BATTLE_RESULT {
+            result: 1,
+            award: Vec::new(),
+            detail_item_award: Vec::new(),
+            player_exp: 0,
+            hero_exp: 0,
+            hero_relation: 0,
+            args: vec!["7".to_owned()],
+            hero_id_list: Vec::new(),
+            round: 1,
+            statistic: Vec::new(),
+            pos_effect: Vec::new(),
+            is_replay: 0,
+        };
+        let bytes = message.encode();
+        assert_eq!(bytes.len(), 35);
+        let back = crate::messages::SC_BATTLE_RESULT::decode(&bytes);
+        assert_eq!(back.args, message.args);
+    }
+
+    #[test]
+    fn attr_int_list_values_encode_as_i64() {
+        // pt_attr_int_list.value feeds 20106 statistic entries; each element
+        // is an i64 on the wire, not a length-prefixed string.
+        let message = crate::messages::pt_attr_int_list {
+            key: 3,
+            value: vec!["11".to_owned(), "22".to_owned()],
+        };
+        let bytes = message.encode();
+        assert_eq!(bytes.len(), 20);
+        let mut reader = crate::packet::ProtocolByteBuf::new(&bytes);
+        let back = crate::messages::pt_attr_int_list::decode(&mut reader);
+        assert_eq!(back.key, 3);
+        assert_eq!(back.value, message.value);
+    }
 }
