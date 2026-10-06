@@ -18,6 +18,7 @@ use tokio::sync::Mutex;
 use tracing::info;
 
 use crate::{
+    capture_replay::decode_payload_hex,
     data_loader::GameDataLoader,
     messages::{
         CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_START, CS_BATTLE_SYNC,
@@ -247,6 +248,7 @@ pub async fn handle_battle_field_enter(
                 }
             }
         }
+        patch_enter_formation(&mut group, &deployed_heroes(&formation));
     }
 
     group.encode(&cursor)
@@ -286,6 +288,7 @@ async fn handle_legacy_field_enter(
                 }
             }
         }
+        patch_enter_formation(&mut group, &deployed_heroes(&formation));
     }
 
     info!(
@@ -481,4 +484,142 @@ pub async fn handle_battle_quit(
     }
     info!("Battle quit");
     Ok(Vec::new())
+}
+
+/// Heroes the client actually deployed, in formation order, as (id, tid).
+///
+/// Prefers the ready-marked team, then team 1001, then the first team with
+/// any heroes.
+fn deployed_heroes(formation: &[crate::messages::pt_hero_formation]) -> Vec<(i32, i32)> {
+    let team = formation
+        .iter()
+        .find(|team| team.is_ready == 1 && !team.formation_hero_list.is_empty())
+        .or_else(|| formation.iter().find(|team| team.team_id == 1001))
+        .or_else(|| formation.iter().find(|team| !team.formation_hero_list.is_empty()));
+    team.map(|team| {
+        team.formation_hero_list
+            .iter()
+            .map(|hero| (hero.hero_id, hero.tid))
+            .collect()
+    })
+    .unwrap_or_default()
+}
+
+fn be_i16(bytes: &[u8], offset: usize) -> Option<i16> {
+    Some(i16::from_be_bytes([*bytes.get(offset)?, *bytes.get(offset + 1)?]))
+}
+
+fn be_i32(bytes: &[u8], offset: usize) -> Option<i32> {
+    Some(i32::from_be_bytes([
+        *bytes.get(offset)?,
+        *bytes.get(offset + 1)?,
+        *bytes.get(offset + 2)?,
+        *bytes.get(offset + 3)?,
+    ]))
+}
+
+fn hero_pos(bytes: &[u8]) -> (i16, i16) {
+    (
+        be_i16(bytes, 9).unwrap_or_default(),
+        be_i16(bytes, 11).unwrap_or_default(),
+    )
+}
+
+fn to_hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+/// Rewrite the attacker hero list inside a raw `SC_BATTLE_FIELD_INFO` (20101)
+/// payload so the battle spawns the heroes the client deployed.
+///
+/// The live wire format of `pt_battle_hero` carries one more trailing i16
+/// than the message schema knows about, so the payload cannot be re-encoded
+/// through the struct.  The attacker hero section is therefore rebuilt with
+/// byte surgery: recorded entries are reused for heroes that stay deployed,
+/// freshly recruited heroes clone the first recorded entry into a free grid
+/// cell, and benched recorded heroes are appended at the end so the recorded
+/// action batches keep referencing heroes the client knows about.
+fn patch_field_info_heroes(raw: &[u8], deployed: &[(i32, i32)]) -> Option<Vec<u8>> {
+    // battle_type i8 + field id i64 + player id i64, then the name string.
+    let mut offset = 1 + 8 + 8;
+    let name_len = be_i16(raw, offset)? as usize & 0x7fff;
+    // name (len+i16) + player_lv i16 + total_hp i64 + avatar i16 + count i16.
+    let count_off = offset + 2 + name_len + 2 + 8 + 2;
+    let count = be_i16(raw, count_off)? as usize;
+    offset = count_off + 2;
+
+    let mut recorded: Vec<(i32, i32, Vec<u8>)> = Vec::new();
+    for _ in 0..count {
+        let start = offset;
+        let id = be_i32(raw, start)?;
+        let tid = be_i32(raw, start + 4)?;
+        let skills = be_i16(raw, start + 40)? as usize;
+        let len = 54 + 5 * skills;
+        let end = start + len;
+        recorded.push((id, tid, raw.get(start..end)?.to_vec()));
+        offset = end;
+    }
+    let suffix = raw.get(offset..)?;
+
+    let mut used: Vec<(i16, i16)> = recorded.iter().map(|entry| hero_pos(&entry.2)).collect();
+    let cells = [(0i16, 0i16), (1, 0), (2, 0), (0, 1), (1, 1), (2, 1)];
+
+    let mut entries: Vec<Vec<u8>> = Vec::new();
+    for (id, tid) in deployed {
+        let mut bytes = match recorded.iter().find(|entry| entry.0 == *id) {
+            Some(entry) => {
+                let mut bytes = entry.2.clone();
+                bytes[4..8].copy_from_slice(&tid.to_be_bytes());
+                bytes
+            }
+            None => {
+                let mut bytes = recorded.first()?.2.clone();
+                bytes[0..4].copy_from_slice(&id.to_be_bytes());
+                bytes[4..8].copy_from_slice(&tid.to_be_bytes());
+                let free = cells.iter().find(|cell| !used.contains(cell));
+                if let Some((x, y)) = free {
+                    bytes[9..11].copy_from_slice(&x.to_be_bytes());
+                    bytes[11..13].copy_from_slice(&y.to_be_bytes());
+                    used.push((*x, *y));
+                }
+                bytes
+            }
+        };
+        entries.push(bytes);
+    }
+    // Benched recorded heroes stay in the lineup so recorded action batches
+    // never reference an unknown hero id.
+    for entry in &recorded {
+        if !deployed.iter().any(|(id, _)| *id == entry.0) {
+            entries.push(entry.2.clone());
+        }
+    }
+
+    let mut out = Vec::with_capacity(raw.len() + 69);
+    out.extend_from_slice(&raw[..count_off]);
+    out.extend_from_slice(&(entries.len() as i16).to_be_bytes());
+    for entry in &entries {
+        out.extend_from_slice(entry);
+    }
+    out.extend_from_slice(suffix);
+    Some(out)
+}
+
+/// Apply the client's deployed formation to a battle entry group's 20101.
+fn patch_enter_formation(group: &mut TemplateGroup, deployed: &[(i32, i32)]) {
+    if deployed.is_empty() {
+        return;
+    }
+    for response in group.responses.iter_mut() {
+        if response.cmd != 20101 {
+            continue;
+        }
+        let Some(raw) = response.payload_hex.as_deref().and_then(decode_payload_hex) else {
+            continue;
+        };
+        match patch_field_info_heroes(&raw, deployed) {
+            Some(patched) => response.payload_hex = Some(to_hex(&patched)),
+            None => tracing::warn!("Could not patch battle field info formation"),
+        }
+    }
 }

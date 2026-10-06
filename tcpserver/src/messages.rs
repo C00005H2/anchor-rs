@@ -18998,6 +18998,8 @@ pub struct pt_battle_hero {
     pub auto_battle_rule: i16,
     /// 衣服时装炫彩id
     pub body_fashion_color_id: i16,
+    /// 星辰等级 (live wire carries one more trailing i16 than older schemas)
+    pub star_lv: i16,
 }
 
 impl pt_battle_hero {
@@ -19027,6 +19029,7 @@ impl pt_battle_hero {
             max_hit_stun: reader.read_i16_padded(),
             auto_battle_rule: reader.read_i16_padded(),
             body_fashion_color_id: reader.read_i16_padded(),
+            star_lv: reader.read_i16_padded(),
         }
     }
     pub fn encode(&self) -> Vec<u8> {
@@ -19051,6 +19054,7 @@ impl pt_battle_hero {
                 buf.write_i16(self.max_hit_stun);
                 buf.write_i16(self.auto_battle_rule);
                 buf.write_i16(self.body_fashion_color_id);
+                buf.write_i16(self.star_lv);
         buf.into_bytes()
     }
 }

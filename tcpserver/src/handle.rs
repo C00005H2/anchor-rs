@@ -19,7 +19,7 @@ use crate::{
         CS_BATTLE_SYNC, CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END, CS_CANNOT_DEL_HERO_LIST,
         CS_CHANGE_HERO, CS_DAILY_SIGN, CS_DIALOGUE_TALK, CS_DIRECT_GIFT_BUY,
         CS_DIRECT_GIFT_PANEL,
-        CS_ENTER_WORLD, CS_GAIN_ACHIEVEMENT_AWARD, CS_GAIN_ALL_FUND,
+        CS_ENTER_WORLD, CS_GAIN_ACHIEVEMENT_AWARD, CS_GAIN_ALL_FUND, CS_GAIN_CONCERN_GIFT,
         CS_GAIN_OPEN_SERVER_SIGN_REWARD, CS_HERO_EVOLUTION, CS_MAIN_STORY_STAGE_AWARD,
         CS_SHOP_BUY,
         CS_GAIN_SEVEN_DAY_REWARD, CS_HERO_DETAIL, CS_MAIL_ENCLOSURE_REC, CS_MAIL_READ,
@@ -332,6 +332,11 @@ pub async fn dispatch_packet_with_replay(
         24022 => {
             let request = CS_GAIN_ACHIEVEMENT_AWARD::decode(data);
             let responses = activity::handle_gain_achievement_award(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        24217 => {
+            let request = CS_GAIN_CONCERN_GIFT::decode(data);
+            let responses = activity::handle_gain_concern_gift(ctx, request).await?;
             send_responses!(writer, responses);
         }
         24034 => {

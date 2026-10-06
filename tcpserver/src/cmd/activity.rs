@@ -12,10 +12,10 @@ use crate::{
     data_loader::GameDataLoader,
     messages::{
         CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE, CS_DAILY_SIGN, CS_GAIN_ACHIEVEMENT_AWARD,
-        CS_GAIN_ALL_FUND, CS_GAIN_OPEN_SERVER_SIGN_REWARD, CS_GAIN_SEVEN_DAY_REWARD,
-        CS_NOVICE_TRAINING_PANEL,
+        CS_GAIN_ALL_FUND, CS_GAIN_CONCERN_GIFT, CS_GAIN_OPEN_SERVER_SIGN_REWARD,
+        CS_GAIN_SEVEN_DAY_REWARD, CS_NOVICE_TRAINING_PANEL,
         CS_NOVICE_TRAINING_RECEIVE_TASK, SC_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE,
-        SC_GAIN_ACHIEVEMENT_AWARD, SC_NOVICE_TRAINING_RECEIVE_TASK,
+        SC_GAIN_ACHIEVEMENT_AWARD, SC_GAIN_CONCERN_GIFT, SC_NOVICE_TRAINING_RECEIVE_TASK,
         SC_OPEN_SERVER_SIGN_PANEL_INFO, SC_SEVEN_DAY_PANEL_INFO, SC_UPDATE_ACHIEVEMENT_INFO,
         SC_UPDATE_COMPLETE_ACHIEVE_INFO,
     },
@@ -379,4 +379,23 @@ pub async fn handle_daily_sign(
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     info!("Daily sign-in (replay)");
     replay_first_group(&ctx, DAILY_SIGN_DATA).await
+}
+
+/// Handle CS_GAIN_CONCERN_GIFT (24217): acknowledge the follow gift claim.
+///
+/// The capture never recorded this flow, so simply report success.
+pub async fn handle_gain_concern_gift(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    request: CS_GAIN_CONCERN_GIFT,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    ctx.lock().await.update_heartbeat();
+    info!(id = request.id, "Concern gift claimed");
+    Ok(vec![build_server_packet(
+        24218,
+        &SC_GAIN_CONCERN_GIFT {
+            id: request.id,
+            result: 1,
+        }
+        .encode(),
+    )?])
 }
