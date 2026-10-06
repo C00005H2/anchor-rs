@@ -247,6 +247,8 @@ def write_flow_tables(groups, data_dir, written, skipped_existing, force):
     battle_auto = None
     battle_video_end = []
     novice_training_panel = None
+    use_by_id = None
+    story_pass = None
 
     def emit(relative_path, payload):
         target = data_dir / relative_path
@@ -339,6 +341,25 @@ def write_flow_tables(groups, data_dir, written, skipped_existing, force):
             response = find_response(group, 24220)
             if response and response.decoded is not None and recruit_times is None:
                 recruit_times = response.decoded.get("recruit_times", 0)
+        elif cmd == 17002 and use_by_id is None:
+            use_by_id = {"groups": [{"responses": template_payload(group.responses)}]}
+        elif cmd == 18012 and story_pass is None:
+            story_pass = {"groups": [{"responses": template_payload(group.responses)}]}
+        elif cmd == 13010:
+            hero_id = (group.request_decoded or {}).get("id")
+            response = find_response(group, 13011)
+            if hero_id is not None and response is not None:
+                if response.payload_hex:
+                    emit(f"hero/hero_detail_{hero_id}.json",
+                         {"payload_hex": response.payload_hex})
+                elif response.decoded is not None:
+                    emit(f"hero/hero_detail_{hero_id}.json", sanitize(response.decoded))
+        elif cmd == 13150 and group.responses:
+            request = group.request_decoded or {}
+            emit(
+                f"hero/attr_preview_{request.get('hero_id')}_{request.get('module_id')}.json",
+                {"groups": [{"responses": template_payload(group.responses)}]},
+            )
         elif cmd == 20100 and battle_enter is None:
             battle_enter = {"groups": [{"responses": template_payload(group.responses)}]}
         elif cmd == 20113 and battle_auto is None:
@@ -372,6 +393,10 @@ def write_flow_tables(groups, data_dir, written, skipped_existing, force):
         emit("battle/auto.json", battle_auto)
     if battle_video_end:
         emit("battle/video_end.json", {"groups": battle_video_end})
+    if use_by_id:
+        emit("items/use_by_id.json", use_by_id)
+    if story_pass:
+        emit("story/dup_only_story_pass.json", story_pass)
 
 
 # --------------------------------------------------------------------------
@@ -523,6 +548,10 @@ def main(argv: list[str] | None = None) -> int:
         hero_default = render_default_sequence("SC_HERO_DETAIL", structs)
         if hero_default:
             write_json("hero/hero_detail_default.json", hero_default, filled)
+            for hero_id in range(1, 23):
+                per_hero = dict(hero_default)
+                per_hero["id"] = hero_id
+                write_json(f"hero/hero_detail_{hero_id}.json", per_hero, filled)
 
     if args.fill_defaults:
         for expectation in expectations:

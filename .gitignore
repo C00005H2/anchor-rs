@@ -1,6 +1,8 @@
 .idea
 data/dialogue
 data/hero
+data/items
+data/story
 data/hero_biography
 data/login
 data/shop

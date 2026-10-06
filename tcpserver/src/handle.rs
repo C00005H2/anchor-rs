@@ -9,7 +9,7 @@ use tracing::warn;
 
 use crate::{
     capture_replay::{encode_captured_response, CaptureReplay, ReplayLookup},
-    cmd::{account, activity, battle, dialogue, hero, mail, shop, system, world},
+    cmd::{account, activity, battle, dialogue, hero, items, mail, shop, story, system, world},
     messages::{
         CS_ACCOUNT_LOGIN, CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE, CS_ATTR_PREVIEW_ALL,
         CS_BATTLE_AUTO,
@@ -18,8 +18,8 @@ use crate::{
         CS_ENTER_WORLD, CS_GAIN_ACHIEVEMENT_AWARD, CS_GAIN_OPEN_SERVER_SIGN_REWARD,
         CS_GAIN_SEVEN_DAY_REWARD, CS_HERO_DETAIL, CS_MAIL_ENCLOSURE_REC, CS_MAIL_READ,
         CS_NOVICE_TRAINING_PANEL, CS_NOVICE_TRAINING_RECEIVE_TASK, CS_PUBLIC_CHAT_SETTING,
-        CS_RECRUIT_HERO_NEW_SAVE_LIST, CS_REQ_MODULE_READ, CS_SET_READY, CS_SHOP_TYPE_DATA,
-        CS_SYS_PING, SC_ACCOUNT_LOGIN,
+        CS_DUP_ONLY_STORY_PASS, CS_RECRUIT_HERO_NEW_SAVE_LIST, CS_REQ_MODULE_READ, CS_SET_READY,
+        CS_SHOP_TYPE_DATA, CS_STORY_OVER, CS_SYS_PING, CS_USE_BY_ID, SC_ACCOUNT_LOGIN,
     },
     state::ConnectionContext,
 };
@@ -198,6 +198,21 @@ pub async fn dispatch_packet_with_replay(
         13290 => {
             let request = CS_RECRUIT_HERO_NEW_SAVE_LIST::decode(data);
             let responses = hero::handle_recruit_hero_new_save_list(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        17002 => {
+            let request = CS_USE_BY_ID::decode(data);
+            let responses = items::handle_use_by_id(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        12054 => {
+            let request = CS_STORY_OVER::decode(data);
+            let responses = story::handle_story_over(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        18012 => {
+            let request = CS_DUP_ONLY_STORY_PASS::decode(data);
+            let responses = story::handle_dup_only_story_pass(ctx, request).await?;
             send_responses!(writer, responses);
         }
         16005 => {

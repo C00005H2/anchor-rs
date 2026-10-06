@@ -8,6 +8,7 @@ use crate::messages::{
     SC_RECRUIT_HERO_NEW_SAVE_LIST,
 };
 use crate::packet::build_server_packet;
+use crate::sequence::TemplateFile;
 use crate::state::ConnectionContext;
 
 pub async fn handle_hero_detail(
@@ -58,7 +59,7 @@ pub async fn handle_cannot_del_hero_list(
 /// preview.  The capture never recorded this flow, so echo the request and
 /// report no extra attributes.
 pub async fn handle_attr_preview_all(
-    _ctx: Arc<Mutex<ConnectionContext>>,
+    ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_ATTR_PREVIEW_ALL,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     info!(
@@ -66,6 +67,19 @@ pub async fn handle_attr_preview_all(
         module_id = request.module_id,
         "Attribute preview requested"
     );
+
+    // Prefer the captured preview for this hero/module pair when available.
+    let path = format!(
+        "hero/attr_preview_{}_{}.json",
+        request.hero_id, request.module_id
+    );
+    if let Ok(script) = TemplateFile::load(&path) {
+        if let Some(group) = script.first_group().cloned() {
+            let cursor = ctx.lock().await.replay_cursor.clone();
+            return group.encode(&cursor);
+        }
+    }
+
     Ok(vec![build_server_packet(
         13151,
         &SC_ATTR_PREVIEW_ALL {

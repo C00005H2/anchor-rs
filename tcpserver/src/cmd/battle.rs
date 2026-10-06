@@ -22,7 +22,7 @@ const AUTO_DATA: &str = "battle/auto.json";
 const VIDEO_END_DATA: &str = "battle/video_end.json";
 
 /// Remember the absolute attribute values a scripted response reports.
-fn absorb_attr_updates(connection: &mut ConnectionContext, group: &TemplateGroup) {
+pub(crate) fn absorb_attr_updates(connection: &mut ConnectionContext, group: &TemplateGroup) {
     for response in &group.responses {
         if response.cmd != 12003 {
             continue;
