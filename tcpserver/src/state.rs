@@ -90,6 +90,9 @@ pub struct ConnectionContext {
     pub recruit_save_index: usize,
     /// Latest battle sync word observed in scripted battle responses.
     pub battle_sync_word: i32,
+    /// Sync word whose next video-end request was already answered when auto
+    /// mode proactively pushed the next recorded action.
+    pub battle_auto_resume_sync_word: Option<i32>,
     /// Stage ids claimed via CS_MAIN_STORY_STAGE_AWARD this connection.
     pub story_award_claimed: Vec<i32>,
     /// Indices of story-pass recordings already consumed this connection.
@@ -134,6 +137,7 @@ impl ConnectionContext {
             recruit_prepare_index: 0,
             recruit_save_index: 0,
             battle_sync_word: 0,
+            battle_auto_resume_sync_word: None,
             story_award_claimed: Vec::new(),
             story_pass_taken: Vec::new(),
             hero_evolution: HashMap::new(),
@@ -158,6 +162,7 @@ impl ConnectionContext {
         self.battle_result_served = true;
         self.battle_round = 0;
         self.battle_sync_word = 0;
+        self.battle_auto_resume_sync_word = None;
     }
 
     pub fn update_heartbeat(&mut self) {

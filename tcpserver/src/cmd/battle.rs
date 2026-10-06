@@ -837,6 +837,7 @@ pub async fn handle_battle_field_enter(
         info!(
             battle_type = request.battle_type,
             battle_field_id = %request.battle_field_id,
+            recorded_field_id = ?session.field_id.as_deref(),
             session = index + 1,
             steps = session.steps.len(),
             "Battle field entered (session)"
@@ -867,10 +868,13 @@ pub async fn handle_battle_field_enter(
         }
         let deployed = deployed_heroes(&formation, ready_team_id);
         let roster = patch_enter_formation(&mut group, &deployed);
+        patch_enter_field_id(&mut group, &request.battle_field_id);
         let mut connection = ctx.lock().await;
         connection.battle_active_heroes = deployed;
         connection.battle_actor_map = roster.actor_map;
         connection.battle_added_heroes = roster.added_heroes;
+    } else {
+        patch_enter_field_id(&mut group, &request.battle_field_id);
     }
 
     encode_group(&ctx, group, None).await
@@ -918,10 +922,13 @@ async fn handle_legacy_field_enter(
         }
         let deployed = deployed_heroes(&formation, ready_team_id);
         let roster = patch_enter_formation(&mut group, &deployed);
+        patch_enter_field_id(&mut group, &request.battle_field_id);
         let mut connection = ctx.lock().await;
         connection.battle_active_heroes = deployed;
         connection.battle_actor_map = roster.actor_map;
         connection.battle_added_heroes = roster.added_heroes;
+    } else {
+        patch_enter_field_id(&mut group, &request.battle_field_id);
     }
 
     info!(
@@ -966,8 +973,10 @@ pub async fn handle_battle_auto(
     };
 
     // Only the first auto request of a battle gets the full opening push;
-    // later toggles (e.g. switching to manual mid-fight) are acknowledged
-    // with SC_BATTLE_AUTO alone, like the capture shows.
+    // later toggles are acknowledged with SC_BATTLE_AUTO, as in the captures.
+    // When auto is enabled again, also push the next action: some clients do
+    // not issue the captured follow-up 20104 after switching modes. If they do,
+    // handle_battle_video_end recognizes that sync as already answered.
     let repeat = {
         let mut connection = ctx.lock().await;
         let repeat = connection.battle_auto_served;
@@ -976,20 +985,76 @@ pub async fn handle_battle_auto(
     };
     if repeat {
         group.responses.retain(|response| response.cmd == 20114);
+        if !group.responses.iter().any(|response| response.cmd == 20114) {
+            if let Some(ack) = TemplateFile::load(AUTO_DATA)
+                .ok()
+                .and_then(|file| file.first_group().cloned())
+                .and_then(|group| {
+                    group
+                        .responses
+                        .into_iter()
+                        .find(|response| response.cmd == 20114)
+                })
+            {
+                group.responses.push(ack);
+            }
+        }
     }
 
     // Echo the requested auto-battle flag in SC_BATTLE_AUTO.
     for response in group.responses.iter_mut() {
         if response.cmd == 20114 {
-            if let Some(object) = response.decoded.as_mut().and_then(|decoded| decoded.as_object_mut()) {
+            if let Some(object) = response
+                .decoded
+                .as_mut()
+                .and_then(|decoded| decoded.as_object_mut())
+            {
                 object.insert("is_auto".to_owned(), serde_json::json!(request.is_auto));
                 response.payload_hex = None;
             }
         }
     }
 
-    info!(is_auto = request.is_auto, "Auto-battle requested");
-    encode_group(&ctx, group.clone(), Some(20113)).await
+    let mut response_request_cmd = Some(20113);
+    let mut legacy_resume = false;
+    let mut resume_sync_word = None;
+    if repeat && request.is_auto != 0 {
+        let current_sync_word = ctx.lock().await.battle_sync_word;
+        if let Some(step) = take_step(&ctx, 20104).await {
+            group.responses.extend(step.responses);
+            response_request_cmd = Some(20104);
+            resume_sync_word = Some(current_sync_word);
+        } else if ctx.lock().await.battle_session_chosen.is_none() {
+            // Keep the older flat capture path working when no session files
+            // are available for this battle.
+            legacy_resume = true;
+            resume_sync_word = Some(current_sync_word);
+        }
+    }
+
+    let mut packets = encode_group(&ctx, group.clone(), response_request_cmd).await?;
+    if legacy_resume {
+        let legacy_packets = handle_legacy_video_end(ctx.clone()).await?;
+        if legacy_packets.is_empty() {
+            resume_sync_word = None;
+        } else {
+            packets.extend(legacy_packets);
+        }
+    }
+    if resume_sync_word.is_some() {
+        ctx.lock().await.battle_auto_resume_sync_word = resume_sync_word;
+    }
+
+    info!(
+        is_auto = request.is_auto,
+        resumed_with_action = response_request_cmd == Some(20104) || legacy_resume,
+        "Auto-battle requested"
+    );
+    Ok(packets)
+}
+
+fn skip_auto_resume_duplicate(connection: &mut ConnectionContext, sync_word: i32) -> bool {
+    connection.battle_auto_resume_sync_word.take() == Some(sync_word)
 }
 
 /// Handle CS_BATTLE_VIDEO_END (20104): feed the next scripted action batch.
@@ -1001,6 +1066,17 @@ pub async fn handle_battle_video_end(
     ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_BATTLE_VIDEO_END,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    let duplicate_auto_resume = {
+        let mut connection = ctx.lock().await;
+        skip_auto_resume_duplicate(&mut connection, request.sync_word)
+    };
+    if duplicate_auto_resume {
+        info!(
+            sync_word = request.sync_word,
+            "Ignoring video-end sync already answered during auto resume"
+        );
+        return Ok(Vec::new());
+    }
     if request.sync_word == 0 {
         info!("Battle video ended without a sync word");
         return serve_battle_result(ctx, "video-end").await;
@@ -1619,9 +1695,45 @@ fn patch_enter_formation(
     patch
 }
 
+/// Keep SC_BATTLE_FIELD_INFO consistent with the client's requested stage when
+/// this replay falls back to a recording captured on a different battlefield.
+fn patch_enter_field_id(group: &mut TemplateGroup, requested_field_id: &str) {
+    let Ok(field_id) = requested_field_id.parse::<i64>() else {
+        return;
+    };
+    for response in group
+        .responses
+        .iter_mut()
+        .filter(|response| response.cmd == 20101)
+    {
+        if let Some(mut raw) = response.payload_hex.as_deref().and_then(decode_payload_hex) {
+            if let Some(field_id_bytes) = raw.get_mut(1..9) {
+                field_id_bytes.copy_from_slice(&field_id.to_be_bytes());
+                response.payload_hex = Some(to_hex(&raw));
+            }
+        }
+        if let Some(object) = response.decoded.as_mut().and_then(Value::as_object_mut) {
+            object.insert("battle_field_id".to_owned(), json!(field_id.to_string()));
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn auto_resume_video_end_duplicate_is_ignored_once() {
+        let mut connection = ConnectionContext::new("test".to_owned());
+        connection.battle_auto_resume_sync_word = Some(71337005);
+
+        assert!(skip_auto_resume_duplicate(&mut connection, 71337005));
+        assert!(!skip_auto_resume_duplicate(&mut connection, 71337005));
+
+        connection.battle_auto_resume_sync_word = Some(71337005);
+        assert!(!skip_auto_resume_duplicate(&mut connection, 71337006));
+        assert_eq!(connection.battle_auto_resume_sync_word, None);
+    }
 
     #[test]
     fn retreat_result_has_no_victory_rewards() {
@@ -1903,12 +2015,37 @@ mod tests {
     }
 
     #[test]
+    fn field_info_uses_the_requested_battlefield_on_capture_fallback() {
+        let mut raw = field_info_with_two_attackers();
+        raw[1..9].copy_from_slice(&1004i64.to_be_bytes());
+        let mut group = TemplateGroup {
+            responses: vec![TemplateResponse {
+                cmd: 20101,
+                decoded: Some(json!({"battle_field_id": "1004"})),
+                payload_hex: Some(to_hex(&raw)),
+            }],
+        };
+
+        patch_enter_field_id(&mut group, "1001");
+        let patched = decode_payload_hex(group.responses[0].payload_hex.as_deref().unwrap())
+            .unwrap();
+        let decoded = crate::messages::SC_BATTLE_FIELD_INFO::decode(&patched);
+
+        assert_eq!(decoded.battle_field_id, "1001");
+        assert_eq!(
+            group.responses[0].decoded.as_ref().unwrap()["battle_field_id"],
+            "1001"
+        );
+    }
+
+    #[test]
     fn field_info_removes_benched_capture_heroes() {
         let raw = field_info_with_two_attackers();
         let deployed = [(42, 1006, 1)];
         let (patched, roster) = patch_field_info_heroes(&raw, &deployed).unwrap();
         let decoded = crate::messages::SC_BATTLE_FIELD_INFO::decode(&patched);
 
+        assert_eq!(decoded.battle_field_id, "1001");
         assert_eq!(decoded.att_info.hero_list.len(), 1);
         assert_eq!(decoded.att_info.hero_list[0].id, 42);
         assert_eq!(decoded.att_info.hero_list[0].tid, 1006);
