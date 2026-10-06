@@ -90,6 +90,14 @@ fn session_count() -> usize {
     count
 }
 
+/// Returns true if this server packet carries a battle sync_word as its trailing 4-byte payload.
+pub(crate) fn is_battle_sync_cmd(cmd: u32) -> bool {
+    matches!(
+        cmd,
+        20103 | 20105 | 20112 | 20115 | 20118 | 20125 | 20126 | 20129
+    )
+}
+
 /// Remember the absolute attribute values a scripted response reports, and
 /// track the newest battle sync word so out-of-script skill requests can be
 /// acknowledged with a plausible sync value.
@@ -105,7 +113,10 @@ pub(crate) fn absorb_attr_updates(connection: &mut ConnectionContext, group: &Te
                 .and_then(|decoded| decoded.get("sync_word"))
                 .and_then(|sync| sync.as_i64())
             {
-                connection.battle_sync_word = sync as i32;
+                let sync_i32 = sync as i32;
+                if sync_i32 > connection.battle_sync_word {
+                    connection.battle_sync_word = sync_i32;
+                }
             }
         }
         if matches!(response.cmd, 20105 | 20106) {
@@ -732,6 +743,69 @@ async fn encode_group(
             _ => true,
         });
     }
+
+    // Synchronize battle sync words monotonically.
+    // Client strictly requires monotonic sync words; sending a stale or regressed
+    // sync word triggers an infinite CS_BATTLE_SYNC desync loop and freezes battle.
+    {
+        let mut connection = ctx.lock().await;
+        for response in &mut group.responses {
+            if !is_battle_sync_cmd(response.cmd) {
+                continue;
+            }
+            let recorded_sync = response
+                .decoded
+                .as_ref()
+                .and_then(|decoded| decoded.get("sync_word"))
+                .and_then(Value::as_i64)
+                .map(|s| s as i32)
+                .or_else(|| {
+                    response
+                        .payload_hex
+                        .as_deref()
+                        .and_then(decode_payload_hex)
+                        .and_then(|raw| {
+                            if raw.len() >= 4 {
+                                be_i32(&raw, raw.len() - 4)
+                            } else {
+                                None
+                            }
+                        })
+                });
+
+            let new_sync = if connection.battle_sync_word == 0 {
+                // Battle just started; initialize baseline from the recording
+                let initial = recorded_sync.unwrap_or(1);
+                connection.battle_sync_word = initial;
+                initial
+            } else {
+                connection.battle_sync_word = connection.battle_sync_word.wrapping_add(1);
+                connection.battle_sync_word
+            };
+
+            let recorded_val = recorded_sync.unwrap_or_default();
+            info!(
+                cmd = response.cmd,
+                recorded_sync = recorded_val,
+                assigned_sync = new_sync,
+                "Assigned monotonic battle sync word to response"
+            );
+
+            if let Some(decoded) = response.decoded.as_mut().and_then(Value::as_object_mut) {
+                if decoded.contains_key("sync_word") {
+                    decoded.insert("sync_word".to_owned(), json!(new_sync));
+                }
+            }
+            if let Some(mut raw) = response.payload_hex.as_deref().and_then(decode_payload_hex) {
+                if raw.len() >= 4 {
+                    let len = raw.len();
+                    raw[len - 4..len].copy_from_slice(&new_sync.to_be_bytes());
+                    response.payload_hex = Some(to_hex(&raw));
+                }
+            }
+        }
+    }
+
     let mut packets = group.encode(&cursor)?;
     let extra_actions = injected_actions(&added, &group.responses);
     let mut insert_at = packets
@@ -742,7 +816,16 @@ async fn encode_group(
         })
         .map(|index| index + 1)
         .unwrap_or(packets.len());
-    for packet in extra_actions {
+    for mut packet in extra_actions {
+        let new_sync = {
+            let mut connection = ctx.lock().await;
+            connection.battle_sync_word = connection.battle_sync_word.wrapping_add(1);
+            connection.battle_sync_word
+        };
+        if packet.len() >= 10 {
+            let len = packet.len();
+            packet[len - 4..len].copy_from_slice(&new_sync.to_be_bytes());
+        }
         packets.insert(insert_at, packet);
         insert_at += 1;
     }
@@ -1218,9 +1301,21 @@ pub async fn handle_battle_video_end(
         return Ok(Vec::new());
     }
 
+    if request.sync_word > 0 && request.sync_word > current_sync {
+        let mut connection = ctx.lock().await;
+        let old_server_sync = connection.battle_sync_word;
+        info!(
+            old_server_sync,
+            client_sync = request.sync_word,
+            "Advancing server battle_sync_word to match client acknowledged sync_word"
+        );
+        connection.battle_sync_word = request.sync_word;
+    }
+
+    let updated_sync = ctx.lock().await.battle_sync_word;
     info!(
         client_sync_word = request.sync_word,
-        server_sync_word = current_sync,
+        server_sync_word = updated_sync,
         pending_skills_queued = pending_len,
         "Processing CS_BATTLE_VIDEO_END"
     );
@@ -1380,10 +1475,6 @@ pub async fn handle_battle_use_skill(
                 is_duplicate = true;
             } else {
                 connection.battle_pending_skills.push_back(skill);
-                // Advance sync word so the client receives a distinct sync token for
-                // this skill ack, matching official captures (requests_20261006_new4
-                // lines 137, 141, 144, 222, 230).
-                connection.battle_sync_word = connection.battle_sync_word.wrapping_add(1);
             }
         }
         (hero_id, tid, connection.battle_sync_word, is_duplicate)
@@ -1421,7 +1512,7 @@ pub async fn handle_battle_use_skill(
         hero_id,
         tid,
         skill_id = request.skill_id,
-        sync_word,
+        server_sync_word = sync_word,
         pending_queue_size,
         "Battle skill requested; checking recorded script"
     );
@@ -1481,6 +1572,11 @@ pub async fn handle_battle_use_skill(
         // The recorded batch was filtered away (e.g. it belonged to a benched
         // hero): acknowledge the requested skill directly so the tap is not
         // left hanging.
+        let sync_word = {
+            let mut connection = ctx.lock().await;
+            connection.battle_sync_word = connection.battle_sync_word.wrapping_add(1);
+            connection.battle_sync_word
+        };
         info!(
             hero_id,
             tid,
@@ -1502,7 +1598,11 @@ pub async fn handle_battle_use_skill(
         )?]);
     }
 
-    let pending_queue_len = ctx.lock().await.battle_pending_skills.len();
+    let (sync_word, pending_queue_len) = {
+        let mut connection = ctx.lock().await;
+        connection.battle_sync_word = connection.battle_sync_word.wrapping_add(1);
+        (connection.battle_sync_word, connection.battle_pending_skills.len())
+    };
     info!(
         hero_id,
         tid,
@@ -1545,6 +1645,16 @@ pub async fn handle_battle_sync(
             connection.battle_active,
         )
     };
+    let sync_delta = current_sync.wrapping_sub(request.sync_word);
+
+    info!(
+        client_sync_word = request.sync_word,
+        server_sync_word = current_sync,
+        sync_delta,
+        battle_active = active,
+        pending_skills = pending_len,
+        "Received CS_BATTLE_SYNC (20120)"
+    );
 
     if let Some(step) = take_step(&ctx, 20120).await {
         let packets = encode_step(&ctx, &step).await?;
@@ -2615,5 +2725,62 @@ mod tests {
         }
         assert!(saw_own_skill, "queued skill must fire on its hero's turn");
         assert!(ctx.lock().await.battle_pending_skills.is_empty());
+    }
+
+    #[tokio::test]
+    async fn battle_action_sync_words_are_strictly_monotonic_across_skills_and_steps() {
+        let mut connection = ConnectionContext::new("sync_monotonic_test".to_owned());
+        let steps = load_session(0).map(|data| data.steps.len()).unwrap_or(13);
+        connection.battle_active = true;
+        connection.battle_session_chosen = Some(0);
+        connection.battle_step_consumed = vec![false; steps];
+        connection.battle_result_served = false;
+        connection.battle_active_heroes = vec![(1, 1110, 1), (3, 1202, 2)];
+        let ctx = Arc::new(Mutex::new(connection));
+
+        // Step 0 served via video end
+        let step0 = handle_battle_video_end(ctx.clone(), CS_BATTLE_VIDEO_END { sync_word: 0 })
+            .await
+            .expect("video-end must serve step 0");
+        assert!(!step0.is_empty());
+        assert_eq!(packet_cmd(&step0[0]), 20103);
+        let sync0 = ctx.lock().await.battle_sync_word;
+        assert_eq!(sync0, 41219004);
+
+        // Tap skill 1 (synthesized ack)
+        let ack1 = handle_battle_use_skill(ctx.clone(), CS_BATTLE_USE_SKILL { skill_id: 111001 })
+            .await
+            .expect("skill 1 must succeed");
+        assert_eq!(ack1.len(), 1);
+        let sync1 = ctx.lock().await.battle_sync_word;
+        assert_eq!(sync1, 41219005);
+        assert_eq!(be_i32(&ack1[0], ack1[0].len() - 4), Some(41219005));
+
+        // Tap skill 2 (synthesized ack)
+        let ack2 = handle_battle_use_skill(ctx.clone(), CS_BATTLE_USE_SKILL { skill_id: 120201 })
+            .await
+            .expect("skill 2 must succeed");
+        assert_eq!(ack2.len(), 1);
+        let sync2 = ctx.lock().await.battle_sync_word;
+        assert_eq!(sync2, 41219006);
+        assert_eq!(be_i32(&ack2[0], ack2[0].len() - 4), Some(41219006));
+
+        // Video end with client acknowledged sync word = 41219006
+        let step1 = handle_battle_video_end(ctx.clone(), CS_BATTLE_VIDEO_END { sync_word: 41219006 })
+            .await
+            .expect("video-end must serve step 1");
+        assert!(!step1.is_empty());
+        let sync3 = ctx.lock().await.battle_sync_word;
+        // Server sync word MUST NOT regress to 41219005 or 41219006; it must advance monotonically!
+        assert!(sync3 > 41219006, "sync word must strictly advance, got {sync3}");
+
+        // Every packet in step1 carrying a sync cmd must have a sync word > 41219006
+        for packet in &step1 {
+            let cmd = packet_cmd(packet);
+            if is_battle_sync_cmd(cmd) {
+                let packet_sync = be_i32(packet, packet.len() - 4).expect("must have sync_word");
+                assert!(packet_sync > 41219006, "packet sync {packet_sync} must be > 41219006");
+            }
+        }
     }
 }
