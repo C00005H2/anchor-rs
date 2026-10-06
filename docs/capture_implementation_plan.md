@@ -57,7 +57,10 @@ reproduces the recorded fight, not arbitrary battle logic.  Recorded no-op
 batches are skipped, result-less sessions are avoided (with a synthesized
 victory fallback), turns of benched heroes are skipped, and a missing
 formation falls back to the recorded roster, so a re-deployed lineup can never
-stall the match with an empty reply.
+stall the match with an empty reply. Skill acknowledgements are replayed only
+for a validated matching tap (including captures that defer the ack), duplicate
+acks are collapsed, and recorded actions are never rewritten for another
+hero's move. A late video-end gets one cached terminal-result retry.
 
 ### Tooling and data
 

@@ -39,6 +39,7 @@ const AUTO_DATA: &str = "battle/auto.json";
 const VIDEO_END_DATA: &str = "battle/video_end.json";
 const SESSION_PREFIX: &str = "battle/session_";
 const MAX_SESSIONS: usize = 32;
+const DELAYED_SKILL_LOOKAHEAD: usize = 5;
 
 /// One recorded action batch inside a battle session.
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -191,6 +192,38 @@ fn battle_skill_ack(
         }
     }
     Some(BattlePendingSkill { hero_id, skill_id })
+}
+
+/// Return the acting side, deployed hero id, and skill id after applying the
+/// current roster mapping. Skill acknowledgements are only safe to pair with
+/// an action carrying the same hero and skill; rewriting those ids on an
+/// unrelated recorded action produces the visible "ghost skill" animation.
+fn battle_action_signature(
+    response: &TemplateResponse,
+    actor_map: &HashMap<i32, (i32, i32, i32)>,
+) -> Option<(i32, i32, i32)> {
+    if response.cmd != 20103 {
+        return None;
+    }
+    let mut response = response.clone();
+    if !actor_map.is_empty() {
+        remap_battle_response(&mut response, actor_map);
+    }
+    if let Some(decoded) = response.decoded.as_ref() {
+        if let (Some(side), Some(hero_id), Some(skill_id)) = (
+            decoded.get("side").and_then(Value::as_i64),
+            decoded.get("hero_id").and_then(Value::as_i64),
+            decoded.get("skill_id").and_then(Value::as_i64),
+        ) {
+            return Some((side as i32, hero_id as i32, skill_id as i32));
+        }
+    }
+    let raw = response.payload_hex.as_deref().and_then(decode_payload_hex)?;
+    Some((
+        *raw.first()? as i32,
+        be_i32(&raw, 1)?,
+        be_i32(&raw, 5)?,
+    ))
 }
 
 fn remap_side_heroes(value: &mut Value, actor_map: &HashMap<i32, (i32, i32, i32)>) {
@@ -518,90 +551,57 @@ async fn encode_group(
         }
     }
 
-    // A skill ack is the authoritative signal that a manual skill was
-    // accepted. Some captures deliver it in a later 20104/20120 response
-    // group rather than in the 20108 response to the original request.
-    // Collapse duplicate copies within a single captured group, but preserve
-    // separately acknowledged skills in timeline order.
-    let mut acknowledged_skills = Vec::new();
-    if !suppress_attacker {
-        for response in &group.responses {
-            if let Some(skill) = battle_skill_ack(response, &actor_map) {
-                if !acknowledged_skills.contains(&skill) {
-                    acknowledged_skills.push(skill);
-                }
-            }
-        }
-    }
-    let pending_skill = {
-        let mut connection = ctx.lock().await;
-        for skill in acknowledged_skills {
-            if !connection.battle_pending_skills.contains(&skill) {
-                connection.battle_pending_skills.push_back(skill);
-            }
-        }
-        if request_consumes_pending_skill(request_cmd) {
-            connection.battle_pending_skills.front().copied()
+    // Replay a captured skill ack only when this connection has a matching,
+    // validated skill request pending. Some captures deliver the ack in a
+    // later 20104/20120 group; duplicate copies in that group are collapsed.
+    // Without a pending request these recorded acks would become ghost casts
+    // in sessions replayed by an auto-battle client.
+    let (pending_skills, pending_skill) = {
+        let connection = ctx.lock().await;
+        let pending_skills = connection.battle_pending_skills.iter().copied().collect::<Vec<_>>();
+        let pending_skill = if request_consumes_pending_skill(request_cmd) {
+            pending_skills.first().copied()
         } else {
             None
-        }
+        };
+        (pending_skills, pending_skill)
     };
-
-    // A queued manual skill applies to the next player-side action only, not
-    // every player action that may happen to share a server-response group.
-    let mut applied_pending_skill = false;
-    if let Some(skill) = pending_skill {
-        for response in &mut group.responses {
-            if response.cmd != 20103 || applied_pending_skill {
-                continue;
-            }
-            let is_player_action = response
-                .decoded
-                .as_ref()
-                .and_then(|decoded| decoded.get("side"))
-                .and_then(Value::as_i64)
-                == Some(1)
-                || response
-                    .payload_hex
-                    .as_deref()
-                    .and_then(decode_payload_hex)
-                    .and_then(|raw| raw.first().copied())
-                    == Some(1);
-            let actor_id = response
-                .decoded
-                .as_ref()
-                .and_then(|decoded| decoded.get("hero_id"))
-                .and_then(Value::as_i64)
-                .map(|id| id as i32)
-                .or_else(|| {
-                    response
-                        .payload_hex
-                        .as_deref()
-                        .and_then(decode_payload_hex)
-                        .and_then(|raw| be_i32(&raw, 1))
-                });
-            if !is_player_action || !actor_id.is_some_and(|id| active_ids.contains(&id)) {
-                continue;
-            }
-            if let Some(decoded) = response.decoded.as_mut() {
-                if let Some(object) = decoded.as_object_mut() {
-                    object.insert("hero_id".to_owned(), json!(skill.hero_id));
-                    object.insert("skill_id".to_owned(), json!(skill.skill_id));
-                    response.payload_hex = None;
-                    applied_pending_skill = true;
-                }
-            } else if let Some(mut raw) =
-                response.payload_hex.as_deref().and_then(decode_payload_hex)
-            {
-                if raw.len() >= 9 && raw[0] == 1 {
-                    raw[1..5].copy_from_slice(&skill.hero_id.to_be_bytes());
-                    raw[5..9].copy_from_slice(&skill.skill_id.to_be_bytes());
-                    response.payload_hex = Some(to_hex(&raw));
-                    applied_pending_skill = true;
-                }
+    let mut acknowledged_skills = Vec::new();
+    group.responses.retain(|response| {
+        if response.cmd != 20115 {
+            return true;
+        }
+        let Some(skill) = battle_skill_ack(response, &actor_map) else {
+            return false;
+        };
+        pending_skills.contains(&skill) && {
+            if acknowledged_skills.contains(&skill) {
+                false
+            } else {
+                acknowledged_skills.push(skill);
+                true
             }
         }
-    }
+    });
+
+    // A queued manual skill is consumed only by its matching recorded action.
+    // Never rewrite an unrelated actor/action's identifiers: the effect list
+    // still belongs to the recorded move and would otherwise create a ghost
+    // cast (often on the final action immediately before victory).
+    let applied_pending_skill = pending_skill.is_some_and(|skill| {
+        group.responses.iter().any(|response| {
+            // The group was already remapped above; do not apply the mapping
+            // a second time to deployed ids.
+            battle_action_signature(response, &HashMap::new()).is_some_and(
+                |(side, hero_id, skill_id)| {
+                    side == 1
+                        && hero_id == skill.hero_id
+                        && skill_id == skill.skill_id
+                        && active_ids.contains(&hero_id)
+                },
+            )
+        })
+    });
     if !active_heroes.is_empty() {
         group.responses.retain(|response| match response.cmd {
             20103 => {
@@ -747,6 +747,17 @@ async fn encode_group(
         if group.responses.iter().any(|response| response.cmd == 20106) {
             connection.battle_result_served = true;
             connection.battle_active = false;
+            connection.battle_pending_skills.clear();
+            connection.battle_sync_advance_pending = false;
+            connection.battle_auto_resume_sync_word = None;
+            connection.battle_terminal_result = packets
+                .iter()
+                .find(|packet| {
+                    packet.len() >= 6
+                        && u32::from_be_bytes([packet[2], packet[3], packet[4], packet[5]])
+                            == 20106
+                })
+                .cloned();
         }
     }
     Ok(packets)
@@ -759,30 +770,14 @@ async fn encode_step(
     encode_group(ctx, step.as_group(), Some(step.request_cmd)).await
 }
 
-/// Pick the next unconsumed step the requester may consume.
-///
-/// Recorded steps form a single timeline: an AUTO recording is all 20104
-/// action batches, a MANUAL recording interleaves 20104 action batches with
-/// 20108 skill batches, and either may contain 20120 sync steps.  To let an
-/// auto client advance through a manual recording (and a manual client tap
-/// through an auto one), each request consumes in timeline order:
-///   * 20104 takes the next action OR skill step (never sync steps — those
-///     are reserved for the client's own 20120 requests),
-///   * 20108 takes the next skill step only (the caller synthesises an ack
-///     when none are left),
-///   * 20120 takes the next sync step only.
-///
-/// Recorded no-op batches (the capture's empty replies to duplicate or
-/// post-result requests) are skipped: handing one to a client that is waiting
-/// for its next action would stall the match with zero packets.
+/// Pick the next unconsumed response step without replaying stale skill/sync
+/// events out of order. A video-end advances past optional skill and sync
+/// requests the client did not send; a sync poll only consumes a sync step if
+/// it is next in the timeline.
 async fn take_step(
     ctx: &Arc<Mutex<ConnectionContext>>,
     request_cmd: u32,
 ) -> Option<BattleStep> {
-    let consumes = |step_cmd: u32| match request_cmd {
-        20104 => step_cmd == 20104 || step_cmd == 20108,
-        other => step_cmd == other,
-    };
     let mut connection = ctx.lock().await;
     if !connection.battle_active || connection.battle_result_served {
         return None;
@@ -795,7 +790,25 @@ async fn take_step(
             .get(index)
             .copied()
             .unwrap_or(true);
-        if consumed || !consumes(step.request_cmd) {
+        if consumed {
+            continue;
+        }
+
+        if request_cmd == 20104 && matches!(step.request_cmd, 20108 | 20120) {
+            // The player did not issue this captured skill/sync request. Mark
+            // it stale rather than emitting a ghost acknowledgement much
+            // later when the next video-end arrives.
+            if let Some(flag) = connection.battle_step_consumed.get_mut(index) {
+                *flag = true;
+            }
+            continue;
+        }
+        if step.request_cmd != request_cmd {
+            // Do not skip a pending action/skill step to reach a future sync
+            // response. The caller can synthesize the appropriate fallback.
+            if request_cmd == 20120 {
+                return None;
+            }
             continue;
         }
         if let Some(flag) = connection.battle_step_consumed.get_mut(index) {
@@ -807,6 +820,232 @@ async fn take_step(
         return Some(step.clone());
     }
     None
+}
+
+/// Consume the next captured skill response only when it actually matches the
+/// requested deployed hero and skill. Empty captured skill batches are safe to
+/// skip; a non-empty mismatch is left for ordinary timeline advancement.
+async fn take_matching_skill_step(
+    ctx: &Arc<Mutex<ConnectionContext>>,
+    requested: BattlePendingSkill,
+) -> Option<BattleStep> {
+    let mut connection = ctx.lock().await;
+    if !connection.battle_active || connection.battle_result_served {
+        return None;
+    }
+    let chosen = connection.battle_session_chosen?;
+    let session = load_session(chosen)?;
+    let actor_map = connection.battle_actor_map.clone();
+    let active_ids: HashSet<i32> = connection
+        .battle_active_heroes
+        .iter()
+        .map(|(hero_id, _, _)| *hero_id)
+        .collect();
+
+    for (index, step) in session.steps.iter().enumerate() {
+        if connection
+            .battle_step_consumed
+            .get(index)
+            .copied()
+            .unwrap_or(true)
+        {
+            continue;
+        }
+        match step.request_cmd {
+            20108 => {
+                if step.responses.is_empty() {
+                    if let Some(flag) = connection.battle_step_consumed.get_mut(index) {
+                        *flag = true;
+                    }
+                    continue;
+                }
+                let matching_ack = step.responses.iter().any(|response| {
+                    battle_skill_ack(response, &actor_map) == Some(requested)
+                });
+                let matching_action = step.responses.iter().any(|response| {
+                    battle_action_signature(response, &actor_map).is_some_and(
+                        |(side, hero_id, skill_id)| {
+                            side == 1
+                                && hero_id == requested.hero_id
+                                && skill_id == requested.skill_id
+                                && active_ids.contains(&hero_id)
+                        },
+                    )
+                });
+                if matching_ack || matching_action {
+                    if let Some(flag) = connection.battle_step_consumed.get_mut(index) {
+                        *flag = true;
+                    }
+                    return Some(step.clone());
+                }
+                return None;
+            }
+            // Do not jump over an earlier action or sync step just to find a
+            // matching skill acknowledgement later in the recording.
+            20104 | 20120 => return None,
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Is the next active player action in the recording exactly the requested
+/// skill? This gates synthetic acknowledgements when the chosen recording did
+/// not capture a 20108 batch, so arbitrary taps cannot rewrite unrelated
+/// attacks or queue a skill to fire on a later hero's turn.
+fn next_scripted_action_matches_skill(
+    connection: &ConnectionContext,
+    requested: BattlePendingSkill,
+) -> bool {
+    let actor_map = &connection.battle_actor_map;
+    let active_ids: HashSet<i32> = connection
+        .battle_active_heroes
+        .iter()
+        .map(|(hero_id, _, _)| *hero_id)
+        .collect();
+    if active_ids.is_empty() {
+        return false;
+    }
+
+    let first_active_player_action = |responses: &[TemplateResponse]| {
+        for response in responses {
+            let Some((side, hero_id, skill_id)) =
+                battle_action_signature(response, actor_map)
+            else {
+                continue;
+            };
+            if side != 1 || !active_ids.contains(&hero_id) {
+                continue;
+            }
+            return Some((hero_id, skill_id));
+        }
+        None
+    };
+
+    if let Some(chosen) = connection.battle_session_chosen {
+        let Some(session) = load_session(chosen) else {
+            return false;
+        };
+        for (index, step) in session.steps.iter().enumerate() {
+            if connection
+                .battle_step_consumed
+                .get(index)
+                .copied()
+                .unwrap_or(true)
+                || !matches!(step.request_cmd, 20104 | 20108)
+            {
+                continue;
+            }
+            if let Some((hero_id, skill_id)) = first_active_player_action(&step.responses) {
+                return hero_id == requested.hero_id && skill_id == requested.skill_id;
+            }
+        }
+        return false;
+    }
+
+    let Ok(script) = TemplateFile::load(VIDEO_END_DATA) else {
+        return false;
+    };
+    for index in connection.battle_script_index..script.group_count() {
+        let Some(group) = script.group(index) else {
+            continue;
+        };
+        if let Some((hero_id, skill_id)) = first_active_player_action(&group.responses) {
+            return hero_id == requested.hero_id && skill_id == requested.skill_id;
+        }
+    }
+    false
+}
+
+/// Some captures return a skill acknowledgement with a later video-end rather
+/// than the original 20108 request. Accept that delayed response only when it
+/// is for this exact requested skill and a matching deployed action follows it.
+fn captured_skill_ack_precedes_matching_action(
+    connection: &ConnectionContext,
+    requested: BattlePendingSkill,
+) -> bool {
+    let actor_map = &connection.battle_actor_map;
+    let active_ids: HashSet<i32> = connection
+        .battle_active_heroes
+        .iter()
+        .map(|(hero_id, _, _)| *hero_id)
+        .collect();
+    if active_ids.is_empty() {
+        return false;
+    }
+
+    let mut saw_matching_ack = false;
+    let mut has_matching_action_after_ack = |responses: &[TemplateResponse]| {
+        for response in responses {
+            if battle_skill_ack(response, actor_map) == Some(requested) {
+                saw_matching_ack = true;
+            }
+            if saw_matching_ack
+                && battle_action_signature(response, actor_map).is_some_and(
+                    |(side, hero_id, skill_id)| {
+                        side == 1
+                            && hero_id == requested.hero_id
+                            && skill_id == requested.skill_id
+                            && active_ids.contains(&hero_id)
+                    },
+                )
+            {
+                return true;
+            }
+        }
+        false
+    };
+
+    if let Some(chosen) = connection.battle_session_chosen {
+        let Some(session) = load_session(chosen) else {
+            return false;
+        };
+        let start = connection
+            .battle_step_consumed
+            .iter()
+            .position(|consumed| !*consumed)
+            .unwrap_or(session.steps.len());
+        for (index, step) in session
+            .steps
+            .iter()
+            .enumerate()
+            .skip(start)
+            .take(DELAYED_SKILL_LOOKAHEAD)
+        {
+            if connection
+                .battle_step_consumed
+                .get(index)
+                .copied()
+                .unwrap_or(true)
+                || !matches!(step.request_cmd, 20104 | 20108 | 20120)
+            {
+                continue;
+            }
+            if has_matching_action_after_ack(&step.responses) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    let Ok(script) = TemplateFile::load(VIDEO_END_DATA) else {
+        return false;
+    };
+    for index in connection
+        .battle_script_index
+        ..connection
+            .battle_script_index
+            .saturating_add(DELAYED_SKILL_LOOKAHEAD)
+            .min(script.group_count())
+    {
+        let Some(group) = script.group(index) else {
+            continue;
+        };
+        if has_matching_action_after_ack(&group.responses) {
+            return true;
+        }
+    }
+    false
 }
 
 /// Handle CS_BATTLE_FIELD_ENTER (20100).
@@ -1135,9 +1374,9 @@ fn skip_auto_resume_duplicate(connection: &mut ConnectionContext, sync_word: i32
 
 /// Handle CS_BATTLE_VIDEO_END (20104): feed the next scripted action batch.
 ///
-/// Batches are consumed in capture order.  When the recording for the current
-/// battle is exhausted the result batch (if any) is re-served so rewards, XP
-/// and level-ups always reach the client.
+/// Batches are consumed in capture order. If the final action already delivered
+/// the result but the client asks for another video-end before leaving the
+/// battle, replay the cached terminal result once instead of leaving it waiting.
 pub async fn handle_battle_video_end(
     ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_BATTLE_VIDEO_END,
@@ -1157,7 +1396,30 @@ pub async fn handle_battle_video_end(
     // commands); process it like any other video-end so a client quirk can
     // never end the battle prematurely.
     if request.sync_word == 0 {
-        info!("Battle video ended without a sync word; serving the next action");
+        info!("Battle video ended without a sync word");
+    }
+    let terminal_result = {
+        let mut connection = ctx.lock().await;
+        if !connection.battle_active
+            && connection.battle_result_served
+            && !connection.battle_terminal_replay_served
+        {
+            if let Some(packet) = connection.battle_terminal_result.clone() {
+                connection.battle_terminal_replay_served = true;
+                Some(packet)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    };
+    if let Some(packet) = terminal_result {
+        info!(
+            sync_word = request.sync_word,
+            "Re-sending the terminal battle result for a late video-end"
+        );
+        return Ok(vec![packet]);
     }
     if !ctx.lock().await.battle_active {
         return Ok(Vec::new());
@@ -1210,6 +1472,9 @@ pub async fn handle_battle_video_end(
             let heroes = connection.battle_active_heroes.clone();
             connection.battle_result_served = true;
             connection.battle_active = false;
+            connection.battle_pending_skills.clear();
+            connection.battle_sync_advance_pending = false;
+            connection.battle_auto_resume_sync_word = None;
             info!(round, "Battle steps exhausted without a recorded result; synthesizing victory");
             let result = SC_BATTLE_RESULT {
                 result: 1,
@@ -1231,7 +1496,10 @@ pub async fn handle_battle_video_end(
                 pos_effect: Vec::new(),
                 is_replay: 0,
             };
-            return Ok(vec![build_server_packet(20106, &result.encode())?]);
+            let packet = build_server_packet(20106, &result.encode())?;
+            connection.battle_terminal_result = Some(packet.clone());
+            connection.battle_terminal_replay_served = false;
+            return Ok(vec![packet]);
         }
     }
 
@@ -1261,55 +1529,137 @@ async fn handle_legacy_video_end(
     encode_group(&ctx, group, Some(20104)).await
 }
 
-/// Handle CS_BATTLE_USE_SKILL (20108): replay the recorded skill batch.
-///
-/// Manual battles interleave skill batches with action batches; each recorded
-/// batch is consumed once in capture order. Recorded no-op batches are skipped,
-/// and requests with no usable captured step receive a synthesized
-/// acknowledgement.
+/// Build a direct skill acknowledgement. `result = 0` is used for taps that
+/// cannot be paired with the next recorded action, rather than claiming they
+/// succeeded and later attaching them to an unrelated hero.
+fn skill_response(
+    hero_id: i32,
+    skill_id: i32,
+    result: i8,
+    rage: i16,
+    sync_word: i32,
+) -> Result<Vec<u8>, anyhow::Error> {
+    build_server_packet(
+        20115,
+        &SC_BATTLE_USE_SKILL {
+            hero_id,
+            skill_id,
+            result,
+            skill_soul: 0,
+            rage,
+            sync_word,
+        }
+        .encode(),
+    )
+}
+
+/// Handle CS_BATTLE_USE_SKILL (20108): replay only a matching captured skill,
+/// or synthesize an acknowledgement when the next recorded player action is
+/// exactly that hero/skill. Repeated or out-of-turn taps are rejected so they
+/// cannot turn a later basic attack (or the victory action) into a ghost cast.
 pub async fn handle_battle_use_skill(
     ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_BATTLE_USE_SKILL,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    if !ctx.lock().await.battle_active {
-        return Ok(Vec::new());
-    }
-    let (hero_id, tid, sync_word) = {
+    let (battle_active, result_served, hero_id, tid, sync_word) = {
         let connection = ctx.lock().await;
         let selected = connection
             .battle_active_heroes
             .iter()
             .find(|(_, hero_tid, _)| {
                 request.skill_id == *hero_tid || request.skill_id / 100 == *hero_tid
-            })
-            .or_else(|| connection.battle_active_heroes.first());
+            });
         let (hero_id, tid) = selected
             .map(|(hero_id, tid, _)| (*hero_id, *tid))
             .unwrap_or_default();
-        (hero_id, tid, connection.battle_sync_word)
+        (
+            connection.battle_active,
+            connection.battle_result_served,
+            hero_id,
+            tid,
+            connection.battle_sync_word,
+        )
     };
-    let requested_skill = (hero_id != 0).then_some(BattlePendingSkill {
+
+    if !battle_active {
+        if result_served {
+            info!(
+                hero_id,
+                skill_id = request.skill_id,
+                sync_word,
+                "Battle skill rejected after the result was served"
+            );
+            return Ok(vec![skill_response(hero_id, request.skill_id, 0, 0, sync_word)?]);
+        }
+        return Ok(Vec::new());
+    }
+
+    let Some(skill) = (hero_id != 0).then_some(BattlePendingSkill {
         hero_id,
         skill_id: request.skill_id,
-    });
+    }) else {
+        let mut connection = ctx.lock().await;
+        if connection.battle_pending_skills.is_empty() {
+            connection.battle_sync_advance_pending = true;
+        }
+        info!(
+            skill_id = request.skill_id,
+            sync_word,
+            "Battle skill rejected: no deployed hero owns the skill"
+        );
+        return Ok(vec![skill_response(0, request.skill_id, 0, 0, sync_word)?]);
+    };
 
-    if let Some(mut step) = take_step(&ctx, 20108).await {
-        let has_skill_ack = step.responses.iter().any(|response| response.cmd == 20115);
+    if ctx.lock().await.battle_pending_skills.contains(&skill) {
+        info!(
+            hero_id,
+            tid,
+            skill_id = request.skill_id,
+            sync_word,
+            "Repeated battle skill rejected while the same skill is pending"
+        );
+        return Ok(vec![skill_response(hero_id, request.skill_id, 0, 0, sync_word)?]);
+    }
+
+    if let Some(mut step) = take_matching_skill_step(&ctx, skill).await {
+        let actor_map = {
+            let mut connection = ctx.lock().await;
+            connection.battle_sync_advance_pending = false;
+            connection.battle_actor_map.clone()
+        };
+        let has_matching_ack = step.responses.iter().any(|response| {
+            battle_skill_ack(response, &actor_map) == Some(skill)
+        });
+        let has_matching_action = step.responses.iter().any(|response| {
+            battle_action_signature(response, &actor_map)
+                == Some((1, skill.hero_id, skill.skill_id))
+        });
+
+        // Only preserve a captured ack after confirming it belongs to this
+        // exact deployed hero and skill. Stale or unrelated acknowledgements
+        // in a mixed group must not be queued onto a future action.
+        step.responses.retain(|response| {
+            response.cmd != 20115 || battle_skill_ack(response, &actor_map) == Some(skill)
+        });
         for response in &mut step.responses {
-            if battle_skill_ack(response, &HashMap::new()).is_none() {
+            if battle_skill_ack(response, &actor_map) != Some(skill) {
                 continue;
             }
             if let Some(object) = response.decoded.as_mut().and_then(Value::as_object_mut) {
-                object.insert("hero_id".to_owned(), json!(hero_id));
-                object.insert("skill_id".to_owned(), json!(request.skill_id));
+                object.insert("hero_id".to_owned(), json!(skill.hero_id));
+                object.insert("skill_id".to_owned(), json!(skill.skill_id));
                 response.payload_hex = None;
-            } else if let Some(mut raw) = response.payload_hex.as_deref().and_then(decode_payload_hex) {
+            } else if let Some(mut raw) = response
+                .payload_hex
+                .as_deref()
+                .and_then(decode_payload_hex)
+            {
                 if raw.len() >= 17 {
-                    raw[..4].copy_from_slice(&hero_id.to_be_bytes());
-                    raw[4..8].copy_from_slice(&request.skill_id.to_be_bytes());
+                    raw[..4].copy_from_slice(&skill.hero_id.to_be_bytes());
+                    raw[4..8].copy_from_slice(&skill.skill_id.to_be_bytes());
                     response.decoded = Some(json!({
-                        "hero_id": hero_id,
-                        "skill_id": request.skill_id,
+                        "hero_id": skill.hero_id,
+                        "skill_id": skill.skill_id,
                         "result": raw[8] as i8,
                         "skill_soul": be_i16(&raw, 9).unwrap_or_default(),
                         "rage": be_i16(&raw, 11).unwrap_or_default(),
@@ -1319,89 +1669,86 @@ pub async fn handle_battle_use_skill(
                 }
             }
         }
-        let contains_player_action = step.responses.iter().any(|response| {
-            response.cmd == 20103
-                && (response
-                    .decoded
-                    .as_ref()
-                    .and_then(|decoded| decoded.get("side"))
-                    .and_then(Value::as_i64)
-                    == Some(1)
-                    || response
-                        .payload_hex
-                        .as_deref()
-                        .and_then(decode_payload_hex)
-                        .and_then(|raw| raw.first().copied())
-                        == Some(1))
-        });
-        if !has_skill_ack && contains_player_action {
-            if let Some(skill) = requested_skill {
-                // Mashed taps must not queue the same skill twice; each
-                // queued copy would eat one future player action.
-                let mut connection = ctx.lock().await;
-                if !connection.battle_pending_skills.contains(&skill) {
-                    connection.battle_pending_skills.push_back(skill);
-                }
+
+        // Keep this validated request pending until its exact action is served.
+        // This also lets a captured ack arrive in a later 20104/20120 group
+        // without trusting unrelated acknowledgements from the recording.
+        if has_matching_action || has_matching_ack {
+            let mut connection = ctx.lock().await;
+            if !connection.battle_pending_skills.contains(&skill) {
+                connection.battle_pending_skills.push_back(skill);
             }
         }
         let packets = encode_step(&ctx, &step).await?;
         if !packets.is_empty() {
             return Ok(packets);
         }
-        // The recorded batch was filtered away (e.g. it belonged to a benched
-        // hero): acknowledge the requested skill directly so the tap is not
-        // left hanging.
         info!(
             hero_id,
             tid,
             skill_id = request.skill_id,
             sync_word,
-            "Battle skill batch filtered away; acknowledging directly"
+            "Matching battle skill response was filtered; acknowledging directly"
         );
-        return Ok(vec![build_server_packet(
-            20115,
-            &SC_BATTLE_USE_SKILL {
-                hero_id,
-                skill_id: request.skill_id,
-                result: 1,
-                skill_soul: 0,
-                rage: 10000,
-                sync_word,
-            }
-            .encode(),
-        )?]);
+        return Ok(vec![skill_response(hero_id, request.skill_id, 1, 10000, sync_word)?]);
     }
 
-    // A manual client needs an acknowledgement even when its battle was not
-    // captured in manual mode. Queue the chosen skill for the next player
-    // action batch so the scripted action actually uses it. The queue holds
-    // each skill once: a mashed button must not pile up copies that each
-    // eat one future player action.
-    if let Some(skill) = requested_skill {
+    let (matches_next_action, has_delayed_capture) = {
+        let connection = ctx.lock().await;
+        let matches_next_action = next_scripted_action_matches_skill(&connection, skill);
+        let has_delayed_capture = !matches_next_action
+            && captured_skill_ack_precedes_matching_action(&connection, skill);
+        (matches_next_action, has_delayed_capture)
+    };
+    if !matches_next_action && has_delayed_capture {
         let mut connection = ctx.lock().await;
         if !connection.battle_pending_skills.contains(&skill) {
             connection.battle_pending_skills.push_back(skill);
         }
+        connection.battle_sync_advance_pending = false;
+        info!(
+            hero_id,
+            tid,
+            skill_id = request.skill_id,
+            sync_word,
+            "Battle skill accepted for a matching captured action with a delayed acknowledgement"
+        );
+        // The capture sends this acknowledgement with its later action batch.
+        return Ok(Vec::new());
+    }
+    if !matches_next_action {
+        let mut connection = ctx.lock().await;
+        // If a previous valid skill is already waiting for execution, its sync
+        // poll will advance the action; otherwise let the next sync advance the
+        // ordinary scripted action after this rejected tap.
+        if connection.battle_pending_skills.is_empty() {
+            connection.battle_sync_advance_pending = true;
+        }
+        info!(
+            hero_id,
+            tid,
+            skill_id = request.skill_id,
+            sync_word,
+            "Battle skill rejected: it does not match the next player action"
+        );
+        return Ok(vec![skill_response(hero_id, request.skill_id, 0, 0, sync_word)?]);
+    }
+
+    {
+        let mut connection = ctx.lock().await;
+        if !connection.battle_pending_skills.contains(&skill) {
+            connection.battle_pending_skills.push_back(skill);
+        }
+        connection.battle_sync_advance_pending = false;
     }
     info!(
         hero_id,
         tid,
         skill_id = request.skill_id,
         sync_word,
-        "Battle skill acknowledged (no recorded batch)"
+        "Battle skill acknowledged for matching scripted action"
     );
-    Ok(vec![build_server_packet(
-        20115,
-        &SC_BATTLE_USE_SKILL {
-            hero_id,
-            skill_id: request.skill_id,
-            result: 1,
-            skill_soul: 0,
-            rage: 10000,
-            sync_word,
-        }
-        .encode(),
-    )?])
+    Ok(vec![skill_response(hero_id, request.skill_id, 1, 10000, sync_word)?])
 }
 
 /// Handle CS_BATTLE_SYNC (20120): replay the recorded sync batch, if any.
@@ -1412,6 +1759,7 @@ pub async fn handle_battle_sync(
     if let Some(step) = take_step(&ctx, 20120).await {
         let packets = encode_step(&ctx, &step).await?;
         if !packets.is_empty() {
+            ctx.lock().await.battle_sync_advance_pending = false;
             return Ok(packets);
         }
     }
@@ -1430,6 +1778,35 @@ pub async fn handle_battle_sync(
                 info!(
                     sync_word = request.sync_word,
                     "Battle sync served pending skill execution"
+                );
+                return Ok(packets);
+            }
+            if !ctx.lock().await.battle_active {
+                return Ok(packets);
+            }
+        }
+    }
+    // A failed/out-of-turn skill still needs a normal action reply; otherwise
+    // some clients keep polling sync even after receiving the failure ack.
+    let rejected_skill_needs_advance = {
+        let mut connection = ctx.lock().await;
+        if connection.battle_active && connection.battle_sync_advance_pending {
+            connection.battle_sync_advance_pending = false;
+            true
+        } else {
+            false
+        }
+    };
+    if rejected_skill_needs_advance {
+        loop {
+            let Some(step) = take_step(&ctx, 20104).await else {
+                break;
+            };
+            let packets = encode_step(&ctx, &step).await?;
+            if !packets.is_empty() {
+                info!(
+                    sync_word = request.sync_word,
+                    "Battle sync advanced after a rejected skill"
                 );
                 return Ok(packets);
             }
@@ -1543,7 +1920,13 @@ async fn serve_battle_result(
     };
     info!(kind, round, "Battle abandoned by client");
     let result = retreat_result(round);
-    Ok(vec![build_server_packet(20106, &result.encode())?])
+    let packet = build_server_packet(20106, &result.encode())?;
+    {
+        let mut connection = ctx.lock().await;
+        connection.battle_terminal_result = Some(packet.clone());
+        connection.battle_terminal_replay_served = false;
+    }
+    Ok(vec![packet])
 }
 
 /// Handle CS_BATTLE_QUIT (20107): the client abandons the current battle.
@@ -2430,9 +2813,8 @@ mod tests {
         // Regression test for the mid-battle loading stall: the client polls
         // 20120 until a tapped skill turns into an action (the official
         // server answers the poll with the action itself), then expects the
-        // current action re-sent once as a sync confirmation (session_3
-        // steps 30-31). Answering NONE to every poll made the client retry
-        // its tap and eventually give up on a loading screen.
+        // current action re-sent once as a sync confirmation. Answering NONE
+        // to every poll made the client retry its tap and eventually give up.
         let mut connection = ConnectionContext::new("test".to_owned());
         let steps = load_session(0).map(|data| data.steps.len()).unwrap_or(13);
         connection.battle_active = true;
@@ -2446,12 +2828,12 @@ mod tests {
             .battle_pending_skills
             .push_back(crate::state::BattlePendingSkill {
                 hero_id: 3,
-                skill_id: 120204,
+                skill_id: 120201,
             });
         let ctx = Arc::new(Mutex::new(connection));
 
-        // First poll carries a pending skill: the next action step is served
-        // with the skill applied, and the queue is consumed.
+        // First poll carries a pending skill: the next recorded action is the
+        // same hero/skill, so it is served and the queue is consumed.
         let first = handle_battle_sync(ctx.clone(), CS_BATTLE_SYNC { sync_word: 0 })
             .await
             .expect("sync poll must serve the pending execution");
@@ -2477,5 +2859,256 @@ mod tests {
         .expect("sync poll must answer");
         assert_eq!(third.len(), 1);
         assert_eq!(packet_cmd(&third[0]), 20116);
+    }
+
+    #[tokio::test]
+    async fn repeated_skill_tap_does_not_queue_multiple_casts() {
+        let mut connection = ConnectionContext::new("test".to_owned());
+        let steps = load_session(0).expect("session_1 must be available").steps.len();
+        connection.battle_active = true;
+        connection.battle_session_chosen = Some(0);
+        connection.battle_step_consumed = vec![false; steps];
+        connection.battle_result_served = false;
+        connection.battle_active_heroes = vec![(1, 1110, 1), (3, 1202, 2)];
+        connection.battle_actor_map.insert(1, (1, 1110, 1110));
+        connection.battle_actor_map.insert(2, (3, 1305, 1202));
+        let ctx = Arc::new(Mutex::new(connection));
+
+        let first = handle_battle_use_skill(
+            ctx.clone(),
+            CS_BATTLE_USE_SKILL { skill_id: 120201 },
+        )
+        .await
+        .expect("matching skill should be accepted");
+        let (_, body) = crate::packet::parse_server_packet(&first[0], "").unwrap();
+        assert_eq!(SC_BATTLE_USE_SKILL::decode(&body).result, 1);
+
+        let duplicate = handle_battle_use_skill(
+            ctx.clone(),
+            CS_BATTLE_USE_SKILL { skill_id: 120201 },
+        )
+        .await
+        .expect("duplicate tap should receive a rejection");
+        let (_, body) = crate::packet::parse_server_packet(&duplicate[0], "").unwrap();
+        assert_eq!(SC_BATTLE_USE_SKILL::decode(&body).result, 0);
+        assert_eq!(ctx.lock().await.battle_pending_skills.len(), 1);
+
+        let action = handle_battle_sync(
+            ctx.clone(),
+            CS_BATTLE_SYNC { sync_word: 41219003 },
+        )
+        .await
+        .expect("one sync should execute the one pending skill");
+        assert_eq!(packet_cmd(&action[0]), 20103);
+        assert!(ctx.lock().await.battle_pending_skills.is_empty());
+    }
+
+    #[tokio::test]
+    async fn mismatched_skill_is_rejected_and_sync_advances_without_rewriting_action() {
+        let mut connection = ConnectionContext::new("test".to_owned());
+        let steps = load_session(0).expect("session_1 must be available").steps.len();
+        connection.battle_active = true;
+        connection.battle_session_chosen = Some(0);
+        connection.battle_step_consumed = vec![false; steps];
+        connection.battle_result_served = false;
+        connection.battle_active_heroes = vec![(1, 1110, 1), (3, 1202, 2)];
+        connection.battle_actor_map.insert(1, (1, 1110, 1110));
+        connection.battle_actor_map.insert(2, (3, 1305, 1202));
+        let ctx = Arc::new(Mutex::new(connection));
+
+        // The next recorded action is hero 3's 120201, not the requested
+        // 120204. Do not claim that the latter is executing.
+        let ack = handle_battle_use_skill(
+            ctx.clone(),
+            CS_BATTLE_USE_SKILL { skill_id: 120204 },
+        )
+        .await
+        .expect("invalid skill tap should be acknowledged as rejected");
+        assert_eq!(packet_cmd(&ack[0]), 20115);
+        let (_, body) = crate::packet::parse_server_packet(&ack[0], "").unwrap();
+        assert_eq!(SC_BATTLE_USE_SKILL::decode(&body).result, 0);
+        assert!(ctx.lock().await.battle_sync_advance_pending);
+
+        // A rejection still advances the expected script action on the next
+        // sync, and the captured hero/skill/effects remain intact.
+        let action_packets = handle_battle_sync(
+            ctx.clone(),
+            CS_BATTLE_SYNC { sync_word: 41219003 },
+        )
+        .await
+        .expect("sync should advance after a rejected skill");
+        assert_eq!(packet_cmd(&action_packets[0]), 20103);
+        let (_, body) = crate::packet::parse_server_packet(&action_packets[0], "").unwrap();
+        let action = crate::messages::SC_BATTLE_ACTION::decode(&body);
+        assert_eq!(action.hero_id, 3);
+        assert_eq!(action.skill_id, 120201);
+        assert!(!ctx.lock().await.battle_sync_advance_pending);
+    }
+
+    #[tokio::test]
+    async fn delayed_skill_ack_is_replayed_only_for_a_matching_pending_action() {
+        let session = load_session(2).expect("session_3 must be available");
+        let mut auto_connection = ConnectionContext::new("auto".to_owned());
+        auto_connection.battle_active = true;
+        auto_connection.battle_session_chosen = Some(2);
+        auto_connection.battle_step_consumed = vec![false; session.steps.len()];
+        auto_connection.battle_active_heroes = vec![(1, 1110, 1), (3, 1202, 2)];
+        auto_connection.battle_actor_map.insert(1, (1, 1110, 1110));
+        auto_connection.battle_actor_map.insert(2, (3, 1305, 1202));
+        let auto_ctx = Arc::new(Mutex::new(auto_connection));
+
+        // Session 3 records two delayed acknowledgements in step 29 for a
+        // manual tap. An auto-battle replay with no matching tap must omit them.
+        let auto_packets = encode_step(&auto_ctx, &session.steps[29])
+            .await
+            .expect("auto action step should encode");
+        assert_eq!(
+            auto_packets
+                .iter()
+                .filter(|packet| packet_cmd(packet) == 20115)
+                .count(),
+            0
+        );
+
+        let mut connection = ConnectionContext::new("manual".to_owned());
+        connection.battle_active = true;
+        connection.battle_session_chosen = Some(2);
+        connection.battle_step_consumed = vec![false; session.steps.len()];
+        connection.battle_step_consumed[..28].fill(true);
+        connection.battle_active_heroes = vec![(1, 1110, 1), (3, 1202, 2)];
+        connection.battle_actor_map.insert(1, (1, 1110, 1110));
+        connection.battle_actor_map.insert(2, (3, 1305, 1202));
+        let ctx = Arc::new(Mutex::new(connection));
+
+        // Step 28 is an empty 20108; its matching ack arrives in step 29,
+        // before the corresponding 111004 player action at step 32.
+        let delayed = handle_battle_use_skill(
+            ctx.clone(),
+            CS_BATTLE_USE_SKILL { skill_id: 111004 },
+        )
+        .await
+        .expect("matching delayed skill should be queued");
+        assert!(delayed.is_empty());
+        assert_eq!(ctx.lock().await.battle_pending_skills.len(), 1);
+
+        let ack_batch = handle_battle_video_end(
+            ctx.clone(),
+            CS_BATTLE_VIDEO_END { sync_word: 0 },
+        )
+        .await
+        .expect("later capture batch should deliver its skill ack");
+        assert_eq!(
+            ack_batch
+                .iter()
+                .filter(|packet| packet_cmd(packet) == 20115)
+                .count(),
+            1
+        );
+        assert_eq!(ctx.lock().await.battle_pending_skills.len(), 1);
+
+        // The current 111001 action does not consume the queued 111004 skill;
+        // the next matching action does, with its captured effects unchanged.
+        let matching_action = handle_battle_video_end(
+            ctx.clone(),
+            CS_BATTLE_VIDEO_END { sync_word: 0 },
+        )
+        .await
+        .expect("matching future action should be served");
+        let action_packet = matching_action
+            .iter()
+            .find(|packet| packet_cmd(packet) == 20103)
+            .expect("matching action should be present");
+        let (_, body) = crate::packet::parse_server_packet(action_packet, "").unwrap();
+        let action = crate::messages::SC_BATTLE_ACTION::decode(&body);
+        assert_eq!(action.hero_id, 1);
+        assert_eq!(action.skill_id, 111004);
+        assert!(ctx.lock().await.battle_pending_skills.is_empty());
+    }
+
+    #[tokio::test]
+    async fn pending_skill_never_rewrites_final_action_and_is_cleared_on_result() {
+        let session = load_session(0).expect("session_1 must be available");
+        let mut connection = ConnectionContext::new("test".to_owned());
+        connection.battle_active = true;
+        connection.battle_session_chosen = Some(0);
+        connection.battle_step_consumed = vec![false; session.steps.len()];
+        connection.battle_result_served = false;
+        connection.battle_active_heroes = vec![(1, 1110, 1), (3, 1202, 2)];
+        connection.battle_actor_map.insert(1, (1, 1110, 1110));
+        connection.battle_actor_map.insert(2, (3, 1305, 1202));
+        connection
+            .battle_pending_skills
+            .push_back(BattlePendingSkill {
+                hero_id: 3,
+                skill_id: 120204,
+            });
+        let ctx = Arc::new(Mutex::new(connection));
+        let final_step = session
+            .steps
+            .iter()
+            .find(|step| step.contains(20106))
+            .expect("session must contain its victory result");
+
+        let packets = encode_step(&ctx, final_step)
+            .await
+            .expect("final step should encode");
+        let action_packet = packets
+            .iter()
+            .find(|packet| packet_cmd(packet) == 20103)
+            .expect("final step should contain its action");
+        let (_, body) = crate::packet::parse_server_packet(action_packet, "").unwrap();
+        let action = crate::messages::SC_BATTLE_ACTION::decode(&body);
+        assert_eq!(action.hero_id, 1);
+        assert_eq!(action.skill_id, 111001);
+        assert!(packets.iter().any(|packet| packet_cmd(packet) == 20106));
+
+        let connection = ctx.lock().await;
+        assert!(connection.battle_pending_skills.is_empty());
+        assert!(!connection.battle_active);
+        assert!(connection.battle_result_served);
+        assert!(connection.battle_terminal_result.is_some());
+    }
+
+    #[tokio::test]
+    async fn post_result_skill_is_rejected_and_late_video_end_replays_result_once() {
+        let terminal_result = build_server_packet(
+            20106,
+            &retreat_result(2).encode(),
+        )
+        .unwrap();
+        let mut connection = ConnectionContext::new("test".to_owned());
+        connection.battle_active = false;
+        connection.battle_result_served = true;
+        connection.battle_active_heroes = vec![(3, 1202, 2)];
+        connection.battle_sync_word = 41219022;
+        connection.battle_terminal_result = Some(terminal_result.clone());
+        let ctx = Arc::new(Mutex::new(connection));
+
+        let skill_ack = handle_battle_use_skill(
+            ctx.clone(),
+            CS_BATTLE_USE_SKILL { skill_id: 120201 },
+        )
+        .await
+        .expect("post-result skill tap should not be dropped");
+        assert_eq!(packet_cmd(&skill_ack[0]), 20115);
+        let (_, body) = crate::packet::parse_server_packet(&skill_ack[0], "").unwrap();
+        assert_eq!(SC_BATTLE_USE_SKILL::decode(&body).result, 0);
+
+        let replay = handle_battle_video_end(
+            ctx.clone(),
+            CS_BATTLE_VIDEO_END { sync_word: 0 },
+        )
+        .await
+        .expect("late video-end should receive a terminal result");
+        assert_eq!(replay, vec![terminal_result]);
+        assert!(ctx.lock().await.battle_terminal_replay_served);
+
+        let duplicate = handle_battle_video_end(
+            ctx,
+            CS_BATTLE_VIDEO_END { sync_word: 0 },
+        )
+        .await
+        .expect("duplicate late video-end should be harmless");
+        assert!(duplicate.is_empty());
     }
 }

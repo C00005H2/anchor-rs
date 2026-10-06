@@ -74,10 +74,18 @@ pub struct ConnectionContext {
     pub battle_actor_map: HashMap<i32, (i32, i32, i32)>,
     /// The actual attacker lineup used by the current battle: (id, tid, slot).
     pub battle_active_heroes: Vec<(i32, i32, i8)>,
-    /// Manually requested skills waiting for a player-side action batch.
+    /// Validated manual skills waiting for their matching player-side action.
     pub battle_pending_skills: VecDeque<BattlePendingSkill>,
-    /// Prevent replaying a win result after it has already been delivered.
+    /// Whether the terminal battle result has been delivered at least once.
     pub battle_result_served: bool,
+    /// Cached terminal result, replayed once if the client sends a late
+    /// CS_BATTLE_VIDEO_END while it is still waiting to leave the battle.
+    pub battle_terminal_result: Option<Vec<u8>>,
+    /// Whether the cached result was already replayed for a late video-end.
+    pub battle_terminal_replay_served: bool,
+    /// A rejected skill still needs the next scripted action on the client's
+    /// following sync poll so the battle timeline keeps moving.
+    pub battle_sync_advance_pending: bool,
     /// Current round, updated from SC_BATTLE_ACTION_END.
     pub battle_round: i8,
     /// Whether this connection has reported its formation at least once.
@@ -137,6 +145,9 @@ impl ConnectionContext {
             battle_active_heroes: Vec::new(),
             battle_pending_skills: VecDeque::new(),
             battle_result_served: false,
+            battle_terminal_result: None,
+            battle_terminal_replay_served: false,
+            battle_sync_advance_pending: false,
             battle_round: 0,
             formation_received: false,
             ready_team_id: None,
@@ -168,6 +179,9 @@ impl ConnectionContext {
         self.battle_active_heroes.clear();
         self.battle_pending_skills.clear();
         self.battle_result_served = true;
+        self.battle_terminal_result = None;
+        self.battle_terminal_replay_served = false;
+        self.battle_sync_advance_pending = false;
         self.battle_round = 0;
         self.battle_sync_word = 0;
         self.battle_auto_resume_sync_word = None;
