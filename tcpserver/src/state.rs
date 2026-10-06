@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::Instant;
 
 use crate::capture_replay::ReplayCursor;
@@ -26,6 +26,14 @@ impl BagItem {
             expired_time: item.expiredTime,
         }
     }
+}
+
+/// A manual skill accepted from the client but not yet represented by the
+/// next scripted action batch.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BattlePendingSkill {
+    pub hero_id: i32,
+    pub skill_id: i32,
 }
 
 pub struct ConnectionContext {
@@ -60,6 +68,22 @@ pub struct ConnectionContext {
     /// Heroes synthesized into the battle entry (not present in the recorded
     /// action batches); they get cloned attack actions so they participate.
     pub battle_added_heroes: Vec<(i32, i32)>,
+    /// Recorded attacker hero id -> (deployed id, recorded tid, deployed tid).
+    /// The battle replayer uses this to adapt captured actions to the player's
+    /// currently selected formation instead of leaving benched units on field.
+    pub battle_actor_map: HashMap<i32, (i32, i32, i32)>,
+    /// The actual attacker lineup used by the current battle: (id, tid, slot).
+    pub battle_active_heroes: Vec<(i32, i32, i8)>,
+    /// Manually requested skills waiting for a player-side action batch.
+    pub battle_pending_skills: VecDeque<BattlePendingSkill>,
+    /// Prevent replaying a win result after it has already been delivered.
+    pub battle_result_served: bool,
+    /// Current round, updated from SC_BATTLE_ACTION_END.
+    pub battle_round: i8,
+    /// Whether this connection has reported its formation at least once.
+    pub formation_received: bool,
+    /// The team selected by CS_SET_READY, when one has been selected.
+    pub ready_team_id: Option<i16>,
     /// Position inside the recorded hero-recruit prepare sequence.
     pub recruit_prepare_index: usize,
     /// Position inside the recorded hero-recruit save-list sequence.
@@ -100,6 +124,13 @@ impl ConnectionContext {
             battle_auto_served: false,
             battle_step_consumed: Vec::new(),
             battle_added_heroes: Vec::new(),
+            battle_actor_map: HashMap::new(),
+            battle_active_heroes: Vec::new(),
+            battle_pending_skills: VecDeque::new(),
+            battle_result_served: false,
+            battle_round: 0,
+            formation_received: false,
+            ready_team_id: None,
             recruit_prepare_index: 0,
             recruit_save_index: 0,
             battle_sync_word: 0,
@@ -110,6 +141,23 @@ impl ConnectionContext {
             purchases: HashMap::new(),
             request_counts: HashMap::new(),
         }
+    }
+
+    /// Clear per-battle replay state without changing the player's formation or
+    /// the round-robin index used to choose the next recorded session.
+    pub fn clear_battle_runtime(&mut self) {
+        self.battle_active = false;
+        self.battle_session_chosen = None;
+        self.battle_step_consumed.clear();
+        self.battle_auto_served = false;
+        self.battle_script_index = 0;
+        self.battle_added_heroes.clear();
+        self.battle_actor_map.clear();
+        self.battle_active_heroes.clear();
+        self.battle_pending_skills.clear();
+        self.battle_result_served = true;
+        self.battle_round = 0;
+        self.battle_sync_word = 0;
     }
 
     pub fn update_heartbeat(&mut self) {

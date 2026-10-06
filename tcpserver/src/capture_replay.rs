@@ -432,7 +432,12 @@ pub fn encode_captured_response(response: &CapturedResponse) -> anyhow::Result<O
         20106 => encode_as!(SC_BATTLE_RESULT),
         20111 => encode_as!(SC_BATTLE_REPLAY_INFOS),
         20114 => encode_as!(SC_BATTLE_AUTO),
+        20115 => encode_as!(SC_BATTLE_USE_SKILL),
+        20116 => encode_as!(SC_BATTLE_NONE),
+        20118 => encode_as!(SC_BATTLE_HERO_CHANGE),
         20125 => encode_as!(SC_BATTLE_ACTION_NOTICE),
+        20126 => encode_as!(SC_BATTLE_ORDER),
+        20129 => encode_as!(SC_BATTLE_ORDER_CHANGE),
         21001 => encode_as!(SC_FORCES_PANEL),
         21073 => encode_as!(SC_UPDATE_FORCES_TASK_INFO),
         23002 => encode_as!(SC_GUILD_PANEL),
@@ -521,6 +526,50 @@ mod tests {
             dispatch_cmd(cmd, &body),
             Some(json!({"time": 123, "open_date": 100, "merge_date": 0}))
         );
+    }
+
+    #[test]
+    fn manual_battle_skill_ack_is_reencoded() {
+        let response = CapturedResponse {
+            cmd: 20115,
+            decoded: json!({
+                "hero_id": 8,
+                "skill_id": 130401,
+                "result": 1,
+                "skill_soul": 0,
+                "rage": 5000,
+                "sync_word": 71510031
+            }),
+            raw: None,
+        };
+        let packet = encode_captured_response(&response).unwrap().unwrap();
+        let (cmd, body) = parse_server_packet(&packet, "").unwrap();
+        assert_eq!(cmd, 20115);
+        assert_eq!(
+            dispatch_cmd(cmd, &body),
+            Some(json!({
+                "hero_id": 8,
+                "skill_id": 130401,
+                "result": 1,
+                "skill_soul": 0,
+                "rage": 5000,
+                "sync_word": 71510031
+            }))
+        );
+    }
+
+    #[test]
+    fn empty_battle_sync_ack_is_reencoded() {
+        let response = CapturedResponse {
+            cmd: 20116,
+            decoded: json!({}),
+            raw: None,
+        };
+        let packet = encode_captured_response(&response).unwrap().unwrap();
+        let (cmd, body) = parse_server_packet(&packet, "").unwrap();
+        assert_eq!(cmd, 20116);
+        let expected = (SC_BATTLE_NONE {}).encode();
+        assert_eq!(body, expected);
     }
 
     #[test]

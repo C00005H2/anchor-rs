@@ -4,16 +4,19 @@
 //! `battle/session_{n}.json` with the entry sequence, the auto-battle push and
 //! every action batch (`CS_BATTLE_VIDEO_END`, `CS_BATTLE_USE_SKILL`,
 //! `CS_BATTLE_SYNC`) in capture order.  The final batch of a session carries
-//! `SC_BATTLE_RESULT` plus all reward updates (XP, items, level-ups), so
-//! battles replay their rewards byte-exact.  Attribute updates inside the
-//! script are absorbed into the local profile so later claims stay coherent.
+//! `SC_BATTLE_RESULT` plus the captured reward updates (XP, items, level-ups),
+//! so completed battles replay their rewards byte-exact. Explicit quit/skip
+//! requests instead receive a non-rewarding retreat result. Attribute updates
+//! inside the script are absorbed into the local profile for later claims.
 //!
 //! When no session files exist the legacy flat `battle/video_end.json` queue
 //! is used instead.
 
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use serde::Deserialize;
+use serde_json::{json, Value};
 use tokio::sync::Mutex;
 use tracing::info;
 
@@ -22,11 +25,12 @@ use crate::{
     data_loader::GameDataLoader,
     messages::{
         CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_START, CS_BATTLE_SYNC,
-        CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END, SC_BATTLE_USE_SKILL,
+        CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END, SC_BATTLE_NONE, SC_BATTLE_RESULT,
+        SC_BATTLE_USE_SKILL,
     },
     packet::build_server_packet,
     sequence::{TemplateFile, TemplateGroup, TemplateResponse},
-    state::ConnectionContext,
+    state::{BattlePendingSkill, ConnectionContext},
 };
 
 const ENTER_DATA: &str = "battle/enter.json";
@@ -90,7 +94,10 @@ fn session_count() -> usize {
 /// acknowledged with a plausible sync value.
 pub(crate) fn absorb_attr_updates(connection: &mut ConnectionContext, group: &TemplateGroup) {
     for response in &group.responses {
-        if matches!(response.cmd, 20103 | 20105 | 20114 | 20115 | 20125) {
+        if matches!(
+            response.cmd,
+            20101 | 20103 | 20105 | 20106 | 20114 | 20115 | 20118 | 20125 | 20126 | 20129
+        ) {
             if let Some(sync) = response
                 .decoded
                 .as_ref()
@@ -98,6 +105,16 @@ pub(crate) fn absorb_attr_updates(connection: &mut ConnectionContext, group: &Te
                 .and_then(|sync| sync.as_i64())
             {
                 connection.battle_sync_word = sync as i32;
+            }
+        }
+        if matches!(response.cmd, 20105 | 20106) {
+            if let Some(round) = response
+                .decoded
+                .as_ref()
+                .and_then(|decoded| decoded.get("round"))
+                .and_then(Value::as_i64)
+            {
+                connection.battle_round = round as i8;
             }
         }
         if response.cmd != 12003 {
@@ -121,53 +138,345 @@ pub(crate) fn absorb_attr_updates(connection: &mut ConnectionContext, group: &Te
     }
 }
 
-/// Build cloned attack actions for heroes synthesized into the battle entry.
-///
-/// Recorded action batches only reference the capture-time lineup, so added
-/// heroes would stand idle.  Whenever a step carries an attacker (side 1)
-/// action we clone it once per added hero, rewriting the actor id and basic
-/// skill, so they visibly attack the same target.
-fn injected_actions(added: &[(i32, i32)], responses: &[TemplateResponse]) -> Vec<Vec<u8>> {
-    let mut packets = Vec::new();
-    if added.is_empty() {
-        return packets;
-    }
-    let template = responses
-        .iter()
-        .find(|response| response.cmd == 20103)
-        .and_then(|response| response.payload_hex.as_deref())
-        .and_then(decode_payload_hex);
-    let Some(mut raw) = template else { return packets };
-    if raw.len() < 14 || raw[0] != 1 {
-        return packets;
-    }
-    for (id, tid) in added {
-        raw[1..5].copy_from_slice(&id.to_be_bytes());
-        raw[5..9].copy_from_slice(&(tid * 100 + 1).to_be_bytes());
-        if let Ok(packet) = build_server_packet(20103, &raw) {
-            packets.push(packet);
-        }
-    }
-    packets
+fn mapped_actor(
+    actor_map: &HashMap<i32, (i32, i32, i32)>,
+    actor_id: i32,
+) -> Option<(i32, i32, i32)> {
+    actor_map
+        .get(&actor_id)
+        .copied()
+        .or_else(|| actor_map.values().min_by_key(|mapped| mapped.0).copied())
 }
 
-/// Send one consumed step and absorb its attribute updates.
+fn remap_skill_id(skill_id: i32, old_tid: i32, new_tid: i32) -> i32 {
+    if skill_id >= 0 && skill_id / 100 == old_tid {
+        new_tid.saturating_mul(100).saturating_add(skill_id % 100)
+    } else {
+        skill_id
+    }
+}
+
+fn remap_side_heroes(value: &mut Value, actor_map: &HashMap<i32, (i32, i32, i32)>) {
+    match value {
+        Value::Object(object) => {
+            let side = object.get("side").and_then(Value::as_i64);
+            let old_id = object.get("hero_id").and_then(Value::as_i64);
+            if side == Some(1) {
+                if let Some(old_id) = old_id {
+                    if let Some((new_id, _, _)) = mapped_actor(actor_map, old_id as i32) {
+                        object.insert("hero_id".to_owned(), json!(new_id));
+                    }
+                }
+            }
+            for child in object.values_mut() {
+                remap_side_heroes(child, actor_map);
+            }
+        }
+        Value::Array(items) => {
+            items.retain_mut(|item| {
+                if let Some(object) = item.as_object_mut() {
+                    if object.get("side").and_then(Value::as_i64) == Some(1) {
+                        if let Some(old_id) = object.get("hero_id").and_then(Value::as_i64) {
+                            let Some((new_id, _, _)) = mapped_actor(actor_map, old_id as i32) else {
+                                return false;
+                            };
+                            object.insert("hero_id".to_owned(), json!(new_id));
+                        }
+                    }
+                }
+                remap_side_heroes(item, actor_map);
+                true
+            });
+        }
+        _ => {}
+    }
+}
+
+fn remap_order_list(value: &mut Value, actor_map: &HashMap<i32, (i32, i32, i32)>) {
+    let Some(items) = value.as_array_mut() else { return };
+    items.retain_mut(|item| {
+        let Some(object) = item.as_object_mut() else { return true };
+        if object.get("key").and_then(Value::as_i64) != Some(1) {
+            return true;
+        }
+        let Some(old_id) = object.get("value").and_then(Value::as_i64) else {
+            return false;
+        };
+        let Some((new_id, _, _)) = mapped_actor(actor_map, old_id as i32) else {
+            return false;
+        };
+        object.insert("value".to_owned(), json!(new_id));
+        true
+    });
+}
+
+/// Remap every player-side actor reference before a captured group is sent.
+/// Raw field-info payloads are handled separately because their hero record has
+/// a trailing field not represented by the generated message struct.
+fn remap_battle_response(
+    response: &mut TemplateResponse,
+    actor_map: &HashMap<i32, (i32, i32, i32)>,
+) {
+    if let Some(decoded) = response.decoded.as_mut() {
+        match response.cmd {
+            20103 => {
+                if let Some(object) = decoded.as_object_mut() {
+                    if object.get("side").and_then(Value::as_i64) == Some(1) {
+                        if let Some(old_id) = object.get("hero_id").and_then(Value::as_i64) {
+                            if let Some((new_id, old_tid, new_tid)) =
+                                mapped_actor(actor_map, old_id as i32)
+                            {
+                                object.insert("hero_id".to_owned(), json!(new_id));
+                                if let Some(skill_id) =
+                                    object.get("skill_id").and_then(Value::as_i64)
+                                {
+                                    object.insert(
+                                        "skill_id".to_owned(),
+                                        json!(remap_skill_id(skill_id as i32, old_tid, new_tid)),
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    for key in ["target_list", "hero_list", "result_list"] {
+                        if let Some(nested) = object.get_mut(key) {
+                            remap_side_heroes(nested, actor_map);
+                        }
+                    }
+                    if object.get("target_side").and_then(Value::as_i64) == Some(1) {
+                        if let Some(old_id) = object.get("target_id").and_then(Value::as_i64) {
+                            if let Some((new_id, _, _)) = mapped_actor(actor_map, old_id as i32) {
+                                object.insert("target_id".to_owned(), json!(new_id));
+                            }
+                        }
+                    }
+                }
+            }
+            20105 | 20126 => {
+                if let Some(object) = decoded.as_object_mut() {
+                    for key in ["curl_order", "next_order"] {
+                        if let Some(order) = object.get_mut(key) {
+                            remap_order_list(order, actor_map);
+                        }
+                    }
+                }
+            }
+            20118 => {
+                if let Some(object) = decoded.as_object_mut() {
+                    if object.get("side").and_then(Value::as_i64) == Some(1) {
+                        // Story/trigger hero changes must not reintroduce an
+                        // attacker that was removed from the ready formation.
+                        object.insert("hero_list".to_owned(), json!([]));
+                    }
+                }
+            }
+            20129 => {
+                if let Some(object) = decoded.as_object_mut() {
+                    if object.get("hero_side").and_then(Value::as_i64) == Some(1) {
+                        if let Some(old_id) = object.get("hero_id").and_then(Value::as_i64) {
+                            if let Some((new_id, _, new_tid)) =
+                                mapped_actor(actor_map, old_id as i32)
+                            {
+                                object.insert("hero_id".to_owned(), json!(new_id));
+                                object.insert("hero_tid".to_owned(), json!(new_tid));
+                            }
+                        }
+                    }
+                }
+            }
+            20106 => {
+                if let Some(object) = decoded.as_object_mut() {
+                    if let Some(items) = object.get_mut("statistic").and_then(Value::as_array_mut) {
+                        items.retain_mut(|item| {
+                            let Some(stat) = item.as_object_mut() else { return true };
+                            if stat.get("side").and_then(Value::as_i64) != Some(1) {
+                                return true;
+                            }
+                            let Some(old_id) = stat.get("hero_id").and_then(Value::as_i64) else {
+                                return false;
+                            };
+                            let Some((new_id, _, new_tid)) =
+                                mapped_actor(actor_map, old_id as i32)
+                            else {
+                                return false;
+                            };
+                            stat.insert("hero_id".to_owned(), json!(new_id));
+                            stat.insert("tid".to_owned(), json!(new_tid));
+                            true
+                        });
+                    }
+                    if let Some(ids) = object.get_mut("hero_id_list").and_then(Value::as_array_mut) {
+                        ids.retain_mut(|entry| {
+                            let Some(item) = entry.as_object_mut() else { return true };
+                            let Some(old_id) = item.get("key").and_then(Value::as_i64) else {
+                                return true;
+                            };
+                            let Some((new_id, _, _)) = mapped_actor(actor_map, old_id as i32) else {
+                                return false;
+                            };
+                            item.insert("key".to_owned(), json!(new_id));
+                            true
+                        });
+                    }
+                }
+            }
+            20125 => remap_side_heroes(decoded, actor_map),
+            _ => {}
+        }
+        if matches!(response.cmd, 20103 | 20105 | 20106 | 20118 | 20125 | 20126 | 20129) {
+            response.payload_hex = None;
+        }
+        return;
+    }
+
+    // If a legacy capture has raw-only action packets, at least rewrite their
+    // acting hero and skill without risking a lossy full-message re-encode.
+    let Some(mut raw) = response.payload_hex.as_deref().and_then(decode_payload_hex) else {
+        return;
+    };
+    match response.cmd {
+        20103 if raw.len() >= 9 && raw[0] == 1 => {
+            let Some(old_id) = be_i32(&raw, 1) else { return };
+            let Some((new_id, old_tid, new_tid)) = mapped_actor(actor_map, old_id) else { return };
+            raw[1..5].copy_from_slice(&new_id.to_be_bytes());
+            if let Some(skill_id) = be_i32(&raw, 5) {
+                raw[5..9].copy_from_slice(&remap_skill_id(skill_id, old_tid, new_tid).to_be_bytes());
+            }
+        }
+        _ => return,
+    }
+    response.payload_hex = Some(to_hex(&raw));
+}
+
+/// Clone the first player action for newly added deployed heroes. This keeps
+/// heroes absent from the recording from standing idle in the replay.
+fn injected_actions(added: &[(i32, i32)], responses: &[TemplateResponse]) -> Vec<Vec<u8>> {
+    let Some(template) = responses.iter().find(|response| response.cmd == 20103) else {
+        return Vec::new();
+    };
+    let Some(decoded) = template.decoded.as_ref() else { return Vec::new() };
+    if decoded.get("side").and_then(Value::as_i64) != Some(1) {
+        return Vec::new();
+    }
+    added
+        .iter()
+        .filter_map(|(hero_id, tid)| {
+            let mut decoded = decoded.clone();
+            let object = decoded.as_object_mut()?;
+            object.insert("hero_id".to_owned(), json!(hero_id));
+            object.insert("skill_id".to_owned(), json!(tid.saturating_mul(100).saturating_add(1)));
+            crate::capture_replay::encode_captured_response(&crate::capture_replay::CapturedResponse {
+                cmd: 20103,
+                decoded,
+                raw: None,
+            })
+            .ok()
+            .flatten()
+        })
+        .collect()
+}
+
+/// Remap, encode and account for one server-response group.
+async fn encode_group(
+    ctx: &Arc<Mutex<ConnectionContext>>,
+    mut group: TemplateGroup,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    let (cursor, added, actor_map, pending_skill, suppress_attacker) = {
+        let connection = ctx.lock().await;
+        (
+            connection.replay_cursor.clone(),
+            connection.battle_added_heroes.clone(),
+            connection.battle_actor_map.clone(),
+            connection.battle_pending_skills.front().copied(),
+            connection.formation_received && connection.battle_active_heroes.is_empty(),
+        )
+    };
+    let mut applied_pending_skill = false;
+    for response in &mut group.responses {
+        if !actor_map.is_empty() || suppress_attacker {
+            remap_battle_response(response, &actor_map);
+        }
+        if response.cmd != 20103 {
+            continue;
+        }
+        if let Some(skill) = pending_skill {
+            if let Some(decoded) = response.decoded.as_mut() {
+                if decoded.get("side").and_then(Value::as_i64) == Some(1) {
+                    if let Some(object) = decoded.as_object_mut() {
+                        object.insert("hero_id".to_owned(), json!(skill.hero_id));
+                        object.insert("skill_id".to_owned(), json!(skill.skill_id));
+                        response.payload_hex = None;
+                        applied_pending_skill = true;
+                    }
+                }
+            } else if let Some(mut raw) =
+                response.payload_hex.as_deref().and_then(decode_payload_hex)
+            {
+                if raw.len() >= 9 && raw[0] == 1 {
+                    raw[1..5].copy_from_slice(&skill.hero_id.to_be_bytes());
+                    raw[5..9].copy_from_slice(&skill.skill_id.to_be_bytes());
+                    response.payload_hex = Some(to_hex(&raw));
+                    applied_pending_skill = true;
+                }
+            }
+        }
+    }
+    if suppress_attacker {
+        group.responses.retain(|response| match response.cmd {
+            20103 | 20129 => {
+                let field = if response.cmd == 20103 { "side" } else { "hero_side" };
+                let side = response
+                    .decoded
+                    .as_ref()
+                    .and_then(|decoded| decoded.get(field))
+                    .and_then(Value::as_i64)
+                    .or_else(|| {
+                        response
+                            .payload_hex
+                            .as_deref()
+                            .and_then(decode_payload_hex)
+                            .and_then(|raw| raw.first().copied())
+                            .map(i64::from)
+                    });
+                side != Some(1)
+            }
+            20115 => false,
+            _ => true,
+        });
+    }
+    let mut packets = group.encode(&cursor)?;
+    let extra_actions = injected_actions(&added, &group.responses);
+    let mut insert_at = packets
+        .iter()
+        .position(|packet| {
+            packet.len() >= 6
+                && u32::from_be_bytes([packet[2], packet[3], packet[4], packet[5]]) == 20103
+        })
+        .map(|index| index + 1)
+        .unwrap_or(packets.len());
+    for packet in extra_actions {
+        packets.insert(insert_at, packet);
+        insert_at += 1;
+    }
+    {
+        let mut connection = ctx.lock().await;
+        absorb_attr_updates(&mut connection, &group);
+        if applied_pending_skill {
+            connection.battle_pending_skills.pop_front();
+        }
+        if group.responses.iter().any(|response| response.cmd == 20106) {
+            connection.battle_result_served = true;
+            connection.battle_active = false;
+        }
+    }
+    Ok(packets)
+}
+
 async fn encode_step(
     ctx: &Arc<Mutex<ConnectionContext>>,
     step: &BattleStep,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    let group = step.as_group();
-    let (cursor, added) = {
-        let connection = ctx.lock().await;
-        (connection.replay_cursor.clone(), connection.battle_added_heroes.clone())
-    };
-    let mut packets = group.encode(&cursor)?;
-    packets.extend(injected_actions(&added, &step.responses));
-    {
-        let mut connection = ctx.lock().await;
-        absorb_attr_updates(&mut connection, &group);
-    }
-    Ok(packets)
+    encode_group(ctx, step.as_group()).await
 }
 
 /// Pick the next unconsumed step the requester may consume.
@@ -191,6 +500,9 @@ async fn take_step(
         other => step_cmd == other,
     };
     let mut connection = ctx.lock().await;
+    if !connection.battle_active || connection.battle_result_served {
+        return None;
+    }
     let chosen = connection.battle_session_chosen?;
     let session = load_session(chosen)?;
     for (index, step) in session.steps.iter().enumerate() {
@@ -221,8 +533,9 @@ pub async fn handle_battle_field_enter(
         return handle_legacy_field_enter(ctx, request).await;
     }
 
-    let (cursor, formation, mut group) = {
+    let (formation, formation_received, ready_team_id, mut group) = {
         let mut connection = ctx.lock().await;
+        connection.clear_battle_runtime();
         let start = connection.battle_session_index.min(count - 1);
         let mut chosen = None;
         let mut fallback = None;
@@ -255,6 +568,7 @@ pub async fn handle_battle_field_enter(
         connection.battle_step_consumed = vec![false; session.steps.len()];
         connection.battle_auto_served = false;
         connection.battle_active = true;
+        connection.battle_result_served = false;
         connection.battle_script_index = 0;
         connection.battle_added_heroes = Vec::new();
         info!(
@@ -265,10 +579,15 @@ pub async fn handle_battle_field_enter(
             "Battle field entered (session)"
         );
         let group = session.enter.clone().unwrap_or_default();
-        (connection.replay_cursor.clone(), connection.formation.clone(), group)
+        (
+            connection.formation.clone(),
+            connection.formation_received,
+            connection.ready_team_id,
+            group,
+        )
     };
 
-    if !formation.is_empty() {
+    if formation_received {
         for response in group.responses.iter_mut() {
             if response.cmd == 13047 {
                 if let Some(object) = response.decoded.as_mut().and_then(|decoded| decoded.as_object_mut()) {
@@ -283,11 +602,15 @@ pub async fn handle_battle_field_enter(
                 }
             }
         }
-        let added = patch_enter_formation(&mut group, &deployed_heroes(&formation));
-        ctx.lock().await.battle_added_heroes = added;
+        let deployed = deployed_heroes(&formation, ready_team_id);
+        let roster = patch_enter_formation(&mut group, &deployed);
+        let mut connection = ctx.lock().await;
+        connection.battle_active_heroes = deployed;
+        connection.battle_actor_map = roster.actor_map;
+        connection.battle_added_heroes = roster.added_heroes;
     }
 
-    group.encode(&cursor)
+    encode_group(&ctx, group).await
 }
 
 /// Legacy entry path for captures without per-battle session files.
@@ -300,16 +623,22 @@ async fn handle_legacy_field_enter(
         return Ok(Vec::new());
     };
 
-    let (cursor, formation) = {
+    let (formation, formation_received, ready_team_id) = {
         let mut connection = ctx.lock().await;
+        connection.clear_battle_runtime();
         connection.battle_active = true;
+        connection.battle_result_served = false;
         connection.battle_script_index = 0;
         connection.battle_session_chosen = None;
         connection.battle_auto_served = false;
-        (connection.replay_cursor.clone(), connection.formation.clone())
+        (
+            connection.formation.clone(),
+            connection.formation_received,
+            connection.ready_team_id,
+        )
     };
 
-    if !formation.is_empty() {
+    if formation_received {
         for response in group.responses.iter_mut() {
             if response.cmd == 13047 {
                 if let Some(object) = response.decoded.as_mut().and_then(|decoded| decoded.as_object_mut()) {
@@ -324,7 +653,12 @@ async fn handle_legacy_field_enter(
                 }
             }
         }
-        patch_enter_formation(&mut group, &deployed_heroes(&formation));
+        let deployed = deployed_heroes(&formation, ready_team_id);
+        let roster = patch_enter_formation(&mut group, &deployed);
+        let mut connection = ctx.lock().await;
+        connection.battle_active_heroes = deployed;
+        connection.battle_actor_map = roster.actor_map;
+        connection.battle_added_heroes = roster.added_heroes;
     }
 
     info!(
@@ -332,7 +666,7 @@ async fn handle_legacy_field_enter(
         battle_field_id = %request.battle_field_id,
         "Battle field entered"
     );
-    group.encode(&cursor)
+    encode_group(&ctx, group).await
 }
 
 /// Handle CS_BATTLE_START (20102): the real server sent no reply.
@@ -351,6 +685,9 @@ pub async fn handle_battle_auto(
     ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_BATTLE_AUTO,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    if !ctx.lock().await.battle_active {
+        return Ok(Vec::new());
+    }
     let mut group = {
         let connection = ctx.lock().await;
         let session_group = connection
@@ -383,22 +720,13 @@ pub async fn handle_battle_auto(
         if response.cmd == 20114 {
             if let Some(object) = response.decoded.as_mut().and_then(|decoded| decoded.as_object_mut()) {
                 object.insert("is_auto".to_owned(), serde_json::json!(request.is_auto));
+                response.payload_hex = None;
             }
         }
     }
 
-    let (cursor, added) = {
-        let connection = ctx.lock().await;
-        (connection.replay_cursor.clone(), connection.battle_added_heroes.clone())
-    };
     info!(is_auto = request.is_auto, "Auto-battle requested");
-    let mut packets = group.encode(&cursor)?;
-    packets.extend(injected_actions(&added, &group.responses));
-    {
-        let mut connection = ctx.lock().await;
-        absorb_attr_updates(&mut connection, group);
-    }
-    Ok(packets)
+    encode_group(&ctx, group.clone()).await
 }
 
 /// Handle CS_BATTLE_VIDEO_END (20104): feed the next scripted action batch.
@@ -411,10 +739,10 @@ pub async fn handle_battle_video_end(
     request: CS_BATTLE_VIDEO_END,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     if request.sync_word == 0 {
-        let mut connection = ctx.lock().await;
-        connection.battle_active = false;
-        connection.battle_script_index = 0;
-        info!("Battle finished");
+        info!("Battle video ended without a sync word");
+        return serve_battle_result(ctx, "video-end").await;
+    }
+    if !ctx.lock().await.battle_active {
         return Ok(Vec::new());
     }
 
@@ -424,13 +752,22 @@ pub async fn handle_battle_video_end(
 
     // Out of recorded video-end batches: re-serve the result batch so the
     // client still receives rewards when step counts diverge.
-    if let Some(reward) = {
+    let (result_served, reward) = {
         let connection = ctx.lock().await;
-        connection
-            .battle_session_chosen
-            .and_then(load_session)
-            .and_then(|session| session.steps.iter().rev().find(|step| step.contains(20106)).cloned())
-    } {
+        (
+            connection.battle_result_served,
+            connection
+                .battle_session_chosen
+                .and_then(load_session)
+                .and_then(|session| {
+                    session.steps.iter().rev().find(|step| step.contains(20106)).cloned()
+                }),
+        )
+    };
+    if result_served {
+        return Ok(Vec::new());
+    }
+    if let Some(reward) = reward {
         return encode_step(&ctx, &reward).await;
     }
 
@@ -443,7 +780,7 @@ async fn handle_legacy_video_end(
     ctx: Arc<Mutex<ConnectionContext>>,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     let script = TemplateFile::load(VIDEO_END_DATA)?;
-    let (cursor, group) = {
+    let group = {
         let mut connection = ctx.lock().await;
         if connection.battle_session_chosen.is_some() {
             return Ok(Vec::new());
@@ -454,16 +791,10 @@ async fn handle_legacy_video_end(
             return Ok(Vec::new());
         }
         connection.battle_script_index = index + 1;
-        let group = script.group(index).cloned().unwrap_or_default();
-        (connection.replay_cursor.clone(), group)
+        script.group(index).cloned().unwrap_or_default()
     };
 
-    let packets = group.encode(&cursor)?;
-    {
-        let mut connection = ctx.lock().await;
-        absorb_attr_updates(&mut connection, &group);
-    }
-    Ok(packets)
+    encode_group(&ctx, group).await
 }
 
 /// Handle CS_BATTLE_USE_SKILL (20108): replay the recorded skill batch.
@@ -475,21 +806,62 @@ pub async fn handle_battle_use_skill(
     ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_BATTLE_USE_SKILL,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    if let Some(step) = take_step(&ctx, 20108).await {
+    if !ctx.lock().await.battle_active {
+        return Ok(Vec::new());
+    }
+    let (hero_id, tid, sync_word) = {
+        let mut connection = ctx.lock().await;
+        let selected = connection
+            .battle_active_heroes
+            .iter()
+            .find(|(_, hero_tid, _)| request.skill_id / 100 == *hero_tid)
+            .or_else(|| connection.battle_active_heroes.first());
+        let (hero_id, tid) = selected
+            .map(|(hero_id, tid, _)| (*hero_id, *tid))
+            .unwrap_or_default();
+        if hero_id != 0 {
+            connection.battle_pending_skills.push_back(BattlePendingSkill {
+                hero_id,
+                skill_id: request.skill_id,
+            });
+        }
+        (hero_id, tid, connection.battle_sync_word)
+    };
+
+    if let Some(mut step) = take_step(&ctx, 20108).await {
+        for response in &mut step.responses {
+            if response.cmd != 20115 {
+                continue;
+            }
+            if let Some(object) = response.decoded.as_mut().and_then(Value::as_object_mut) {
+                object.insert("hero_id".to_owned(), json!(hero_id));
+                object.insert("skill_id".to_owned(), json!(request.skill_id));
+                response.payload_hex = None;
+            } else if let Some(mut raw) = response.payload_hex.as_deref().and_then(decode_payload_hex) {
+                if raw.len() >= 8 {
+                    raw[..4].copy_from_slice(&hero_id.to_be_bytes());
+                    raw[4..8].copy_from_slice(&request.skill_id.to_be_bytes());
+                    response.payload_hex = Some(to_hex(&raw));
+                }
+            }
+        }
         return encode_step(&ctx, &step).await;
     }
-    // Manual battle outside a recorded manual session: acknowledge the skill
-    // so the client does not stall waiting for SC_BATTLE_USE_SKILL.
-    let sync_word = ctx.lock().await.battle_sync_word;
+
+    // A manual client needs an acknowledgement even when its battle was not
+    // captured in manual mode. Queue the chosen skill for the next player
+    // action batch so the scripted action actually uses it.
     info!(
+        hero_id,
+        tid,
         skill_id = request.skill_id,
-        sync_word = sync_word,
+        sync_word,
         "Battle skill acknowledged (no recorded batch)"
     );
     Ok(vec![build_server_packet(
         20115,
         &SC_BATTLE_USE_SKILL {
-            hero_id: 0,
+            hero_id,
             skill_id: request.skill_id,
             result: 1,
             skill_soul: 0,
@@ -508,40 +880,51 @@ pub async fn handle_battle_sync(
     if let Some(step) = take_step(&ctx, 20120).await {
         return encode_step(&ctx, &step).await;
     }
+    if ctx.lock().await.battle_active {
+        let response = SC_BATTLE_NONE {};
+        return Ok(vec![build_server_packet(20116, &response.encode())?]);
+    }
     Ok(Vec::new())
 }
 
-/// Serve the recorded result batch so the client closes the battle screen.
+/// Send a non-rewarding retreat result so quit/skip leaves the battle screen
+/// without replaying the captured session's victory rewards.
+fn retreat_result(round: i8) -> SC_BATTLE_RESULT {
+    SC_BATTLE_RESULT {
+        result: 3,
+        award: Vec::new(),
+        detail_item_award: Vec::new(),
+        player_exp: 0,
+        hero_exp: 0,
+        hero_relation: 0,
+        args: Vec::new(),
+        hero_id_list: Vec::new(),
+        round,
+        statistic: Vec::new(),
+        pos_effect: Vec::new(),
+        is_replay: 0,
+    }
+}
+
 async fn serve_battle_result(
     ctx: Arc<Mutex<ConnectionContext>>,
     kind: &str,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    let result_step = {
+    let round = {
         let mut connection = ctx.lock().await;
-        connection.battle_active = false;
-        connection
-            .battle_session_chosen
-            .and_then(load_session)
-            .and_then(|session| {
-                session
-                    .steps
-                    .iter()
-                    .rev()
-                    .find(|step| step.contains(20106))
-                    .cloned()
-            })
+        if connection.battle_result_served {
+            return Ok(Vec::new());
+        }
+        let round = connection.battle_round;
+        connection.clear_battle_runtime();
+        round
     };
-    info!(kind, "Battle ended by client request");
-    match result_step {
-        Some(step) => encode_step(&ctx, &step).await,
-        None => Ok(Vec::new()),
-    }
+    info!(kind, round, "Battle abandoned by client");
+    let result = retreat_result(round);
+    Ok(vec![build_server_packet(20106, &result.encode())?])
 }
 
 /// Handle CS_BATTLE_QUIT (20107): the client abandons the current battle.
-///
-/// The capture recorded no reply for it; serving the recorded result batch
-/// makes the client play the end-of-battle flow and return to the map.
 pub async fn handle_battle_quit(
     ctx: Arc<Mutex<ConnectionContext>>,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
@@ -560,10 +943,13 @@ pub async fn handle_battle_skip(
 ///
 /// Prefers the ready-marked team, then team 1001, then the first team with
 /// any heroes.
-fn deployed_heroes(formation: &[crate::messages::pt_hero_formation]) -> Vec<(i32, i32, i8)> {
-    let team = formation
-        .iter()
-        .find(|team| team.is_ready == 1 && !team.formation_hero_list.is_empty())
+fn deployed_heroes(
+    formation: &[crate::messages::pt_hero_formation],
+    ready_team_id: Option<i16>,
+) -> Vec<(i32, i32, i8)> {
+    let team = ready_team_id
+        .and_then(|team_id| formation.iter().find(|team| team.team_id == team_id))
+        .or_else(|| formation.iter().find(|team| team.is_ready == 1))
         .or_else(|| formation.iter().find(|team| team.team_id == 1001))
         .or_else(|| formation.iter().find(|team| !team.formation_hero_list.is_empty()));
     team.map(|team| {
@@ -656,13 +1042,6 @@ fn be_i32(bytes: &[u8], offset: usize) -> Option<i32> {
     ]))
 }
 
-fn hero_pos(bytes: &[u8]) -> (i16, i16) {
-    (
-        be_i16(bytes, 9).unwrap_or_default(),
-        be_i16(bytes, 11).unwrap_or_default(),
-    )
-}
-
 fn to_hex(bytes: &[u8]) -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
@@ -677,155 +1056,454 @@ fn to_hex(bytes: &[u8]) -> String {
 /// freshly recruited heroes clone the first recorded entry into a free grid
 /// cell, and benched recorded heroes are appended at the end so the recorded
 /// action batches keep referencing heroes the client knows about.
+fn count_at(raw: &[u8], offset: usize) -> Option<usize> {
+    let count = be_i16(raw, offset)?;
+    if count < 0 || count > 4096 {
+        return None;
+    }
+    Some(count as usize)
+}
+
+fn be_i64(bytes: &[u8], offset: usize) -> Option<i64> {
+    Some(i64::from_be_bytes([
+        *bytes.get(offset)?,
+        *bytes.get(offset + 1)?,
+        *bytes.get(offset + 2)?,
+        *bytes.get(offset + 3)?,
+        *bytes.get(offset + 4)?,
+        *bytes.get(offset + 5)?,
+        *bytes.get(offset + 6)?,
+        *bytes.get(offset + 7)?,
+    ]))
+}
+
+/// Byte length of one live-wire pt_battle_hero, including its trailing star
+/// level field.
 fn hero_entry_len(raw: &[u8], start: usize) -> Option<usize> {
-    let skills = be_i16(raw, start + 40)? as usize;
-    Some(54 + 5 * skills)
+    let skills = count_at(raw, start.checked_add(40)?)?;
+    54usize.checked_add(5usize.checked_mul(skills)?)
 }
 
 fn skip_assist_list(raw: &[u8], offset: usize) -> Option<usize> {
-    let count = be_i16(raw, offset)? as usize;
-    let mut offset = offset + 2;
+    let count = count_at(raw, offset)?;
+    let mut offset = offset.checked_add(2)?;
     for _ in 0..count {
-        // hero_tid i32 + hero_lv i16 + hero_evolution i16 + skill count i16.
-        offset += 4 + 2 + 2;
-        let skills = be_i16(raw, offset)? as usize;
-        offset += 2 + 4 * skills;
+        // hero_tid i32 + hero_lv i16 + hero_evolution i16.
+        offset = offset.checked_add(8)?;
+        let skills = count_at(raw, offset)?;
+        offset = offset
+            .checked_add(2)?
+            .checked_add(4usize.checked_mul(skills)?)?;
+        if offset > raw.len() {
+            return None;
+        }
     }
     Some(offset)
 }
 
-fn patch_field_info_heroes(raw: &[u8], deployed: &[(i32, i32, i8)]) -> Option<(Vec<u8>, Vec<(i32, i32)>)> {
-    // battle_type i8 + field id i64 + player id i64, then the name string.
-    let mut offset = 1 + 8 + 8;
-    let name_len = be_i16(raw, offset)? as usize & 0x7fff;
-    // name (len+i16) + player_lv i16 + total_hp i64 + avatar i16 + count i16.
-    let count_off = offset + 2 + name_len + 2 + 8 + 2;
-    let count = be_i16(raw, count_off)? as usize;
-    offset = count_off + 2;
+fn build_actor_map(
+    recorded: &[(i32, i32, Vec<u8>)],
+    deployed: &[(i32, i32, i8)],
+) -> HashMap<i32, (i32, i32, i32)> {
+    let mut actor_map = HashMap::new();
+    let mut assigned = HashSet::new();
+    if deployed.is_empty() {
+        return actor_map;
+    }
+    for (index, (old_id, old_tid, _)) in recorded.iter().enumerate() {
+        let target = deployed
+            .iter()
+            .find(|hero| hero.0 == *old_id)
+            .or_else(|| {
+                deployed
+                    .iter()
+                    .find(|hero| hero.1 == *old_tid && !assigned.contains(&hero.0))
+            })
+            .or_else(|| deployed.iter().find(|hero| !assigned.contains(&hero.0)))
+            .or_else(|| deployed.get(index % deployed.len()));
+        if let Some((new_id, new_tid, _)) = target {
+            actor_map.insert(*old_id, (*new_id, *old_tid, *new_tid));
+            assigned.insert(*new_id);
+        }
+    }
+    actor_map
+}
 
-    let mut recorded: Vec<(i32, i32, Vec<u8>)> = Vec::new();
-    for _ in 0..count {
+#[derive(Default)]
+struct FormationPatch {
+    actor_map: HashMap<i32, (i32, i32, i32)>,
+    added_heroes: Vec<(i32, i32)>,
+}
+
+/// Rebuild the attacker roster in an SC_BATTLE_FIELD_INFO raw payload. Unlike
+/// the old behavior, captured bench heroes are removed rather than appended.
+/// Their captured actor IDs are redirected to the client's ready formation in
+/// subsequent actions and result messages.
+fn patch_field_info_heroes(
+    raw: &[u8],
+    deployed: &[(i32, i32, i8)],
+) -> Option<(Vec<u8>, FormationPatch)> {
+    // battle_type i8 + field id i64 + player id i64, then player name.
+    let name_len_offset = 1 + 8 + 8;
+    let name_len = count_at(raw, name_len_offset)?;
+    let name_end = name_len_offset.checked_add(2)?.checked_add(name_len)?;
+    if name_end > raw.len() {
+        return None;
+    }
+    let total_hp_offset = name_end.checked_add(2)?; // player level
+    let count_off = total_hp_offset.checked_add(8)?.checked_add(2)?; // hp + avatar
+    let recorded_count = count_at(raw, count_off)?;
+    let mut offset = count_off.checked_add(2)?;
+
+    let mut recorded: Vec<(i32, i32, Vec<u8>)> = Vec::with_capacity(recorded_count);
+    for _ in 0..recorded_count {
         let start = offset;
         let len = hero_entry_len(raw, start)?;
-        let end = start + len;
+        let end = start.checked_add(len)?;
         recorded.push((
             be_i32(raw, start)?,
-            be_i32(raw, start + 4)?,
+            be_i32(raw, start.checked_add(4)?)?,
             raw.get(start..end)?.to_vec(),
         ));
         offset = end;
     }
     let mid_start = offset;
 
-    // Attacker qte energy + assist list, then the full defender block.
-    offset += 2;
+    // Attacker QTE and assists, followed by the complete defender block.
+    offset = offset.checked_add(2)?;
     offset = skip_assist_list(raw, offset)?;
-    offset += 8; // defender player id
-    let dname = be_i16(raw, offset)? as usize & 0x7fff;
-    offset += 2 + dname + 2 + 8 + 2;
-    let dcount = be_i16(raw, offset)? as usize;
-    offset += 2;
-    for _ in 0..dcount {
-        offset += hero_entry_len(raw, offset)?;
+    offset = offset.checked_add(8)?; // defender player ID
+    let defender_name_len = count_at(raw, offset)?;
+    offset = offset
+        .checked_add(2)?
+        .checked_add(defender_name_len)?
+        .checked_add(2 + 8 + 2)?; // name, level, HP, avatar
+    let defender_count = count_at(raw, offset)?;
+    offset = offset.checked_add(2)?;
+    for _ in 0..defender_count {
+        offset = offset.checked_add(hero_entry_len(raw, offset)?)?;
     }
-    offset += 2;
+    offset = offset.checked_add(2)?; // defender QTE
     offset = skip_assist_list(raw, offset)?;
 
-    // hero_order: (side i16, hero id i32) entries; appended for added heroes.
+    // hero_order is a count followed by (side i16, hero ID i32) pairs.
     let order_off = offset;
-    let order_count = be_i16(raw, order_off)? as usize;
-    let order_start = order_off + 2;
-    let order_end = order_start + 6 * order_count;
+    let order_count = count_at(raw, order_off)?;
+    let order_start = order_off.checked_add(2)?;
+    let order_end = order_start.checked_add(order_count.checked_mul(6)?)?;
     let tail = raw.get(order_end..)?;
 
-    // Unchanged lineup: keep the recorded payload untouched.
-    if deployed.len() == recorded.len()
-        && deployed
-            .iter()
-            .all(|(id, _, _)| recorded.iter().any(|(rid, _, _)| rid == id))
-    {
-        return None;
-    }
-
-    let mut used: Vec<(i16, i16)> = recorded.iter().map(|entry| hero_pos(&entry.2)).collect();
-
-    let mut entries: Vec<Vec<u8>> = Vec::new();
-    let mut added: Vec<i32> = Vec::new();
+    let actor_map = build_actor_map(&recorded, deployed);
+    let mut used_cells = Vec::new();
+    let mut entries = Vec::with_capacity(deployed.len());
     for (id, tid, slot) in deployed {
-        match recorded.iter().find(|entry| entry.0 == *id) {
-            Some(entry) => {
-                let mut bytes = entry.2.clone();
-                bytes[4..8].copy_from_slice(&tid.to_be_bytes());
-                entries.push(bytes);
-            }
-            None => {
-                let cell = slot_cell(*slot, &used);
-                used.push(cell);
-                added.push(*id);
-                entries.push(synth_hero_entry(*id, *tid, cell));
+        let cell = slot_cell(*slot, &used_cells);
+        used_cells.push(cell);
+        let template = recorded
+            .iter()
+            .find(|(recorded_id, recorded_tid, _)| recorded_id == id && recorded_tid == tid)
+            .or_else(|| recorded.iter().find(|(recorded_id, _, _)| recorded_id == id))
+            .or_else(|| recorded.iter().find(|(_, recorded_tid, _)| recorded_tid == tid));
+        let (mut entry, source_tid) = match template {
+            Some((_, source_tid, bytes)) => (bytes.clone(), *source_tid),
+            None => (synth_hero_entry(*id, *tid, cell), *tid),
+        };
+        if entry.len() < 13 {
+            return None;
+        }
+        entry[0..4].copy_from_slice(&id.to_be_bytes());
+        entry[4..8].copy_from_slice(&tid.to_be_bytes());
+        entry[9..11].copy_from_slice(&cell.0.to_be_bytes());
+        entry[11..13].copy_from_slice(&cell.1.to_be_bytes());
+        if source_tid != *tid {
+            let skills = count_at(&entry, 40)?;
+            for index in 0..skills {
+                let skill_id_offset = 43usize.checked_add(index.checked_mul(5)?)?;
+                let skill_id = be_i32(&entry, skill_id_offset)?;
+                let remapped = remap_skill_id(skill_id, source_tid, *tid);
+                entry[skill_id_offset..skill_id_offset + 4]
+                    .copy_from_slice(&remapped.to_be_bytes());
             }
         }
+        entries.push(entry);
     }
-    // Benched recorded heroes stay in the lineup so recorded action batches
-    // never reference an unknown hero id.
-    for entry in &recorded {
-        if !deployed.iter().any(|(id, _, _)| *id == entry.0) {
-            entries.push(entry.2.clone());
+
+    let mut total_hp = 0i64;
+    for entry in &entries {
+        total_hp = total_hp.saturating_add(be_i64(entry, 13)?);
+    }
+
+    let active_ids: HashSet<i32> = deployed.iter().map(|(id, _, _)| *id).collect();
+    let added_heroes = deployed
+        .iter()
+        .filter(|hero| !actor_map.values().any(|mapped| mapped.0 == hero.0))
+        .map(|(id, tid, _)| (*id, *tid))
+        .collect();
+
+    let mut order_entries: Vec<Vec<u8>> = Vec::new();
+    let mut ordered_player_ids = HashSet::new();
+    for index in 0..order_count {
+        let entry_offset = order_start.checked_add(index.checked_mul(6)?)?;
+        let side = be_i16(raw, entry_offset)?;
+        let hero_id = be_i32(raw, entry_offset.checked_add(2)?)?;
+        if side == 1 {
+            if let Some((id, _, _)) = actor_map.get(&hero_id) {
+                if active_ids.contains(id) && ordered_player_ids.insert(*id) {
+                    let mut entry = Vec::with_capacity(6);
+                    entry.extend_from_slice(&1i16.to_be_bytes());
+                    entry.extend_from_slice(&id.to_be_bytes());
+                    order_entries.push(entry);
+                }
+            }
+        } else {
+            order_entries.push(raw.get(entry_offset..entry_offset.checked_add(6)?)?.to_vec());
+        }
+    }
+    for (id, _, _) in deployed {
+        if ordered_player_ids.insert(*id) {
+            let mut entry = Vec::with_capacity(6);
+            entry.extend_from_slice(&1i16.to_be_bytes());
+            entry.extend_from_slice(&id.to_be_bytes());
+            order_entries.push(entry);
         }
     }
 
-    let mut out = Vec::with_capacity(raw.len() + 96);
-    out.extend_from_slice(&raw[..count_off]);
+    let mut out = Vec::with_capacity(raw.len() + 64);
+    out.extend_from_slice(raw.get(..total_hp_offset)?);
+    out.extend_from_slice(&total_hp.to_be_bytes());
+    out.extend_from_slice(raw.get(total_hp_offset.checked_add(8)?..count_off)?);
     out.extend_from_slice(&(entries.len() as i16).to_be_bytes());
     for entry in &entries {
         out.extend_from_slice(entry);
     }
-    out.extend_from_slice(&raw[mid_start..order_off]);
-    out.extend_from_slice(&((order_count + added.len()) as i16).to_be_bytes());
-    out.extend_from_slice(&raw[order_start..order_end]);
-    for id in &added {
-        out.extend_from_slice(&1i16.to_be_bytes());
-        out.extend_from_slice(&id.to_be_bytes());
+    out.extend_from_slice(raw.get(mid_start..order_off)?);
+    out.extend_from_slice(&(order_entries.len() as i16).to_be_bytes());
+    for entry in &order_entries {
+        out.extend_from_slice(entry);
     }
     out.extend_from_slice(tail);
 
-    let added_pairs: Vec<(i32, i32)> = deployed
-        .iter()
-        .filter(|(id, _, _)| added.contains(id))
-        .map(|(id, tid, _)| (*id, *tid))
-        .collect();
-    Some((out, added_pairs))
+    Some((
+        out,
+        FormationPatch {
+            actor_map,
+            added_heroes,
+        },
+    ))
 }
 
-/// Apply the client's deployed formation to a battle entry group's 20101.
-/// Returns the heroes that were synthesized (id, tid) so callers can give
-/// them battle actions.
-fn patch_enter_formation(group: &mut TemplateGroup, deployed: &[(i32, i32, i8)]) -> Vec<(i32, i32)> {
-    if deployed.is_empty() {
-        return Vec::new();
-    }
-    let mut added = Vec::new();
+fn patch_enter_formation(
+    group: &mut TemplateGroup,
+    deployed: &[(i32, i32, i8)],
+) -> FormationPatch {
+    let mut patch = FormationPatch::default();
     for response in group.responses.iter_mut() {
         if response.cmd != 20101 {
             continue;
         }
         let Some(raw) = response.payload_hex.as_deref().and_then(decode_payload_hex) else {
+            tracing::warn!("Cannot patch battle field info without a raw payload");
             continue;
         };
-        match patch_field_info_heroes(&raw, deployed) {
-            Some((patched, new_heroes)) => {
-                info!(
-                    deployed = ?deployed,
-                    bytes = patched.len(),
-                    "Battle field info patched with client formation"
-                );
-                added = new_heroes;
-                response.payload_hex = Some(to_hex(&patched));
-            }
-            // None = lineup unchanged (or unparsable payload); the recorded
-            // bytes are already correct in that case.
-            None => {}
+        if let Some((patched, roster)) = patch_field_info_heroes(&raw, deployed) {
+            info!(
+                deployed = ?deployed,
+                bytes = patched.len(),
+                "Battle field info patched with ready formation"
+            );
+            response.payload_hex = Some(to_hex(&patched));
+            patch = roster;
+        } else {
+            tracing::warn!(
+                deployed = ?deployed,
+                "Could not parse captured battle field info; retaining its original roster"
+            );
         }
     }
-    added
+    patch
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn retreat_result_has_no_victory_rewards() {
+        let result = retreat_result(4);
+        let decoded = crate::dispatch::dispatch_cmd(20106, &result.encode()).unwrap();
+        assert_eq!(decoded["result"], 3);
+        assert_eq!(decoded["award"], json!([]));
+        assert_eq!(decoded["detail_item_award"], json!([]));
+        assert_eq!(decoded["player_exp"], 0);
+        assert_eq!(decoded["hero_exp"], 0);
+        assert_eq!(decoded["round"], 4);
+    }
+
+    #[test]
+    fn action_and_effect_actor_ids_follow_the_ready_roster() {
+        let mut actor_map = HashMap::new();
+        actor_map.insert(7, (42, 1305, 1006));
+        actor_map.insert(8, (43, 1110, 1304));
+        let mut response = TemplateResponse {
+            cmd: 20103,
+            decoded: Some(json!({
+                "side": 1,
+                "hero_id": 7,
+                "skill_id": 130501,
+                "target_side": 1,
+                "target_id": 8,
+                "target_list": [
+                    {"side": 1, "hero_id": 8, "effect_list": []},
+                    {"side": 2, "hero_id": 99, "effect_list": []}
+                ],
+                "hero_list": [],
+                "result_list": [
+                    {"qte_val": 0, "hero_list": [
+                        {"side": 1, "hero_id": 7, "effect_list": []}
+                    ], "has_extra_call": 0, "is_final_hit": 0}
+                ],
+                "sync_word": 123
+            })),
+            payload_hex: Some("deadbeef".to_owned()),
+        };
+
+        remap_battle_response(&mut response, &actor_map);
+        let decoded = response.decoded.unwrap();
+        assert_eq!(decoded["hero_id"], 42);
+        assert_eq!(decoded["skill_id"], 100601);
+        assert_eq!(decoded["target_id"], 43);
+        assert_eq!(decoded["target_list"][0]["hero_id"], 43);
+        assert_eq!(decoded["target_list"][1]["hero_id"], 99);
+        assert_eq!(decoded["result_list"][0]["hero_list"][0]["hero_id"], 42);
+        assert!(response.payload_hex.is_none());
+    }
+
+    fn push_i16(raw: &mut Vec<u8>, value: i16) {
+        raw.extend_from_slice(&value.to_be_bytes());
+    }
+
+    fn push_i32(raw: &mut Vec<u8>, value: i32) {
+        raw.extend_from_slice(&value.to_be_bytes());
+    }
+
+    fn push_i64(raw: &mut Vec<u8>, value: i64) {
+        raw.extend_from_slice(&value.to_be_bytes());
+    }
+
+    fn field_info_with_two_attackers() -> Vec<u8> {
+        let mut raw = Vec::new();
+        raw.push(1); // battle_type
+        push_i64(&mut raw, 1001); // field id
+        push_i64(&mut raw, 10); // attacker player id
+        push_i16(&mut raw, 1);
+        raw.push(b'p');
+        push_i16(&mut raw, 1); // player level
+        push_i64(&mut raw, 1304); // original total HP
+        push_i16(&mut raw, 0); // avatar
+        push_i16(&mut raw, 2); // attacker count
+        raw.extend_from_slice(&synth_hero_entry(7, 1110, (2, 1)));
+        raw.extend_from_slice(&synth_hero_entry(8, 1305, (1, 2)));
+        push_i16(&mut raw, 0); // attacker qte
+        push_i16(&mut raw, 0); // attacker assists
+
+        push_i64(&mut raw, 20); // defender player id
+        push_i16(&mut raw, 1);
+        raw.push(b'd');
+        push_i16(&mut raw, 1); // player level
+        push_i64(&mut raw, 0); // total HP
+        push_i16(&mut raw, 0); // avatar
+        push_i16(&mut raw, 0); // defender count
+        push_i16(&mut raw, 0); // defender qte
+        push_i16(&mut raw, 0); // defender assists
+
+        push_i16(&mut raw, 3); // order count
+        push_i16(&mut raw, 1);
+        push_i32(&mut raw, 7);
+        push_i16(&mut raw, 1);
+        push_i32(&mut raw, 8);
+        push_i16(&mut raw, 2);
+        push_i32(&mut raw, 99);
+        raw.push(20); // max round
+        raw.push(0); // auto
+        raw.push(0); // replay
+        push_i32(&mut raw, 71510000);
+        push_i16(&mut raw, 0); // scene skills
+        raw.push(1); // enter result
+        push_i16(&mut raw, 0); // forces skills
+        push_i16(&mut raw, 0); // forces energy
+        raw
+    }
+
+    #[test]
+    fn attacker_trigger_heroes_are_not_reintroduced_after_field_entry() {
+        let mut actor_map = HashMap::new();
+        actor_map.insert(7, (42, 1305, 1006));
+        let mut response = TemplateResponse {
+            cmd: 20118,
+            decoded: Some(json!({
+                "side": 1,
+                "hero_list": [{"id": 999, "tid": 1999}],
+                "story_id": 1,
+                "talk_id": 2,
+                "sync_word": 10
+            })),
+            payload_hex: Some("deadbeef".to_owned()),
+        };
+
+        remap_battle_response(&mut response, &actor_map);
+        assert_eq!(response.decoded.as_ref().unwrap()["hero_list"], json!([]));
+        assert!(response.payload_hex.is_none());
+    }
+
+    #[test]
+    fn selected_ready_team_wins_over_the_captured_team() {
+        let hero = |hero_id, tid| crate::messages::pt_formation_hero_info {
+            pos: 1,
+            is_captain: 1,
+            hero_id,
+            tid,
+            hero_source: 1,
+        };
+        let formation = vec![
+            crate::messages::pt_hero_formation {
+                team_id: 1001,
+                formation_id: 1,
+                is_ready: 1,
+                name: "capture team".to_owned(),
+                formation_hero_list: vec![hero(7, 1110)],
+                assist_fight_list: Vec::new(),
+                pet_id: 0,
+            },
+            crate::messages::pt_hero_formation {
+                team_id: 1002,
+                formation_id: 2,
+                is_ready: 0,
+                name: "selected team".to_owned(),
+                formation_hero_list: vec![hero(42, 1006)],
+                assist_fight_list: Vec::new(),
+                pet_id: 0,
+            },
+        ];
+        assert_eq!(deployed_heroes(&formation, Some(1002)), vec![(42, 1006, 1)]);
+    }
+
+    #[test]
+    fn field_info_removes_benched_capture_heroes() {
+        let raw = field_info_with_two_attackers();
+        let deployed = [(42, 1006, 1)];
+        let (patched, roster) = patch_field_info_heroes(&raw, &deployed).unwrap();
+        let decoded = crate::messages::SC_BATTLE_FIELD_INFO::decode(&patched);
+
+        assert_eq!(decoded.att_info.hero_list.len(), 1);
+        assert_eq!(decoded.att_info.hero_list[0].id, 42);
+        assert_eq!(decoded.att_info.hero_list[0].tid, 1006);
+        assert_eq!(decoded.att_info.total_hp, "529");
+        assert_eq!(decoded.hero_order.len(), 2);
+        assert_eq!(decoded.hero_order[0].key, 1);
+        assert_eq!(decoded.hero_order[0].value, 42);
+        assert_eq!(decoded.hero_order[1].key, 2);
+        assert_eq!(decoded.hero_order[1].value, 99);
+        assert_eq!(roster.actor_map.get(&7), Some(&(42, 1110, 1006)));
+        assert_eq!(roster.actor_map.get(&8), Some(&(42, 1305, 1006)));
+    }
 }

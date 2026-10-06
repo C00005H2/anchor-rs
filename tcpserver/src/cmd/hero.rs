@@ -30,7 +30,11 @@ pub async fn handle_set_ready(
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     let mut connection = ctx.lock().await;
     connection.update_heartbeat();
-    info!(team_id = request.team_id, "Team ready state noted");
+    connection.ready_team_id = Some(request.team_id);
+    for team in &mut connection.formation {
+        team.is_ready = if team.team_id == request.team_id { 1 } else { 0 };
+    }
+    info!(team_id = request.team_id, "Team ready state updated");
     Ok(Vec::new())
 }
 
@@ -42,7 +46,17 @@ pub async fn handle_change_hero(
     let mut connection = ctx.lock().await;
     connection.update_heartbeat();
     info!(formations = request.formation_list.len(), "Hero formation updated");
-    connection.formation = request.formation_list;
+    connection.formation_received = true;
+    let mut formation = request.formation_list;
+    if let Some(team) = formation.iter().find(|team| team.is_ready == 1) {
+        connection.ready_team_id = Some(team.team_id);
+    }
+    if let Some(ready_team_id) = connection.ready_team_id {
+        for team in &mut formation {
+            team.is_ready = if team.team_id == ready_team_id { 1 } else { 0 };
+        }
+    }
+    connection.formation = formation;
     Ok(Vec::new())
 }
 
