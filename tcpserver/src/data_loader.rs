@@ -54,16 +54,22 @@ impl GameDataLoader {
             ));
         }
 
-        let data: T = Self::load_struct(relative_path)?;
+        let json_data = fs::read_to_string(&file_path)
+            .with_context(|| format!("could not read JSON data file {}", file_path.display()))?;
+        // Raw captures ({"payload_hex": ...}) replay byte-for-byte; plain JSON
+        // files are deserialized and encoded through the schema.
+        if let Ok(raw) = serde_json::from_str::<RawPayload>(&json_data) {
+            let bytes = hex_decode(&raw.payload_hex)
+                .with_context(|| format!("invalid hex in {relative_path}"))?;
+            return Ok(build_server_packet(cmd_id, &bytes)?);
+        }
+        let data: T = serde_json::from_str(&json_data)
+            .with_context(|| format!("invalid JSON in data file {}", file_path.display()))?;
         Ok(build_server_packet(cmd_id, &data.encode())?)
     }
 
     /// Build a packet from a raw hex payload file (commands without a schema).
     pub fn load_raw_packet(relative_path: &str, cmd_id: u32) -> Result<Vec<u8>, anyhow::Error> {
-        #[derive(serde::Deserialize)]
-        struct RawPayload {
-            payload_hex: String,
-        }
         let file_path = Self::resolve_data_path(relative_path)?;
         if !file_path.is_file() {
             return Err(anyhow::anyhow!(
@@ -303,6 +309,11 @@ impl GameDataLoader {
     }
 }
 
+
+#[derive(serde::Deserialize)]
+struct RawPayload {
+    payload_hex: String,
+}
 
 pub trait MessageEncode {
     fn encode(&self) -> Vec<u8>;

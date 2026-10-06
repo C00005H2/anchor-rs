@@ -24,7 +24,7 @@ const EVENT_CHANNEL_CAPACITY: usize = 128;
 
 /// Undecoded payloads are recorded up to this size so the message catalogue can
 /// be extended from a later capture.
-const MAX_UNDECODED_HEX_BYTES: usize = 1024;
+const MAX_UNDECODED_HEX_BYTES: usize = 65536;
 
 #[derive(Debug, Clone, Serialize)]
 struct PacketInfo {
@@ -301,10 +301,11 @@ fn make_packet_info(direction: &str, cmd: u32, data: &[u8]) -> PacketInfo {
         redact_capture_value(cmd, value);
     }
 
-    // Keep the raw bytes of server messages that have no schema yet so the
-    // catalogue can be completed from a later capture. Client requests are not
-    // recorded this way because unknown fields may contain credentials.
-    let payload_hex = if decoded.is_none() && direction == "S->C" {
+    // Keep the raw bytes of every server message: some wire structs differ
+    // from the generated schemas, so captures replay byte-for-byte from hex
+    // instead of re-encoding decoded JSON.  Client requests are not recorded
+    // this way because unknown fields may contain credentials.
+    let payload_hex = if direction == "S->C" {
         Some(hex_encode(data, MAX_UNDECODED_HEX_BYTES))
     } else {
         None

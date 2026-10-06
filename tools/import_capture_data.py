@@ -478,7 +478,17 @@ def main(argv: list[str] | None = None) -> int:
         # Group responses are replayed in capture order, so the first matching
         # group is the one the client would use for this data file.
         _, response = candidate_groups[0]
-        write_json(expectation.path, sanitize(response.decoded), written)
+        # The init burst replays byte-for-byte from raw hex whenever the
+        # capture recorded it (schemas drift from the wire for some structs);
+        # mail_list.json stays decoded because handlers parse it as a struct.
+        if (
+            expectation.path.startswith("hero_biography/")
+            and expectation.path != "hero_biography/mail_list.json"
+            and response.payload_hex
+        ):
+            write_json(expectation.path, {"payload_hex": response.payload_hex}, written)
+        else:
+            write_json(expectation.path, sanitize(response.decoded), written)
         covered_cmds.add(expectation.cmd)
         covered_paths.add(expectation.path)
 
