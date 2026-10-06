@@ -120,7 +120,10 @@ pub async fn handle_battle_auto(
     let cursor = ctx.lock().await.replay_cursor.clone();
     info!(is_auto = request.is_auto, "Auto-battle requested");
     let packets = group.encode(&cursor)?;
-    absorb_attr_updates(&mut ctx.lock().await, &group);
+    {
+        let mut connection = ctx.lock().await;
+        absorb_attr_updates(&mut connection, &group);
+    }
     Ok(packets)
 }
 
@@ -154,6 +157,9 @@ pub async fn handle_battle_video_end(
     };
 
     let packets = group.encode(&cursor)?;
-    absorb_attr_updates(&mut ctx.lock().await, &group);
+    {
+        let mut connection = ctx.lock().await;
+        absorb_attr_updates(&mut connection, &group);
+    }
     Ok(packets)
 }

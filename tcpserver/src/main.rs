@@ -30,7 +30,7 @@ struct Args {
     replay_capture: Option<PathBuf>,
 
     /// Local interface/address to listen on.
-    #[arg(long, default_value_t = GAMESERVER)]
+    #[arg(long, default_value_t = GAMESERVER.to_string())]
     bind: String,
 
     /// Local TCP port to listen on.

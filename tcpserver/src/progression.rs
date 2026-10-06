@@ -209,19 +209,18 @@ fn apply_attr_reward(
 
 /// Build the `SC_NEW_UNREAD` notices recorded for a flow.
 pub fn unread_packets(notices: &[UnreadNotice]) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    notices
-        .iter()
-        .map(|notice| {
-            build_server_packet(
-                10059,
-                &SC_NEW_UNREAD {
-                    msg_type: notice.msg_type,
-                    id_list: notice.id_list.clone(),
-                }
-                .encode(),
-            )
-        })
-        .collect()
+    let mut packets = Vec::with_capacity(notices.len());
+    for notice in notices {
+        packets.push(build_server_packet(
+            10059,
+            &SC_NEW_UNREAD {
+                msg_type: notice.msg_type,
+                id_list: notice.id_list.clone(),
+            }
+            .encode(),
+        )?);
+    }
+    Ok(packets)
 }
 
 #[cfg(test)]

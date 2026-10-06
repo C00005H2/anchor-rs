@@ -1,7 +1,7 @@
 use actix_web::body::{BoxBody, EitherBody, MessageBody};
 use actix_web::{
     dev::{ServiceRequest, ServiceResponse},
-    http::{header, header::HeaderValue, HeaderMap, Method},
+    http::{header, header::{HeaderMap, HeaderValue}, Method},
     middleware::Next,
     Error, HttpResponse,
 };
