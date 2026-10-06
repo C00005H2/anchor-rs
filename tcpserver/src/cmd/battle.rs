@@ -121,14 +121,48 @@ pub(crate) fn absorb_attr_updates(connection: &mut ConnectionContext, group: &Te
     }
 }
 
+/// Build cloned attack actions for heroes synthesized into the battle entry.
+///
+/// Recorded action batches only reference the capture-time lineup, so added
+/// heroes would stand idle.  Whenever a step carries an attacker (side 1)
+/// action we clone it once per added hero, rewriting the actor id and basic
+/// skill, so they visibly attack the same target.
+fn injected_actions(added: &[(i32, i32)], responses: &[TemplateResponse]) -> Vec<Vec<u8>> {
+    let mut packets = Vec::new();
+    if added.is_empty() {
+        return packets;
+    }
+    let template = responses
+        .iter()
+        .find(|response| response.cmd == 20103)
+        .and_then(|response| response.payload_hex.as_deref())
+        .and_then(decode_payload_hex);
+    let Some(mut raw) = template else { return packets };
+    if raw.len() < 14 || raw[0] != 1 {
+        return packets;
+    }
+    for (id, tid) in added {
+        raw[1..5].copy_from_slice(&id.to_be_bytes());
+        raw[5..9].copy_from_slice(&(tid * 100 + 1).to_be_bytes());
+        if let Ok(packet) = build_server_packet(20103, &raw) {
+            packets.push(packet);
+        }
+    }
+    packets
+}
+
 /// Send one consumed step and absorb its attribute updates.
 async fn encode_step(
     ctx: &Arc<Mutex<ConnectionContext>>,
     step: &BattleStep,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     let group = step.as_group();
-    let cursor = ctx.lock().await.replay_cursor.clone();
-    let packets = group.encode(&cursor)?;
+    let (cursor, added) = {
+        let connection = ctx.lock().await;
+        (connection.replay_cursor.clone(), connection.battle_added_heroes.clone())
+    };
+    let mut packets = group.encode(&cursor)?;
+    packets.extend(injected_actions(&added, &step.responses));
     {
         let mut connection = ctx.lock().await;
         absorb_attr_updates(&mut connection, &group);
@@ -222,6 +256,7 @@ pub async fn handle_battle_field_enter(
         connection.battle_auto_served = false;
         connection.battle_active = true;
         connection.battle_script_index = 0;
+        connection.battle_added_heroes = Vec::new();
         info!(
             battle_type = request.battle_type,
             battle_field_id = %request.battle_field_id,
@@ -248,7 +283,8 @@ pub async fn handle_battle_field_enter(
                 }
             }
         }
-        patch_enter_formation(&mut group, &deployed_heroes(&formation));
+        let added = patch_enter_formation(&mut group, &deployed_heroes(&formation));
+        ctx.lock().await.battle_added_heroes = added;
     }
 
     group.encode(&cursor)
@@ -351,9 +387,13 @@ pub async fn handle_battle_auto(
         }
     }
 
-    let cursor = ctx.lock().await.replay_cursor.clone();
+    let (cursor, added) = {
+        let connection = ctx.lock().await;
+        (connection.replay_cursor.clone(), connection.battle_added_heroes.clone())
+    };
     info!(is_auto = request.is_auto, "Auto-battle requested");
-    let packets = group.encode(&cursor)?;
+    let mut packets = group.encode(&cursor)?;
+    packets.extend(injected_actions(&added, &group.responses));
     {
         let mut connection = ctx.lock().await;
         absorb_attr_updates(&mut connection, group);
@@ -471,19 +511,48 @@ pub async fn handle_battle_sync(
     Ok(Vec::new())
 }
 
+/// Serve the recorded result batch so the client closes the battle screen.
+async fn serve_battle_result(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    kind: &str,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    let result_step = {
+        let mut connection = ctx.lock().await;
+        connection.battle_active = false;
+        connection
+            .battle_session_chosen
+            .and_then(load_session)
+            .and_then(|session| {
+                session
+                    .steps
+                    .iter()
+                    .rev()
+                    .find(|step| step.contains(20106))
+                    .cloned()
+            })
+    };
+    info!(kind, "Battle ended by client request");
+    match result_step {
+        Some(step) => encode_step(&ctx, &step).await,
+        None => Ok(Vec::new()),
+    }
+}
+
 /// Handle CS_BATTLE_QUIT (20107): the client abandons the current battle.
 ///
-/// The capture recorded no reply for it, so just clear local battle state;
-/// the next field enter re-initialises step consumption.
+/// The capture recorded no reply for it; serving the recorded result batch
+/// makes the client play the end-of-battle flow and return to the map.
 pub async fn handle_battle_quit(
     ctx: Arc<Mutex<ConnectionContext>>,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    {
-        let mut connection = ctx.lock().await;
-        connection.battle_active = false;
-    }
-    info!("Battle quit");
-    Ok(Vec::new())
+    serve_battle_result(ctx, "quit").await
+}
+
+/// Handle CS_BATTLE_SKIP (20109): the client skips ahead / retreats.
+pub async fn handle_battle_skip(
+    ctx: Arc<Mutex<ConnectionContext>>,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    serve_battle_result(ctx, "skip").await
 }
 
 /// Heroes the client actually deployed, in formation order, as
@@ -719,14 +788,23 @@ fn patch_field_info_heroes(raw: &[u8], deployed: &[(i32, i32, i8)]) -> Option<Ve
         out.extend_from_slice(&id.to_be_bytes());
     }
     out.extend_from_slice(tail);
-    Some(out)
+
+    let added_pairs: Vec<(i32, i32)> = deployed
+        .iter()
+        .filter(|(id, _, _)| added.contains(id))
+        .map(|(id, tid, _)| (*id, *tid))
+        .collect();
+    Some((out, added_pairs))
 }
 
 /// Apply the client's deployed formation to a battle entry group's 20101.
-fn patch_enter_formation(group: &mut TemplateGroup, deployed: &[(i32, i32, i8)]) {
+/// Returns the heroes that were synthesized (id, tid) so callers can give
+/// them battle actions.
+fn patch_enter_formation(group: &mut TemplateGroup, deployed: &[(i32, i32, i8)]) -> Vec<(i32, i32)> {
     if deployed.is_empty() {
-        return;
+        return Vec::new();
     }
+    let mut added = Vec::new();
     for response in group.responses.iter_mut() {
         if response.cmd != 20101 {
             continue;
@@ -735,12 +813,13 @@ fn patch_enter_formation(group: &mut TemplateGroup, deployed: &[(i32, i32, i8)])
             continue;
         };
         match patch_field_info_heroes(&raw, deployed) {
-            Some(patched) => {
+            Some((patched, new_heroes)) => {
                 info!(
                     deployed = ?deployed,
                     bytes = patched.len(),
                     "Battle field info patched with client formation"
                 );
+                added = new_heroes;
                 response.payload_hex = Some(to_hex(&patched));
             }
             // None = lineup unchanged (or unparsable payload); the recorded
@@ -748,4 +827,5 @@ fn patch_enter_formation(group: &mut TemplateGroup, deployed: &[(i32, i32, i8)])
             None => {}
         }
     }
+    added
 }

@@ -15,7 +15,7 @@ use crate::{
     },
     messages::{
         CS_ACCOUNT_LOGIN, CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE, CS_ATTR_PREVIEW_ALL,
-        CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_QUIT, CS_BATTLE_START,
+        CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_QUIT, CS_BATTLE_SKIP, CS_BATTLE_START,
         CS_BATTLE_SYNC, CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END, CS_CANNOT_DEL_HERO_LIST,
         CS_CHANGE_HERO, CS_DAILY_SIGN, CS_DIALOGUE_TALK, CS_DIRECT_GIFT_BUY,
         CS_DIRECT_GIFT_PANEL,
@@ -38,6 +38,7 @@ use crate::{
 macro_rules! send_responses {
     ($writer:expr, $responses:expr) => {
         for pkt in $responses {
+            let pkt = crate::cmd::story::maybe_expand_story_unlock(pkt);
             if pkt.len() >= 6 {
                 let cmd_id = u32::from_be_bytes([pkt[2], pkt[3], pkt[4], pkt[5]]);
                 let body = &pkt[6..];
@@ -317,6 +318,11 @@ pub async fn dispatch_packet_with_replay(
         20107 => {
             let _request = CS_BATTLE_QUIT::decode(data);
             let responses = battle::handle_battle_quit(ctx).await?;
+            send_responses!(writer, responses);
+        }
+        20109 => {
+            let _request = CS_BATTLE_SKIP::decode(data);
+            let responses = battle::handle_battle_skip(ctx).await?;
             send_responses!(writer, responses);
         }
         20108 => {

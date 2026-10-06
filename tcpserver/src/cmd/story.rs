@@ -10,7 +10,7 @@ use crate::{
     cmd::battle::absorb_attr_updates,
     data_loader::GameDataLoader,
     messages::{
-        CS_DUP_ONLY_STORY_PASS, CS_MAIN_STORY_STAGE_AWARD, CS_STORY_OVER,
+        CS_DUP_ONLY_STORY_PASS, CS_MAIN_STORY_STAGE_AWARD, CS_STORY_OVER, SC_MAIN_STORY_INFO,
         SC_MAIN_STORY_STAGE_AWARD_LIST, SC_PROP_AWARD_SEND, pt_prop_award,
     },
     packet::build_server_packet,
@@ -149,4 +149,50 @@ pub async fn handle_main_story_stage_award(
             .encode(),
         )?,
     ])
+}
+
+/// Rewrite an outgoing `SC_MAIN_STORY_INFO` (18000) packet so every story
+/// stage is unlocked and marked cleared, letting the player enter any map
+/// without grinding the campaign on the real account.
+///
+/// Stage ids follow the captured `chapter * 1000 + index` scheme.  Unknown
+/// ids are ignored by the client, so a generous range is safe.
+pub fn maybe_expand_story_unlock(pkt: Vec<u8>) -> Vec<u8> {
+    if pkt.len() < 6 {
+        return pkt;
+    }
+    let cmd = u32::from_be_bytes([pkt[2], pkt[3], pkt[4], pkt[5]]);
+    if cmd != 18000 {
+        return pkt;
+    }
+    let body = pkt[6..].to_vec();
+    let mut info = SC_MAIN_STORY_INFO::decode(&body);
+
+    let mut stages: Vec<i32> = Vec::new();
+    let mut chapters: Vec<i16> = Vec::new();
+    for chapter in 1..=10i32 {
+        chapters.push(chapter as i16);
+        for index in 1..=10i32 {
+            stages.push(chapter * 1000 + index);
+        }
+    }
+    for stage in &stages {
+        if !info.now_stage_list.contains(stage) {
+            info.now_stage_list.push(*stage);
+        }
+        if !info.pass_stage_list.contains(stage) {
+            info.pass_stage_list.push(*stage);
+        }
+    }
+    for chapter in chapters {
+        if !info.play_chapter_pic_list.contains(&chapter) {
+            info.play_chapter_pic_list.push(chapter);
+        }
+    }
+    info.ongoing_stage_id = 0;
+
+    match build_server_packet(18000, &info.encode()) {
+        Ok(expanded) => expanded,
+        Err(_) => pkt,
+    }
 }

@@ -57,6 +57,9 @@ pub struct ConnectionContext {
     pub battle_auto_served: bool,
     /// Which recorded action steps of the chosen session were consumed.
     pub battle_step_consumed: Vec<bool>,
+    /// Heroes synthesized into the battle entry (not present in the recorded
+    /// action batches); they get cloned attack actions so they participate.
+    pub battle_added_heroes: Vec<(i32, i32)>,
     /// Position inside the recorded hero-recruit prepare sequence.
     pub recruit_prepare_index: usize,
     /// Position inside the recorded hero-recruit save-list sequence.
@@ -96,6 +99,7 @@ impl ConnectionContext {
             battle_session_chosen: None,
             battle_auto_served: false,
             battle_step_consumed: Vec::new(),
+            battle_added_heroes: Vec::new(),
             recruit_prepare_index: 0,
             recruit_save_index: 0,
             battle_sync_word: 0,
