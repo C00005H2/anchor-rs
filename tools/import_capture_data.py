@@ -435,6 +435,11 @@ def main(argv: list[str] | None = None) -> int:
     covered_cmds: set[int] = set()
     covered_paths: set[str] = set()
 
+    # When a command appears several times in one sequence (8x SC_BAG_INIT,
+    # 2x SC_PLAYER_HOMEPAGE_INFO, ...), the N-th loader slot must be filled
+    # with the N-th occurrence in the captured burst.
+    occurrence: dict[tuple[str, int], int] = {}
+
     for expectation in expectations:
         if expectation.raw:
             for group in by_cmd.get(expectation.cmd, []):
@@ -450,18 +455,19 @@ def main(argv: list[str] | None = None) -> int:
                 break
             continue
 
+        slot = occurrence.get((expectation.sequence, expectation.cmd), 0)
+        occurrence[(expectation.sequence, expectation.cmd)] = slot + 1
+
         candidate_groups = []
         for group in by_cmd.get(expectation.cmd, []):
-            matching_response = next(
-                (
-                    response
-                    for response in group.responses
-                    if response.cmd == expectation.cmd
-                    and response.name == expectation.struct
-                    and response.decoded is not None
-                ),
-                None,
-            )
+            matches = [
+                response
+                for response in group.responses
+                if response.cmd == expectation.cmd
+                and response.name == expectation.struct
+                and response.decoded is not None
+            ]
+            matching_response = matches[slot] if len(matches) > slot else None
             if matching_response is None:
                 continue
             if expectation.selector is not None:
