@@ -58,6 +58,25 @@ impl GameDataLoader {
         Ok(build_server_packet(cmd_id, &data.encode())?)
     }
 
+    /// Build a packet from a raw hex payload file (commands without a schema).
+    pub fn load_raw_packet(relative_path: &str, cmd_id: u32) -> Result<Vec<u8>, anyhow::Error> {
+        #[derive(serde::Deserialize)]
+        struct RawPayload {
+            payload_hex: String,
+        }
+        let file_path = Self::resolve_data_path(relative_path)?;
+        if !file_path.is_file() {
+            return Err(anyhow::anyhow!(
+                "Missing raw payload file for command ID {cmd_id}: {}\nCreate it as {{\"payload_hex\": \"<hex bytes>\"}}",
+                file_path.display()
+            ));
+        }
+        let raw: RawPayload = Self::load_struct(relative_path)?;
+        let bytes =
+            hex_decode(&raw.payload_hex).with_context(|| format!("invalid hex in {relative_path}"))?;
+        Ok(build_server_packet(cmd_id, &bytes)?)
+    }
+
     fn resolve_data_path(relative_path: &str) -> Result<PathBuf, anyhow::Error> {
         let path = Path::new(relative_path);
         if path.is_absolute()
@@ -298,6 +317,9 @@ impl MessageEncode for SC_PLATFORM_ACHIEVE_PANEL { fn encode(&self) -> Vec<u8> {
 impl MessageEncode for SC_FIRST_PAY_PANEL { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
 impl MessageEncode for SC_TITANIUM_EXCHANGE_GOLD_COIN_INFO { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
 impl MessageEncode for SC_MAIL_LIST { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
+impl MessageEncode for SC_FASHION_SCENE_PANEL { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
+impl MessageEncode for SC_NEW_UNREAD { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
+impl MessageEncode for SC_ACTIVITY_EXPIRED_GOODS { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
 impl MessageEncode for SC_BAG_INIT { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
 impl MessageEncode for SC_IS_RENAME { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
 impl MessageEncode for SC_PLAYER_HOMEPAGE_INFO { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
