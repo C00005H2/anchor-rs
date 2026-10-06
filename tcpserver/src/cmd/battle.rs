@@ -694,7 +694,7 @@ fn skip_assist_list(raw: &[u8], offset: usize) -> Option<usize> {
     Some(offset)
 }
 
-fn patch_field_info_heroes(raw: &[u8], deployed: &[(i32, i32, i8)]) -> Option<Vec<u8>> {
+fn patch_field_info_heroes(raw: &[u8], deployed: &[(i32, i32, i8)]) -> Option<(Vec<u8>, Vec<(i32, i32)>)> {
     // battle_type i8 + field id i64 + player id i64, then the name string.
     let mut offset = 1 + 8 + 8;
     let name_len = be_i16(raw, offset)? as usize & 0x7fff;
