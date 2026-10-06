@@ -61,6 +61,14 @@ pub struct ConnectionContext {
     pub recruit_prepare_index: usize,
     /// Position inside the recorded hero-recruit save-list sequence.
     pub recruit_save_index: usize,
+    /// Latest battle sync word observed in scripted battle responses.
+    pub battle_sync_word: i32,
+    /// Stage ids claimed via CS_MAIN_STORY_STAGE_AWARD this connection.
+    pub story_award_claimed: Vec<i32>,
+    /// Indices of story-pass recordings already consumed this connection.
+    pub story_pass_taken: Vec<usize>,
+    /// Evolution level reached per hero instance this connection.
+    pub hero_evolution: HashMap<i32, i16>,
     /// Hero formation last reported by `CS_CHANGE_HERO`.
     pub formation: Vec<pt_hero_formation>,
     /// Purchase counts per goods id.
@@ -90,6 +98,10 @@ impl ConnectionContext {
             battle_step_consumed: Vec::new(),
             recruit_prepare_index: 0,
             recruit_save_index: 0,
+            battle_sync_word: 0,
+            story_award_claimed: Vec::new(),
+            story_pass_taken: Vec::new(),
+            hero_evolution: HashMap::new(),
             formation: Vec::new(),
             purchases: HashMap::new(),
             request_counts: HashMap::new(),

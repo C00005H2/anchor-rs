@@ -260,8 +260,8 @@ def write_flow_tables(groups, data_dir, written, skipped_existing, force):
     daily_sign = None
     guide_end = None
     novice_training_panel = None
-    use_by_id = None
-    story_pass = None
+    use_by_id_groups = []
+    story_pass_groups = []
 
     def emit(relative_path, payload):
         target = data_dir / relative_path
@@ -354,10 +354,19 @@ def write_flow_tables(groups, data_dir, written, skipped_existing, force):
             response = find_response(group, 24220)
             if response and response.decoded is not None and recruit_times is None:
                 recruit_times = response.decoded.get("recruit_times", 0)
-        elif cmd == 17002 and use_by_id is None:
-            use_by_id = {"groups": [{"responses": template_payload(group.responses)}]}
-        elif cmd == 18012 and story_pass is None:
-            story_pass = {"groups": [{"responses": template_payload(group.responses)}]}
+        elif cmd == 17002:
+            use_by_id_groups.append({
+                "request": {"id": request.get("id")},
+                "responses": template_payload(group.responses),
+            })
+        elif cmd == 18012:
+            story_pass_groups.append({
+                "request": {
+                    "battle_type": request.get("battle_type"),
+                    "field_id": request.get("field_id"),
+                },
+                "responses": template_payload(group.responses),
+            })
         elif cmd == 13010:
             hero_id = (group.request_decoded or {}).get("id")
             response = find_response(group, 13011)
@@ -457,10 +466,10 @@ def write_flow_tables(groups, data_dir, written, skipped_existing, force):
         emit("progression/daily_sign.json", daily_sign)
     if guide_end:
         emit("world/guide_end.json", guide_end)
-    if use_by_id:
-        emit("items/use_by_id.json", use_by_id)
-    if story_pass:
-        emit("story/dup_only_story_pass.json", story_pass)
+    if use_by_id_groups:
+        emit("items/use_by_id.json", {"groups": use_by_id_groups})
+    if story_pass_groups:
+        emit("story/dup_only_story_pass.json", {"groups": story_pass_groups})
 
 
 # --------------------------------------------------------------------------

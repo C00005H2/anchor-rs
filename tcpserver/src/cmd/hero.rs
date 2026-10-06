@@ -4,7 +4,8 @@ use tracing::info;
 
 use crate::data_loader::GameDataLoader;
 use crate::messages::{
-    CS_ATTR_PREVIEW_ALL, CS_HERO_DETAIL, SC_ATTR_PREVIEW_ALL,
+    CS_ATTR_PREVIEW_ALL, CS_HERO_DETAIL, CS_HERO_EVOLUTION, SC_ATTR_PREVIEW_ALL,
+    SC_HERO_EVOLUTION,
 };
 use crate::packet::build_server_packet;
 use crate::sequence::TemplateFile;
@@ -91,3 +92,28 @@ pub async fn handle_attr_preview_all(
     )?])
 }
 
+
+
+/// Handle CS_HERO_EVOLUTION (13004): accept the evolution and report the new
+/// evolution level.  Levels are tracked per hero instance per connection.
+pub async fn handle_hero_evolution(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    request: CS_HERO_EVOLUTION,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    let evolution = {
+        let mut connection = ctx.lock().await;
+        let entry = connection.hero_evolution.entry(request.id).or_insert(0);
+        *entry += 1;
+        *entry
+    };
+    info!(hero_id = request.id, evolution = evolution, "Hero evolved");
+    Ok(vec![build_server_packet(
+        13005,
+        &SC_HERO_EVOLUTION {
+            result: 1,
+            id: request.id,
+            evolution,
+        }
+        .encode(),
+    )?])
+}

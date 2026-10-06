@@ -65,13 +65,19 @@ async fn encode_group(
 
 /// Handle CS_RECRUIT_ITEM (13051): replay the recorded pull batch.
 ///
-/// The recorded pull matching the requested pool and pull count wins; any
-/// recorded pull is the fallback so repeated gacha keeps working.
+/// Matching order: exact pool+count, then the richest recorded pull on the
+/// same pool for multi-pulls (x10 and up), then the first recording — so
+/// repeated and unrecorded gacha keeps producing results.
 pub async fn handle_recruit_item(
     ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_RECRUIT_ITEM,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     let file: PullFile = crate::data_loader::GameDataLoader::load_struct(ITEM_PULL_DATA)?;
+    let same_pool: Vec<&PullEntry> = file
+        .groups
+        .iter()
+        .filter(|entry| entry.request.as_ref().and_then(|pull| pull.id) == Some(request.id))
+        .collect();
     let matched = file
         .groups
         .iter()
@@ -82,6 +88,17 @@ pub async fn handle_recruit_item(
                 .map(|pull| pull.id == Some(request.id) && pull.times == Some(request.times))
                 .unwrap_or(false)
         })
+        .or_else(|| {
+            if i16::from(request.times) >= 2 {
+                same_pool
+                    .iter()
+                    .max_by_key(|entry| entry.responses.len())
+                    .copied()
+            } else {
+                same_pool.first().copied()
+            }
+        })
+        .or_else(|| same_pool.first().copied())
         .or_else(|| file.groups.first());
     let Some(entry) = matched else {
         return Ok(Vec::new());
@@ -142,10 +159,9 @@ pub async fn handle_recruit_hero_new_save_list(
             .encode(),
         )?]);
     };
-    if script.group_count() == 0 {
-        return Ok(Vec::new());
-    }
-    let group = {
+    let group = if script.group_count() == 0 {
+        TemplateGroup::default()
+    } else {
         let mut connection = ctx.lock().await;
         let index = connection.recruit_save_index.min(script.group_count() - 1);
         if connection.recruit_save_index < script.group_count() {
@@ -153,5 +169,16 @@ pub async fn handle_recruit_hero_new_save_list(
         }
         script.group(index).cloned().unwrap_or_default()
     };
+    if group.responses.is_empty() {
+        // The real server sometimes stays silent here, but the client keeps
+        // waiting; answer with an explicit empty save list instead.
+        return Ok(vec![build_server_packet(
+            13291,
+            &SC_RECRUIT_HERO_NEW_SAVE_LIST {
+                item_list: Vec::new(),
+            }
+            .encode(),
+        )?]);
+    }
     encode_group(&ctx, &group).await
 }

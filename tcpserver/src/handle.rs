@@ -20,7 +20,8 @@ use crate::{
         CS_CHANGE_HERO, CS_DAILY_SIGN, CS_DIALOGUE_TALK, CS_DIRECT_GIFT_BUY,
         CS_DIRECT_GIFT_PANEL,
         CS_ENTER_WORLD, CS_GAIN_ACHIEVEMENT_AWARD, CS_GAIN_ALL_FUND,
-        CS_GAIN_OPEN_SERVER_SIGN_REWARD,
+        CS_GAIN_OPEN_SERVER_SIGN_REWARD, CS_HERO_EVOLUTION, CS_MAIN_STORY_STAGE_AWARD,
+        CS_SHOP_BUY,
         CS_GAIN_SEVEN_DAY_REWARD, CS_HERO_DETAIL, CS_MAIL_ENCLOSURE_REC, CS_MAIL_READ,
         CS_NOVICE_TRAINING_PANEL, CS_NOVICE_TRAINING_RECEIVE_TASK, CS_PUBLIC_CHAT_SETTING,
         CS_DUP_ONLY_STORY_PASS, CS_GUIDE_END, CS_MONTH_CARD_PANEL, CS_NORMAL_LOG,
@@ -179,6 +180,11 @@ pub async fn dispatch_packet_with_replay(
             let responses = dialogue::handle_dialogue_talk(ctx, request).await?;
             send_responses!(writer, responses);
         }
+        13004 => {
+            let request = CS_HERO_EVOLUTION::decode(data);
+            let responses = hero::handle_hero_evolution(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
         13010 => {
             let request = CS_HERO_DETAIL::decode(data);
             let responses = hero::handle_hero_detail(ctx, request).await?;
@@ -227,6 +233,16 @@ pub async fn dispatch_packet_with_replay(
         17002 => {
             let request = CS_USE_BY_ID::decode(data);
             let responses = items::handle_use_by_id(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        17007 => {
+            let request = CS_SHOP_BUY::decode(data);
+            let responses = shop::handle_shop_buy(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        18053 => {
+            let request = CS_MAIN_STORY_STAGE_AWARD::decode(data);
+            let responses = story::handle_main_story_stage_award(ctx, request).await?;
             send_responses!(writer, responses);
         }
         12054 => {

@@ -22,7 +22,8 @@ pub async fn handle_direct_gift_panel(
 }
 
 use crate::messages::{
-    pt_attr_int, CS_DIRECT_GIFT_BUY, SC_DIRECT_GIFT_BUY, SC_DIRECT_GIFT_PANEL,
+    pt_attr_int, CS_DIRECT_GIFT_BUY, CS_SHOP_BUY, SC_DIRECT_GIFT_BUY, SC_DIRECT_GIFT_PANEL,
+    SC_SHOP_BUY,
 };
 use crate::packet::build_server_packet;
 use crate::progression::{grant_rewards, GiftTable};
@@ -83,4 +84,30 @@ pub async fn handle_direct_gift_buy(
         packets.push(build_server_packet(24097, &panel.encode())?);
     }
     Ok(packets)
+}
+
+
+/// Handle CS_SHOP_BUY (17007): acknowledge the purchase.  Captures contain no
+/// shop purchases, so the buy is confirmed without awarding specific items —
+/// the alternative (silence) leaves the client hanging on the shop screen.
+pub async fn handle_shop_buy(
+    _ctx: Arc<Mutex<ConnectionContext>>,
+    request: CS_SHOP_BUY,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    tracing::info!(
+        shop_type = request.shop_type,
+        shop_id = request.shop_id,
+        num = request.num,
+        "Shop purchase acknowledged"
+    );
+    Ok(vec![build_server_packet(
+        17008,
+        &SC_SHOP_BUY {
+            shop_type: request.shop_type,
+            shop_id: request.shop_id,
+            num: request.num,
+            award_list: Vec::new(),
+        }
+        .encode(),
+    )?])
 }

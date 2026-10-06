@@ -21,8 +21,9 @@ use crate::{
     data_loader::GameDataLoader,
     messages::{
         CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_START, CS_BATTLE_SYNC,
-        CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END,
+        CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END, SC_BATTLE_USE_SKILL,
     },
+    packet::build_server_packet,
     sequence::{TemplateFile, TemplateGroup, TemplateResponse},
     state::ConnectionContext,
 };
@@ -83,9 +84,21 @@ fn session_count() -> usize {
     count
 }
 
-/// Remember the absolute attribute values a scripted response reports.
+/// Remember the absolute attribute values a scripted response reports, and
+/// track the newest battle sync word so out-of-script skill requests can be
+/// acknowledged with a plausible sync value.
 pub(crate) fn absorb_attr_updates(connection: &mut ConnectionContext, group: &TemplateGroup) {
     for response in &group.responses {
+        if matches!(response.cmd, 20103 | 20105 | 20114 | 20115 | 20125) {
+            if let Some(sync) = response
+                .decoded
+                .as_ref()
+                .and_then(|decoded| decoded.get("sync_word"))
+                .and_then(|sync| sync.as_i64())
+            {
+                connection.battle_sync_word = sync as i32;
+            }
+        }
         if response.cmd != 12003 {
             continue;
         }
@@ -212,6 +225,10 @@ pub async fn handle_battle_field_enter(
                         "formation_list".to_owned(),
                         serde_json::to_value(&formation)?,
                     );
+                    // The patched formation must win over the recorded raw
+                    // bytes, otherwise freshly recruited heroes never show up
+                    // on the deploy screen.
+                    response.payload_hex = None;
                 }
             }
         }
@@ -247,6 +264,10 @@ async fn handle_legacy_field_enter(
                         "formation_list".to_owned(),
                         serde_json::to_value(&formation)?,
                     );
+                    // The patched formation must win over the recorded raw
+                    // bytes, otherwise freshly recruited heroes never show up
+                    // on the deploy screen.
+                    response.payload_hex = None;
                 }
             }
         }
@@ -399,8 +420,26 @@ pub async fn handle_battle_use_skill(
     if let Some(step) = take_step(&ctx, 20108).await {
         return encode_step(&ctx, &step).await;
     }
-    info!(skill_id = request.skill_id, "Battle skill without recorded batch");
-    Ok(Vec::new())
+    // Manual battle outside a recorded manual session: acknowledge the skill
+    // so the client does not stall waiting for SC_BATTLE_USE_SKILL.
+    let sync_word = ctx.lock().await.battle_sync_word;
+    info!(
+        skill_id = request.skill_id,
+        sync_word = sync_word,
+        "Battle skill acknowledged (no recorded batch)"
+    );
+    Ok(vec![build_server_packet(
+        20115,
+        &SC_BATTLE_USE_SKILL {
+            hero_id: 0,
+            skill_id: request.skill_id,
+            result: 1,
+            skill_soul: 0,
+            rage: 10000,
+            sync_word,
+        }
+        .encode(),
+    )?])
 }
 
 /// Handle CS_BATTLE_SYNC (20120): replay the recorded sync batch, if any.
