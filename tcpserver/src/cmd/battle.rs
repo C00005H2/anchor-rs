@@ -18,7 +18,7 @@ use std::sync::Arc;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use tokio::sync::Mutex;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 use crate::{
     capture_replay::decode_payload_hex,
@@ -1235,9 +1235,10 @@ pub async fn handle_battle_video_end(
         };
         let packets = encode_step(&ctx, &step).await?;
         if !packets.is_empty() {
+            let new_server_sync_word = ctx.lock().await.battle_sync_word;
             info!(
                 client_sync_word = request.sync_word,
-                new_server_sync_word = ctx.lock().await.battle_sync_word,
+                new_server_sync_word,
                 packets_served = packets.len(),
                 skipped_benched_steps = skipped_benched,
                 "Battle video-end served action step"
@@ -1415,12 +1416,13 @@ pub async fn handle_battle_use_skill(
         skill_id: request.skill_id,
     });
 
+    let pending_queue_size = ctx.lock().await.battle_pending_skills.len();
     info!(
         hero_id,
         tid,
         skill_id = request.skill_id,
         sync_word,
-        pending_queue_size = ctx.lock().await.battle_pending_skills.len(),
+        pending_queue_size,
         "Battle skill requested; checking recorded script"
     );
 
@@ -1500,12 +1502,13 @@ pub async fn handle_battle_use_skill(
         )?]);
     }
 
+    let pending_queue_len = ctx.lock().await.battle_pending_skills.len();
     info!(
         hero_id,
         tid,
         skill_id = request.skill_id,
         sync_word,
-        pending_queue_len = ctx.lock().await.battle_pending_skills.len(),
+        pending_queue_len,
         "Battle skill acknowledged with synthesized ack (no recorded batch, queued for hero's next turn)"
     );
     Ok(vec![build_server_packet(
