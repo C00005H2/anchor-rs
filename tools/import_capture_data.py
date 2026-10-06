@@ -340,11 +340,11 @@ def write_flow_tables(groups, data_dir, written, skipped_existing, force):
             if response and response.decoded is not None and recruit_times is None:
                 recruit_times = response.decoded.get("recruit_times", 0)
         elif cmd == 20100 and battle_enter is None:
-            battle_enter = {"groups": [template_payload(group.responses)]}
+            battle_enter = {"groups": [{"responses": template_payload(group.responses)}]}
         elif cmd == 20113 and battle_auto is None:
-            battle_auto = {"groups": [template_payload(group.responses)]}
+            battle_auto = {"groups": [{"responses": template_payload(group.responses)}]}
         elif cmd == 20104:
-            battle_video_end.append(template_payload(group.responses))
+            battle_video_end.append({"responses": template_payload(group.responses)})
 
     if chat_channels:
         emit("chat/public_chat.json", {"channels": list(chat_channels.values())})
@@ -515,6 +515,14 @@ def main(argv: list[str] | None = None) -> int:
     flow_written_before = len(written)
     write_flow_tables(groups, data_dir, written, skipped_existing, args.force)
     flow_files = len(written) - flow_written_before
+
+    # The deploy screen opens SC_HERO_DETAIL per hero; captures rarely contain
+    # it, so provide a zeroed fallback the loader picks when the per-id file
+    # is absent.
+    if not args.only or any("hero/".startswith(prefix) for prefix in args.only):
+        hero_default = render_default_sequence("SC_HERO_DETAIL", structs)
+        if hero_default:
+            write_json("hero/hero_detail_default.json", hero_default, filled)
 
     if args.fill_defaults:
         for expectation in expectations:

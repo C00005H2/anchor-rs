@@ -26,9 +26,32 @@ pub struct TemplateResponse {
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]
+#[serde(from = "TemplateGroupWire")]
 pub struct TemplateGroup {
     #[serde(default)]
     pub responses: Vec<TemplateResponse>,
+}
+
+/// Older importer revisions wrote groups as bare response lists; current ones
+/// wrap them as ``{"responses": [...]}``.  Accept both.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum TemplateGroupWire {
+    Wrapped {
+        #[serde(default)]
+        responses: Vec<TemplateResponse>,
+    },
+    Bare(Vec<TemplateResponse>),
+}
+
+impl From<TemplateGroupWire> for TemplateGroup {
+    fn from(wire: TemplateGroupWire) -> Self {
+        match wire {
+            TemplateGroupWire::Wrapped { responses } | TemplateGroupWire::Bare(responses) => {
+                Self { responses }
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize)]

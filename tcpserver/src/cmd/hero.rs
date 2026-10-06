@@ -3,7 +3,11 @@ use tokio::sync::Mutex;
 use tracing::info;
 
 use crate::data_loader::GameDataLoader;
-use crate::messages::CS_HERO_DETAIL;
+use crate::messages::{
+    CS_ATTR_PREVIEW_ALL, CS_HERO_DETAIL, CS_RECRUIT_HERO_NEW_SAVE_LIST, SC_ATTR_PREVIEW_ALL,
+    SC_RECRUIT_HERO_NEW_SAVE_LIST,
+};
+use crate::packet::build_server_packet;
 use crate::state::ConnectionContext;
 
 pub async fn handle_hero_detail(
@@ -48,4 +52,43 @@ pub async fn handle_cannot_del_hero_list(
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     ctx.lock().await.update_heartbeat();
     Ok(Vec::new())
+}
+
+/// Handle CS_ATTR_PREVIEW_ALL (13150): the deploy screen asks for a stat
+/// preview.  The capture never recorded this flow, so echo the request and
+/// report no extra attributes.
+pub async fn handle_attr_preview_all(
+    _ctx: Arc<Mutex<ConnectionContext>>,
+    request: CS_ATTR_PREVIEW_ALL,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    info!(
+        hero_id = request.hero_id,
+        module_id = request.module_id,
+        "Attribute preview requested"
+    );
+    Ok(vec![build_server_packet(
+        13151,
+        &SC_ATTR_PREVIEW_ALL {
+            hero_id: request.hero_id,
+            module_id: request.module_id,
+            param_int: request.param_int,
+            attr_preview: Vec::new(),
+        }
+        .encode(),
+    )?])
+}
+
+/// Handle CS_RECRUIT_HERO_NEW_SAVE_LIST (13290): no newly recruited heroes to
+/// report on a private server.
+pub async fn handle_recruit_hero_new_save_list(
+    _ctx: Arc<Mutex<ConnectionContext>>,
+    _request: CS_RECRUIT_HERO_NEW_SAVE_LIST,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    Ok(vec![build_server_packet(
+        13291,
+        &SC_RECRUIT_HERO_NEW_SAVE_LIST {
+            item_list: Vec::new(),
+        }
+        .encode(),
+    )?])
 }

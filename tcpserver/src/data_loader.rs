@@ -331,6 +331,8 @@ impl MessageEncode for SC_MAIL_LIST { fn encode(&self) -> Vec<u8> { Self::encode
 impl MessageEncode for SC_FASHION_SCENE_PANEL { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
 impl MessageEncode for SC_NEW_UNREAD { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
 impl MessageEncode for SC_ACTIVITY_EXPIRED_GOODS { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
+impl MessageEncode for SC_ATTR_PREVIEW_ALL { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
+impl MessageEncode for SC_RECRUIT_HERO_NEW_SAVE_LIST { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
 impl MessageEncode for SC_BAG_INIT { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
 impl MessageEncode for SC_IS_RENAME { fn encode(&self) -> Vec<u8> { Self::encode(self) } }
 impl MessageEncode for SC_PLAYER_HOMEPAGE_INFO { fn encode(&self) -> Vec<u8> { Self::encode(self) } }

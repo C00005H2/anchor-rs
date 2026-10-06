@@ -11,13 +11,15 @@ use crate::{
     capture_replay::{encode_captured_response, CaptureReplay, ReplayLookup},
     cmd::{account, activity, battle, dialogue, hero, mail, shop, system, world},
     messages::{
-        CS_ACCOUNT_LOGIN, CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE, CS_BATTLE_AUTO,
+        CS_ACCOUNT_LOGIN, CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE, CS_ATTR_PREVIEW_ALL,
+        CS_BATTLE_AUTO,
         CS_BATTLE_FIELD_ENTER, CS_BATTLE_START, CS_BATTLE_VIDEO_END, CS_CANNOT_DEL_HERO_LIST,
         CS_CHANGE_HERO, CS_DIALOGUE_TALK, CS_DIRECT_GIFT_BUY, CS_DIRECT_GIFT_PANEL,
         CS_ENTER_WORLD, CS_GAIN_ACHIEVEMENT_AWARD, CS_GAIN_OPEN_SERVER_SIGN_REWARD,
         CS_GAIN_SEVEN_DAY_REWARD, CS_HERO_DETAIL, CS_MAIL_ENCLOSURE_REC, CS_MAIL_READ,
         CS_NOVICE_TRAINING_PANEL, CS_NOVICE_TRAINING_RECEIVE_TASK, CS_PUBLIC_CHAT_SETTING,
-        CS_REQ_MODULE_READ, CS_SET_READY, CS_SHOP_TYPE_DATA, CS_SYS_PING, SC_ACCOUNT_LOGIN,
+        CS_RECRUIT_HERO_NEW_SAVE_LIST, CS_REQ_MODULE_READ, CS_SET_READY, CS_SHOP_TYPE_DATA,
+        CS_SYS_PING, SC_ACCOUNT_LOGIN,
     },
     state::ConnectionContext,
 };
@@ -186,6 +188,16 @@ pub async fn dispatch_packet_with_replay(
         13061 => {
             let request = CS_CANNOT_DEL_HERO_LIST::decode(data);
             let responses = hero::handle_cannot_del_hero_list(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        13150 => {
+            let request = CS_ATTR_PREVIEW_ALL::decode(data);
+            let responses = hero::handle_attr_preview_all(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        13290 => {
+            let request = CS_RECRUIT_HERO_NEW_SAVE_LIST::decode(data);
+            let responses = hero::handle_recruit_hero_new_save_list(ctx, request).await?;
             send_responses!(writer, responses);
         }
         16005 => {
