@@ -18,8 +18,10 @@ use crate::{
         CS_ENTER_WORLD, CS_GAIN_ACHIEVEMENT_AWARD, CS_GAIN_OPEN_SERVER_SIGN_REWARD,
         CS_GAIN_SEVEN_DAY_REWARD, CS_HERO_DETAIL, CS_MAIL_ENCLOSURE_REC, CS_MAIL_READ,
         CS_NOVICE_TRAINING_PANEL, CS_NOVICE_TRAINING_RECEIVE_TASK, CS_PUBLIC_CHAT_SETTING,
-        CS_DUP_ONLY_STORY_PASS, CS_RECRUIT_HERO_NEW_SAVE_LIST, CS_REQ_MODULE_READ, CS_SET_READY,
-        CS_SHOP_TYPE_DATA, CS_STORY_OVER, CS_SYS_PING, CS_USE_BY_ID, SC_ACCOUNT_LOGIN,
+        CS_DUP_ONLY_STORY_PASS, CS_GUIDE_END, CS_MONTH_CARD_PANEL, CS_NORMAL_LOG,
+        CS_RECRUIT_HERO_NEW_SAVE_LIST, CS_REQ_MODULE_READ, CS_RESET_HERO_LV_PRE_VIEW,
+        CS_SET_READY, CS_SHOP_TYPE_DATA, CS_STORY_OVER, CS_SYS_PING, CS_USE_BY_ID,
+        SC_ACCOUNT_LOGIN,
     },
     state::ConnectionContext,
 };
@@ -213,6 +215,26 @@ pub async fn dispatch_packet_with_replay(
         18012 => {
             let request = CS_DUP_ONLY_STORY_PASS::decode(data);
             let responses = story::handle_dup_only_story_pass(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        12059 => {
+            let request = CS_GUIDE_END::decode(data);
+            let responses = system::handle_guide_end(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        12068 => {
+            let request = CS_NORMAL_LOG::decode(data);
+            let responses = system::handle_normal_log(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        13364 => {
+            let request = CS_RESET_HERO_LV_PRE_VIEW::decode(data);
+            let responses = system::handle_reset_hero_lv_preview(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        24094 => {
+            let request = CS_MONTH_CARD_PANEL::decode(data);
+            let responses = system::handle_month_card_panel(ctx, request).await?;
             send_responses!(writer, responses);
         }
         16005 => {

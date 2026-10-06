@@ -23,6 +23,8 @@ pub async fn handle_ping(
 
 use crate::data_loader::GameDataLoader;
 use crate::messages::{
+    CS_GUIDE_END, CS_MONTH_CARD_PANEL, CS_NORMAL_LOG, CS_RESET_HERO_LV_PRE_VIEW,
+    SC_MONTH_CARD_PANEL,
     CS_PUBLIC_CHAT_SETTING, CS_REQ_MODULE_READ, SC_PUBLIC_CHAT_SETTING, SC_RES_MODULE_READ,
 };
 use serde::Deserialize;
@@ -76,5 +78,43 @@ pub async fn handle_req_module_read(
             id: request.id,
         }
         .encode(),
+    )?])
+}
+
+/// Handle CS_GUIDE_END (12059): the real server sent no reply.
+pub async fn handle_guide_end(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    _request: CS_GUIDE_END,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    ctx.lock().await.update_heartbeat();
+    Ok(Vec::new())
+}
+
+/// Handle CS_NORMAL_LOG (12068): client telemetry, no reply.
+pub async fn handle_normal_log(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    _request: CS_NORMAL_LOG,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    ctx.lock().await.update_heartbeat();
+    Ok(Vec::new())
+}
+
+/// Handle CS_RESET_HERO_LV_PRE_VIEW (13364): preview-only request, no reply.
+pub async fn handle_reset_hero_lv_preview(
+    ctx: Arc<Mutex<ConnectionContext>>,
+    _request: CS_RESET_HERO_LV_PRE_VIEW,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    ctx.lock().await.update_heartbeat();
+    Ok(Vec::new())
+}
+
+/// Handle CS_MONTH_CARD_PANEL (24094): resend the month card panel snapshot.
+pub async fn handle_month_card_panel(
+    _ctx: Arc<Mutex<ConnectionContext>>,
+    _request: CS_MONTH_CARD_PANEL,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    Ok(vec![GameDataLoader::build_packet::<SC_MONTH_CARD_PANEL>(
+        "hero_biography/month_card_panel.json",
+        24095,
     )?])
 }

@@ -213,15 +213,19 @@ def reward_from_responses(responses, ledger):
 
 
 def template_payload(responses):
-    """Capture-style response list for TemplateFile (battle scripts etc.)."""
+    """Capture-style response list for TemplateFile (battle scripts etc.).
+
+    Stores raw hex AND decoded JSON: the wire replay is byte-exact from hex,
+    while decoded values remain available for game logic (attr absorption,
+    formation patching)."""
     template = []
     for response in responses:
         entry = {"cmd": response.cmd}
+        if response.payload_hex:
+            entry["payload_hex"] = response.payload_hex
         if response.decoded is not None:
             entry["decoded"] = sanitize(response.decoded)
-        elif response.payload_hex:
-            entry["payload_hex"] = response.payload_hex
-        else:
+        if len(entry) == 1:
             continue  # undecoded and no raw bytes: nothing to script
         template.append(entry)
     return template

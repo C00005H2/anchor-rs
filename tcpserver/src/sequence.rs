@@ -86,22 +86,24 @@ impl TemplateGroup {
     pub fn encode(&self, cursor: &ReplayCursor) -> Result<Vec<Vec<u8>>, anyhow::Error> {
         let mut packets = Vec::with_capacity(self.responses.len());
         for response in &self.responses {
-            let captured = match &response.decoded {
-                Some(decoded) if !decoded.is_null() => {
-                    let decoded = cursor.rehydrate(decoded);
-                    CapturedResponse {
-                        cmd: response.cmd,
-                        decoded,
-                        raw: None,
+            // Raw bytes win: re-encoding decoded JSON drifts from the wire for
+            // several structs.  Decoded data stays attached for logic only.
+            let captured = match response.payload_hex.as_deref().and_then(decode_payload_hex) {
+                Some(raw) => CapturedResponse {
+                    cmd: response.cmd,
+                    decoded: Value::Null,
+                    raw: Some(raw),
+                },
+                None => match &response.decoded {
+                    Some(decoded) if !decoded.is_null() => {
+                        let decoded = cursor.rehydrate(decoded);
+                        CapturedResponse {
+                            cmd: response.cmd,
+                            decoded,
+                            raw: None,
+                        }
                     }
-                }
-                _ => match response.payload_hex.as_deref().and_then(decode_payload_hex) {
-                    Some(raw) => CapturedResponse {
-                        cmd: response.cmd,
-                        decoded: Value::Null,
-                        raw: Some(raw),
-                    },
-                    None => {
+                    _ => {
                         tracing::warn!(
                             command = response.cmd,
                             "Skipping scripted response without usable payload"
