@@ -135,17 +135,32 @@ async fn encode_step(
     Ok(packets)
 }
 
-/// Pick the next unconsumed step recorded for `request_cmd`.
+/// Pick the next unconsumed step the requester may consume.
+///
+/// Recorded steps form a single timeline: an AUTO recording is all 20104
+/// action batches, a MANUAL recording interleaves 20104 action batches with
+/// 20108 skill batches, and either may contain 20120 sync steps.  To let an
+/// auto client advance through a manual recording (and a manual client tap
+/// through an auto one), each request consumes in timeline order:
+///   * 20104 takes the next action OR skill step (never sync steps — those
+///     are reserved for the client's own 20120 requests),
+///   * 20108 takes the next skill step only (the caller synthesises an ack
+///     when none are left),
+///   * 20120 takes the next sync step only.
 async fn take_step(
     ctx: &Arc<Mutex<ConnectionContext>>,
     request_cmd: u32,
 ) -> Option<BattleStep> {
+    let consumes = |step_cmd: u32| match request_cmd {
+        20104 => step_cmd == 20104 || step_cmd == 20108,
+        other => step_cmd == other,
+    };
     let mut connection = ctx.lock().await;
     let chosen = connection.battle_session_chosen?;
     let session = load_session(chosen)?;
     for (index, step) in session.steps.iter().enumerate() {
         let consumed = connection.battle_step_consumed.get(index).copied().unwrap_or(true);
-        if !consumed && step.request_cmd == request_cmd {
+        if !consumed && consumes(step.request_cmd) {
             if let Some(flag) = connection.battle_step_consumed.get_mut(index) {
                 *flag = true;
             }
@@ -450,5 +465,20 @@ pub async fn handle_battle_sync(
     if let Some(step) = take_step(&ctx, 20120).await {
         return encode_step(&ctx, &step).await;
     }
+    Ok(Vec::new())
+}
+
+/// Handle CS_BATTLE_QUIT (20107): the client abandons the current battle.
+///
+/// The capture recorded no reply for it, so just clear local battle state;
+/// the next field enter re-initialises step consumption.
+pub async fn handle_battle_quit(
+    ctx: Arc<Mutex<ConnectionContext>>,
+) -> Result<Vec<Vec<u8>>, anyhow::Error> {
+    {
+        let mut connection = ctx.lock().await;
+        connection.battle_active = false;
+    }
+    info!("Battle quit");
     Ok(Vec::new())
 }

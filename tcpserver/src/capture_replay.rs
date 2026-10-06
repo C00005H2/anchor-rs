@@ -347,6 +347,7 @@ pub fn encode_captured_response(response: &CapturedResponse) -> anyhow::Result<O
 
     match cmd_id {
         10002 => encode_as!(SC_SYS_DATE),
+        10010 => encode_as!(SC_SYS_5_RESET),
         10021 => encode_as!(SC_PAY_DATA),
         10032 => encode_as!(SC_SYSTEM_ANNOUNCE),
         10051 => encode_as!(SC_PUBLIC_CHAT),

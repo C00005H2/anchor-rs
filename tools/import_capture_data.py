@@ -116,6 +116,32 @@ def default_value(rust_type: str, structs: dict[str, MessageStruct]) -> object:
     return 0
 
 
+# Testing convenience requested by the capture owner: max out player
+# resources when regenerating the login data files so every feature can be
+# exercised without grinding.
+TEST_BOOST_RESOURCES = {
+    "titanium": "99999",
+    "gold_coin": "99999",
+    "arena_coin": "99999",
+    "decoreate_coin": "99999",
+    "hero_global_exp": "99999",
+    "inst_global_exp": "99999",
+    "prestige_exp": "99999",
+}
+
+
+def apply_test_boost(relative_path: str, payload: object) -> object:
+    if not isinstance(payload, dict):
+        return payload
+    if relative_path == "login/player_base_data.json":
+        for field, value in TEST_BOOST_RESOURCES.items():
+            if field in payload:
+                payload[field] = value
+    elif relative_path == "hero_biography/player_stamina_info.json":
+        payload["stamina"] = 999
+    return payload
+
+
 def render_default_sequence(struct_name: str, structs: dict[str, MessageStruct]) -> object:
     struct = structs.get(struct_name)
     if struct is None:
@@ -282,6 +308,20 @@ def write_flow_tables(groups, data_dir, written, skipped_existing, force):
             elif response.cmd in (12002, 12003) and response.cmd not in FLOW_CMD_REWARD:
                 if group.request_cmd not in FLOW_CMD_REWARD | {24111}:
                     ledger.absorb(response.decoded)
+
+        # Real SC_HERO_DETAIL payloads surface inside recruit confirm bursts
+        # (13294) and other multi-response groups, not just standalone 13010
+        # requests. Record them keyed by hero id so the deploy screen gets
+        # real data instead of the zeroed fallback for recruited heroes.
+        for response in group.responses:
+            if response.cmd != 13011 or not response.payload_hex:
+                continue
+            hero_info = (response.decoded or {}).get("hero_info") or {}
+            detail_id = hero_info.get("id") if isinstance(hero_info, dict) else None
+            if not detail_id:
+                continue
+            emit(f"hero/hero_detail_{detail_id}.json",
+                 {"payload_hex": response.payload_hex})
 
         cmd = group.request_cmd
 
@@ -588,11 +628,16 @@ def main(argv: list[str] | None = None) -> int:
         if (
             expectation.path.startswith("hero_biography/")
             and expectation.path != "hero_biography/mail_list.json"
+            and expectation.path != "hero_biography/player_stamina_info.json"
             and response.payload_hex
         ):
             write_json(expectation.path, {"payload_hex": response.payload_hex}, written)
         else:
-            write_json(expectation.path, sanitize(response.decoded), written)
+            write_json(
+                expectation.path,
+                apply_test_boost(expectation.path, sanitize(response.decoded)),
+                written,
+            )
         covered_cmds.add(expectation.cmd)
         covered_paths.add(expectation.path)
 
@@ -624,6 +669,11 @@ def main(argv: list[str] | None = None) -> int:
             for hero_id in range(1, 23):
                 per_hero = dict(hero_default)
                 per_hero["id"] = hero_id
+                hero_info = per_hero.get("hero_info")
+                if isinstance(hero_info, dict):
+                    hero_info = dict(hero_info)
+                    hero_info["id"] = hero_id
+                    per_hero["hero_info"] = hero_info
                 write_json(f"hero/hero_detail_{hero_id}.json", per_hero, filled)
 
     if args.fill_defaults:

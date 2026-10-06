@@ -15,8 +15,8 @@ use crate::{
     },
     messages::{
         CS_ACCOUNT_LOGIN, CS_ACTIVITY_NOVICE_RECRUIT_HERO_RECEIVE, CS_ATTR_PREVIEW_ALL,
-        CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_START, CS_BATTLE_SYNC,
-        CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END, CS_CANNOT_DEL_HERO_LIST,
+        CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_QUIT, CS_BATTLE_START,
+        CS_BATTLE_SYNC, CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END, CS_CANNOT_DEL_HERO_LIST,
         CS_CHANGE_HERO, CS_DAILY_SIGN, CS_DIALOGUE_TALK, CS_DIRECT_GIFT_BUY,
         CS_DIRECT_GIFT_PANEL,
         CS_ENTER_WORLD, CS_GAIN_ACHIEVEMENT_AWARD, CS_GAIN_ALL_FUND,
@@ -312,6 +312,11 @@ pub async fn dispatch_packet_with_replay(
         20113 => {
             let request = CS_BATTLE_AUTO::decode(data);
             let responses = battle::handle_battle_auto(ctx, request).await?;
+            send_responses!(writer, responses);
+        }
+        20107 => {
+            let _request = CS_BATTLE_QUIT::decode(data);
+            let responses = battle::handle_battle_quit(ctx).await?;
             send_responses!(writer, responses);
         }
         20108 => {
