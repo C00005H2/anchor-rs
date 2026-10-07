@@ -24,10 +24,10 @@ use crate::{
     capture_replay::decode_payload_hex,
     data_loader::GameDataLoader,
     messages::{
-        CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER, CS_BATTLE_FORCES_SKILL, CS_BATTLE_START,
-        CS_BATTLE_SYNC, CS_BATTLE_USE_SKILL, CS_BATTLE_VIDEO_END, CS_HERO_AUTO_RULE_CHANGE,
-        SC_BATTLE_FORCES_SKILL_ENERGY, SC_BATTLE_RESULT, SC_BATTLE_USE_SKILL,
-        SC_HERO_AUTO_RULE_CHANGE,
+        pt_attr_int, pt_battle_statistic, CS_BATTLE_AUTO, CS_BATTLE_FIELD_ENTER,
+        CS_BATTLE_FORCES_SKILL, CS_BATTLE_START, CS_BATTLE_SYNC, CS_BATTLE_USE_SKILL,
+        CS_BATTLE_VIDEO_END, CS_HERO_AUTO_RULE_CHANGE, SC_BATTLE_FORCES_SKILL_ENERGY,
+        SC_BATTLE_RESULT, SC_BATTLE_USE_SKILL, SC_HERO_AUTO_RULE_CHANGE, SC_MAIN_STORY_INFO,
     },
     packet::build_server_packet,
     sequence::{TemplateFile, TemplateGroup, TemplateResponse},
@@ -391,8 +391,43 @@ fn remap_battle_response(
                             stat.insert("tid".to_owned(), json!(new_tid));
                             true
                         });
+
+                        let mut existing_heroes = HashSet::new();
+                        for item in items.iter() {
+                            if let Some(stat) = item.as_object() {
+                                if stat.get("side").and_then(Value::as_i64) == Some(1) {
+                                    if let Some(hid) = stat.get("hero_id").and_then(Value::as_i64) {
+                                        existing_heroes.insert(hid as i32);
+                                    }
+                                }
+                            }
+                        }
+                        for (new_id, _, new_tid) in actor_map.values() {
+                            if existing_heroes.insert(*new_id) {
+                                items.push(json!({
+                                    "evolution": 0,
+                                    "hero_id": new_id,
+                                    "info": [],
+                                    "is_call": 0,
+                                    "is_mon": 0,
+                                    "lv": 1,
+                                    "side": 1,
+                                    "tid": new_tid,
+                                }));
+                            }
+                        }
                     }
-                    if let Some(ids) = object.get_mut("hero_id_list").and_then(Value::as_array_mut) {
+
+                    let mut deployed_hero_entries: Vec<Value> = Vec::new();
+                    let mut seen = HashSet::new();
+                    for (new_id, _, _) in actor_map.values() {
+                        if seen.insert(*new_id) {
+                            deployed_hero_entries.push(json!({"key": new_id, "value": 0}));
+                        }
+                    }
+                    if !deployed_hero_entries.is_empty() {
+                        object.insert("hero_id_list".to_owned(), Value::Array(deployed_hero_entries));
+                    } else if let Some(ids) = object.get_mut("hero_id_list").and_then(Value::as_array_mut) {
                         ids.retain_mut(|entry| {
                             let Some(item) = entry.as_object_mut() else { return true };
                             let Some(old_id) = item.get("key").and_then(Value::as_i64) else {
@@ -405,12 +440,49 @@ fn remap_battle_response(
                             true
                         });
                     }
+
+                    if object.get("result").and_then(Value::as_i64) == Some(1) {
+                        if object.get("player_exp").and_then(Value::as_i64).unwrap_or(0) == 0 {
+                            object.insert("player_exp".to_owned(), json!(135));
+                        }
+                        if object.get("hero_exp").and_then(Value::as_i64).unwrap_or(0) == 0 {
+                            object.insert("hero_exp".to_owned(), json!(450));
+                        }
+                        if object.get("hero_relation").and_then(Value::as_i64).unwrap_or(0) == 0 {
+                            object.insert("hero_relation".to_owned(), json!(30));
+                        }
+                        let award_empty = object
+                            .get("award")
+                            .and_then(Value::as_array)
+                            .map(|a| a.is_empty())
+                            .unwrap_or(true);
+                        if award_empty {
+                            object.insert(
+                                "award".to_owned(),
+                                json!([
+                                    {"break_add_attr": [], "color": 4, "count": 30, "expiredOddTime": 0, "expiredTime": 0, "refine_lv": 0, "skill_effect": [], "tid": 3, "total_attr": []},
+                                    {"break_add_attr": [], "color": 2, "count": 10, "expiredOddTime": 0, "expiredTime": 0, "refine_lv": 0, "skill_effect": [], "tid": 2011, "total_attr": []},
+                                    {"break_add_attr": [], "color": 2, "count": 5000, "expiredOddTime": 0, "expiredTime": 0, "refine_lv": 0, "skill_effect": [], "tid": 1, "total_attr": []}
+                                ]),
+                            );
+                        }
+                    }
+                }
+            }
+            13007 | 13090 | 13003 => {
+                if let Some(object) = decoded.as_object_mut() {
+                    if let Some(old_id) = object.get("hero_id").and_then(Value::as_i64) {
+                        if let Some((new_id, _, _)) = actor_map.get(&(old_id as i32)) {
+                            object.insert("hero_id".to_owned(), json!(new_id));
+                            response.payload_hex = None;
+                        }
+                    }
                 }
             }
             20125 => remap_side_heroes(decoded, actor_map),
             _ => {}
         }
-        if matches!(response.cmd, 20103 | 20105 | 20106 | 20118 | 20125 | 20126 | 20129) {
+        if matches!(response.cmd, 20103 | 20105 | 20106 | 20118 | 20125 | 20126 | 20129 | 13007 | 13090 | 13003) {
             response.payload_hex = None;
         }
         return;
@@ -744,6 +816,100 @@ async fn encode_group(
         });
     }
 
+    // Handle post-battle completion progression if SC_BATTLE_RESULT is present.
+    let has_result = group.responses.iter().any(|r| r.cmd == 20106);
+    if has_result {
+        let is_victory = group.responses.iter().any(|r| {
+            r.cmd == 20106
+                && r.decoded
+                    .as_ref()
+                    .and_then(|d| d.get("result"))
+                    .and_then(Value::as_i64)
+                    == Some(1)
+        });
+        let has_story_info = group.responses.iter().any(|r| r.cmd == 18000);
+
+        if is_victory {
+            if !has_story_info {
+                if let Some(s2) = load_session(1) {
+                    if let Some(step) = s2.steps.into_iter().find(|s| s.responses.iter().any(|r| r.cmd == 20106)) {
+                        let prog_responses: Vec<TemplateResponse> = step
+                            .responses
+                            .into_iter()
+                            .filter(|r| r.cmd != 20103 && r.cmd != 20106)
+                            .collect();
+                        info!(
+                            count = prog_responses.len(),
+                            "Appending missing post-battle progression packets to victory result"
+                        );
+                        for mut resp in prog_responses {
+                            remap_battle_response(&mut resp, &actor_map);
+                            group.responses.push(resp);
+                        }
+                    }
+                }
+            }
+
+            let (story_info, stage_id, next_stage) = {
+                let mut connection = ctx.lock().await;
+                let field_str = connection
+                    .battle_current_field_id
+                    .clone()
+                    .unwrap_or_else(|| "1001".to_string());
+                let stage_id = field_str.parse::<i32>().unwrap_or(1001);
+
+                if !connection.story_pass_stage_list.contains(&stage_id) {
+                    connection.story_pass_stage_list.push(stage_id);
+                }
+
+                let next_stage = if stage_id == 1001 && !connection.story_pass_stage_list.contains(&1002) {
+                    1002
+                } else if connection.story_now_stage_list.contains(&stage_id) {
+                    let mut candidate = stage_id + 1;
+                    while connection.story_pass_stage_list.contains(&candidate) && candidate % 1000 <= 10 {
+                        candidate += 1;
+                    }
+                    candidate
+                } else {
+                    connection.story_now_stage_list.first().copied().unwrap_or(stage_id + 1)
+                };
+                connection.story_now_stage_list = vec![next_stage];
+
+                let info = SC_MAIN_STORY_INFO {
+                    now_stage_list: connection.story_now_stage_list.clone(),
+                    pass_stage_list: connection.story_pass_stage_list.clone(),
+                    ongoing_stage_id: 0,
+                    play_chapter_pic_list: connection.story_play_chapter_pic_list.clone(),
+                };
+                (info, stage_id, next_stage)
+            };
+
+            info!(
+                cleared_stage = stage_id,
+                next_stage = next_stage,
+                now_stages = ?story_info.now_stage_list,
+                pass_stages_count = story_info.pass_stage_list.len(),
+                "Story progress updated upon battle victory"
+            );
+
+            let mut story_updated = false;
+            for resp in &mut group.responses {
+                if resp.cmd == 18000 {
+                    resp.decoded = Some(serde_json::to_value(&story_info)?);
+                    resp.payload_hex = None;
+                    story_updated = true;
+                }
+            }
+            if !story_updated {
+                group.responses.push(TemplateResponse {
+                    cmd: 18000,
+                    decoded: Some(serde_json::to_value(&story_info)?),
+                    payload_hex: None,
+                });
+            }
+        }
+    }
+
     // Synchronize battle sync words monotonically.
     // Client strictly requires monotonic sync words; sending a stale or regressed
     // sync word triggers an infinite CS_BATTLE_SYNC desync loop and freezes battle.
@@ -987,6 +1153,7 @@ pub async fn handle_battle_field_enter(
         connection.battle_result_served = false;
         connection.battle_script_index = 0;
         connection.battle_added_heroes = Vec::new();
+        connection.battle_current_field_id = Some(request.battle_field_id.clone());
         info!(
             battle_type = request.battle_type,
             battle_field_id = %request.battle_field_id,
@@ -1075,6 +1242,7 @@ async fn handle_legacy_field_enter(
         connection.battle_script_index = 0;
         connection.battle_session_chosen = None;
         connection.battle_auto_served = false;
+        connection.battle_current_field_id = Some(request.battle_field_id.clone());
         (
             connection.formation.clone(),
             connection.formation_received,
@@ -1284,20 +1452,30 @@ pub async fn handle_battle_video_end(
     if request.sync_word == 0 {
         info!("Battle video ended without a sync word (sync_word=0); serving next action");
     }
-    let (active, current_sync, pending_len) = {
+    let (active, result_served, current_sync, pending_len) = {
         let connection = ctx.lock().await;
         (
             connection.battle_active,
+            connection.battle_result_served,
             connection.battle_sync_word,
             connection.battle_pending_skills.len(),
         )
     };
     if !active {
-        warn!(
-            client_sync_word = request.sync_word,
-            server_sync_word = current_sync,
-            "CS_BATTLE_VIDEO_END received while battle is inactive"
-        );
+        if result_served {
+            info!(
+                client_sync_word = request.sync_word,
+                "CS_BATTLE_VIDEO_END post-battle ack received; battle finalized cleanly"
+            );
+            let mut connection = ctx.lock().await;
+            connection.clear_battle_runtime();
+        } else {
+            warn!(
+                client_sync_word = request.sync_word,
+                server_sync_word = current_sync,
+                "CS_BATTLE_VIDEO_END received while battle is inactive"
+            );
+        }
         return Ok(Vec::new());
     }
 
@@ -1727,7 +1905,12 @@ pub async fn handle_hero_auto_rule_change(
 
 /// Send a non-rewarding retreat result so quit/skip leaves the battle screen
 /// without replaying the captured session's victory rewards.
-fn retreat_result(round: i8) -> SC_BATTLE_RESULT {
+///
+/// CRITICAL: `hero_id_list` and `statistic` MUST be populated with the deployed heroes.
+/// The Unity client coroutine requires `hero_id_list` to query `CS_HERO_DETAIL` for
+/// each deployed hero and resolve post-match state; an empty list causes the transition
+/// coroutine to hang indefinitely on the battlefield exit loading screen.
+fn retreat_result(round: i8, heroes: &[(i32, i32, i8)]) -> SC_BATTLE_RESULT {
     SC_BATTLE_RESULT {
         result: 3,
         award: Vec::new(),
@@ -1736,9 +1919,27 @@ fn retreat_result(round: i8) -> SC_BATTLE_RESULT {
         hero_exp: 0,
         hero_relation: 0,
         args: Vec::new(),
-        hero_id_list: Vec::new(),
+        hero_id_list: heroes
+            .iter()
+            .map(|(hero_id, _, _)| pt_attr_int {
+                key: *hero_id as i16,
+                value: 0,
+            })
+            .collect(),
         round,
-        statistic: Vec::new(),
+        statistic: heroes
+            .iter()
+            .map(|(hero_id, tid, _)| pt_battle_statistic {
+                evolution: 0,
+                hero_id: *hero_id,
+                info: Vec::new(),
+                is_call: 0,
+                is_mon: 0,
+                lv: 1,
+                side: 1,
+                tid: *tid,
+            })
+            .collect(),
         pos_effect: Vec::new(),
         is_replay: 0,
     }
@@ -1748,17 +1949,30 @@ async fn serve_battle_result(
     ctx: Arc<Mutex<ConnectionContext>>,
     kind: &str,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    let round = {
+    let (round, heroes) = {
         let mut connection = ctx.lock().await;
         if connection.battle_result_served {
+            info!(kind, "Battle result already served; ignoring duplicate request");
             return Ok(Vec::new());
         }
-        let round = connection.battle_round;
-        connection.clear_battle_runtime();
-        round
+        let round = connection.battle_round.max(1);
+        let heroes = if !connection.battle_active_heroes.is_empty() {
+            connection.battle_active_heroes.clone()
+        } else {
+            deployed_heroes(&connection.formation, connection.ready_team_id)
+        };
+        connection.battle_result_served = true;
+        connection.battle_active = false;
+        (round, heroes)
     };
-    info!(kind, round, "Battle abandoned by client");
-    let result = retreat_result(round);
+    info!(
+        kind,
+        round,
+        heroes_count = heroes.len(),
+        heroes = ?heroes,
+        "Battle abandoned / quit by client; serving retreat result"
+    );
+    let result = retreat_result(round, &heroes);
     Ok(vec![build_server_packet(20106, &result.encode())?])
 }
 
@@ -2245,7 +2459,8 @@ mod tests {
 
     #[test]
     fn retreat_result_has_no_victory_rewards() {
-        let result = retreat_result(4);
+        let heroes = [(1, 1110, 1), (2, 1305, 2)];
+        let result = retreat_result(4, &heroes);
         let decoded = crate::dispatch::dispatch_cmd(20106, &result.encode()).unwrap();
         assert_eq!(decoded["result"], 3);
         assert_eq!(decoded["award"], json!([]));
@@ -2253,6 +2468,8 @@ mod tests {
         assert_eq!(decoded["player_exp"], 0);
         assert_eq!(decoded["hero_exp"], 0);
         assert_eq!(decoded["round"], 4);
+        assert_eq!(decoded["hero_id_list"].as_array().unwrap().len(), 2);
+        assert_eq!(decoded["statistic"].as_array().unwrap().len(), 2);
     }
 
     #[test]
@@ -2782,5 +2999,34 @@ mod tests {
                 assert!(packet_sync > 41219006, "packet sync {packet_sync} must be > 41219006");
             }
         }
+    }
+
+    #[tokio::test]
+    async fn handle_battle_quit_populates_deployed_heroes() {
+        let mut connection = ConnectionContext::new("quit_test".to_owned());
+        connection.battle_active = true;
+        connection.battle_round = 2;
+        connection.battle_active_heroes = vec![(1, 1110, 1), (2, 1305, 2)];
+        let ctx = Arc::new(Mutex::new(connection));
+
+        let packets = handle_battle_quit(ctx.clone())
+            .await
+            .expect("quit must succeed");
+        assert_eq!(packets.len(), 1);
+        assert_eq!(packet_cmd(&packets[0]), 20106);
+
+        let decoded = crate::messages::SC_BATTLE_RESULT::decode(&packets[0][6..]);
+        assert_eq!(decoded.result, 3);
+        assert_eq!(decoded.round, 2);
+        assert_eq!(decoded.hero_id_list.len(), 2);
+        assert_eq!(decoded.hero_id_list[0].key, 1);
+        assert_eq!(decoded.hero_id_list[1].key, 2);
+        assert_eq!(decoded.statistic.len(), 2);
+
+        // After quit, post-battle video end should be accepted cleanly
+        let end_packets = handle_battle_video_end(ctx.clone(), CS_BATTLE_VIDEO_END { sync_word: 0 })
+            .await
+            .expect("post-battle video end must succeed");
+        assert!(end_packets.is_empty());
     }
 }

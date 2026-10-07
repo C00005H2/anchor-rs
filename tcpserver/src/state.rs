@@ -97,6 +97,14 @@ pub struct ConnectionContext {
     pub story_award_claimed: Vec<i32>,
     /// Indices of story-pass recordings already consumed this connection.
     pub story_pass_taken: Vec<usize>,
+    /// Current field / stage id being played in battle (e.g. "1001").
+    pub battle_current_field_id: Option<String>,
+    /// Passed main story stage ids.
+    pub story_pass_stage_list: Vec<i32>,
+    /// Current available main story stage id(s) — strictly length <= 1.
+    pub story_now_stage_list: Vec<i32>,
+    /// Unlocked chapter splash picture ids (chapters 1..=10).
+    pub story_play_chapter_pic_list: Vec<i16>,
     /// Evolution level reached per hero instance this connection.
     pub hero_evolution: HashMap<i32, i16>,
     /// Hero formation last reported by `CS_CHANGE_HERO`.
@@ -140,6 +148,10 @@ impl ConnectionContext {
             battle_auto_resume_sync_word: None,
             story_award_claimed: Vec::new(),
             story_pass_taken: Vec::new(),
+            battle_current_field_id: None,
+            story_pass_stage_list: vec![1004, 1003, 1002, 1001],
+            story_now_stage_list: vec![1005],
+            story_play_chapter_pic_list: (1..=10).collect(),
             hero_evolution: HashMap::new(),
             formation: Vec::new(),
             purchases: HashMap::new(),
@@ -163,6 +175,7 @@ impl ConnectionContext {
         self.battle_round = 0;
         self.battle_sync_word = 0;
         self.battle_auto_resume_sync_word = None;
+        self.battle_current_field_id = None;
     }
 
     pub fn update_heartbeat(&mut self) {
@@ -359,5 +372,15 @@ mod tests {
         let first = connection.allocate_bag_item();
         let second = connection.allocate_bag_item();
         assert!(second > first);
+    }
+
+    #[test]
+    fn initial_story_state_has_valid_invariants() {
+        let connection = ConnectionContext::new("session".to_owned());
+        assert_eq!(connection.story_now_stage_list.len(), 1);
+        assert_eq!(connection.story_now_stage_list, vec![1005]);
+        assert_eq!(connection.story_pass_stage_list, vec![1004, 1003, 1002, 1001]);
+        assert!(!connection.story_pass_stage_list.contains(&1005));
+        assert_eq!(connection.story_play_chapter_pic_list.len(), 10);
     }
 }

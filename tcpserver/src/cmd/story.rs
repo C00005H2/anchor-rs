@@ -173,12 +173,19 @@ pub async fn handle_main_story_stage_award(
     ])
 }
 
-/// Rewrite an outgoing `SC_MAIN_STORY_INFO` (18000) packet so every story
-/// stage is unlocked and marked cleared, letting the player enter any map
-/// without grinding the campaign on the real account.
+/// Validate and sanitize an outgoing `SC_MAIN_STORY_INFO` (18000) packet.
 ///
-/// Stage ids follow the captured `chapter * 1000 + index` scheme.  Unknown
-/// ids are ignored by the client, so a generous range is safe.
+/// CRITICAL CLIENT INVARIANT:
+/// `now_stage_list` must NEVER contain stages from other chapters, and should
+/// contain at most ONE ongoing stage (or empty if all are cleared). In the
+/// Unity client, opening or returning to a chapter map iterates `now_stage_list`
+/// and attempts to position focus/animation markers on the chapter's canvas.
+/// If `now_stage_list` contains stages belonging to other chapters, `GetStageNode`
+/// returns `null` and throws `NullReferenceException`, which permanently locks
+/// the full-screen touch raycaster and freezes the map UI.
+///
+/// Additionally, a stage must NEVER appear in both `now_stage_list` and
+/// `pass_stage_list` simultaneously.
 pub fn maybe_expand_story_unlock(pkt: Vec<u8>) -> Vec<u8> {
     if pkt.len() < 6 {
         return pkt;
@@ -190,31 +197,81 @@ pub fn maybe_expand_story_unlock(pkt: Vec<u8>) -> Vec<u8> {
     let body = pkt[6..].to_vec();
     let mut info = SC_MAIN_STORY_INFO::decode(&body);
 
-    let mut stages: Vec<i32> = Vec::new();
-    let mut chapters: Vec<i16> = Vec::new();
-    for chapter in 1..=10i32 {
-        chapters.push(chapter as i16);
-        for index in 1..=10i32 {
-            stages.push(chapter * 1000 + index);
-        }
-    }
-    for stage in &stages {
-        if !info.now_stage_list.contains(stage) {
-            info.now_stage_list.push(*stage);
-        }
-        if !info.pass_stage_list.contains(stage) {
-            info.pass_stage_list.push(*stage);
-        }
-    }
-    for chapter in chapters {
+    let original_now = info.now_stage_list.clone();
+    let original_pass_len = info.pass_stage_list.len();
+
+    // Ensure all 10 chapters are viewable in the chapter select UI
+    for chapter in 1..=10i16 {
         if !info.play_chapter_pic_list.contains(&chapter) {
             info.play_chapter_pic_list.push(chapter);
         }
     }
+
+    // STRICT INVARIANT: now_stage_list MUST contain at most ONE stage!
+    if info.now_stage_list.len() > 1 {
+        info.now_stage_list.truncate(1);
+    }
+
+    // STRICT INVARIANT: no stage can be both now (ongoing) and pass (cleared)
+    if let Some(&now_stage) = info.now_stage_list.first() {
+        info.pass_stage_list.retain(|&s| s != now_stage);
+    }
+
     info.ongoing_stage_id = 0;
+
+    tracing::debug!(
+        original_now = ?original_now,
+        sanitized_now = ?info.now_stage_list,
+        pass_stages_count = info.pass_stage_list.len(),
+        original_pass_count = original_pass_len,
+        chapters_count = info.play_chapter_pic_list.len(),
+        "Sanitized SC_MAIN_STORY_INFO packet"
+    );
 
     match build_server_packet(18000, &info.encode()) {
         Ok(expanded) => expanded,
-        Err(_) => pkt,
+        Err(err) => {
+            tracing::error!(error = %err, "Failed to encode sanitized SC_MAIN_STORY_INFO; using original");
+            pkt
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maybe_expand_story_unlock_truncates_now_stage_to_at_most_one() {
+        let info = SC_MAIN_STORY_INFO {
+            now_stage_list: vec![1001, 1002, 1003],
+            pass_stage_list: vec![1000],
+            ongoing_stage_id: 0,
+            play_chapter_pic_list: vec![1],
+        };
+        let pkt = build_server_packet(18000, &info.encode()).unwrap();
+        let expanded = maybe_expand_story_unlock(pkt);
+        let decoded = SC_MAIN_STORY_INFO::decode(&expanded[6..]);
+
+        assert_eq!(decoded.now_stage_list, vec![1001]);
+        assert_eq!(decoded.pass_stage_list, vec![1000]);
+        assert_eq!(decoded.play_chapter_pic_list.len(), 10);
+    }
+
+    #[test]
+    fn maybe_expand_story_unlock_removes_now_stage_from_pass_list() {
+        let info = SC_MAIN_STORY_INFO {
+            now_stage_list: vec![1005],
+            pass_stage_list: vec![1001, 1002, 1003, 1004, 1005],
+            ongoing_stage_id: 0,
+            play_chapter_pic_list: vec![1],
+        };
+        let pkt = build_server_packet(18000, &info.encode()).unwrap();
+        let expanded = maybe_expand_story_unlock(pkt);
+        let decoded = SC_MAIN_STORY_INFO::decode(&expanded[6..]);
+
+        assert_eq!(decoded.now_stage_list, vec![1005]);
+        assert_eq!(decoded.pass_stage_list, vec![1001, 1002, 1003, 1004]);
+        assert!(!decoded.pass_stage_list.contains(&1005));
     }
 }
