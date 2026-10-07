@@ -129,6 +129,27 @@ pub(crate) fn absorb_attr_updates(connection: &mut ConnectionContext, group: &Te
                 connection.battle_round = round as i8;
             }
         }
+        if response.cmd == 18000 {
+            let story_info = if let Some(decoded) = response.decoded.as_ref() {
+                serde_json::from_value::<SC_MAIN_STORY_INFO>(decoded.clone()).ok()
+            } else if let Some(raw) = response.payload_hex.as_deref().and_then(decode_payload_hex) {
+                Some(SC_MAIN_STORY_INFO::decode(&raw))
+            } else {
+                None
+            };
+            if let Some(info) = story_info {
+                for stage in info.pass_stage_list {
+                    if !connection.story_pass_stage_list.contains(&stage) {
+                        connection.story_pass_stage_list.push(stage);
+                    }
+                }
+                if !info.now_stage_list.is_empty() {
+                    let now = info.now_stage_list[0];
+                    connection.story_now_stage_list = vec![now];
+                    connection.story_pass_stage_list.retain(|&s| s != now);
+                }
+            }
+        }
         if response.cmd != 12003 {
             continue;
         }

@@ -122,6 +122,9 @@ pub async fn handle_dup_only_story_pass(
     let packets = group.encode(&cursor)?;
     {
         let mut connection = ctx.lock().await;
+        if !connection.story_pass_stage_list.contains(&request.field_id) {
+            connection.story_pass_stage_list.push(request.field_id);
+        }
         absorb_attr_updates(&mut connection, &group);
     }
     Ok(packets)
@@ -273,5 +276,23 @@ mod tests {
         assert_eq!(decoded.now_stage_list, vec![1005]);
         assert_eq!(decoded.pass_stage_list, vec![1001, 1002, 1003, 1004]);
         assert!(!decoded.pass_stage_list.contains(&1005));
+    }
+
+    #[tokio::test]
+    async fn handle_dup_only_story_pass_advances_stage_progression() {
+        let mut connection = ConnectionContext::new("test_story_pass".to_owned());
+        connection.story_pass_stage_list = vec![1001, 1002, 1003, 1004];
+        connection.story_now_stage_list = vec![1005];
+        let ctx = Arc::new(Mutex::new(connection));
+
+        let request = CS_DUP_ONLY_STORY_PASS {
+            battle_type: 2,
+            field_id: 1005,
+        };
+        let packets = handle_dup_only_story_pass(ctx.clone(), request).await.expect("story pass");
+        assert!(!packets.is_empty());
+
+        let connection = ctx.lock().await;
+        assert!(connection.story_pass_stage_list.contains(&1005));
     }
 }
