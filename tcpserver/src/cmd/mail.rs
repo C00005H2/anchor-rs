@@ -72,7 +72,10 @@ pub async fn handle_mail_enclosure_rec(
     request: CS_MAIL_ENCLOSURE_REC,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
     let mails = load_mail_list()?;
-    let notices: Vec<UnreadNotice> = GameDataLoader::load_struct(ENCLOSURE_UNREAD_DATA)?;
+    let notices: Vec<UnreadNotice> = GameDataLoader::load_struct(ENCLOSURE_UNREAD_DATA).unwrap_or_else(|e| {
+        tracing::warn!(error = %e, "Failed to load mail enclosure unread notices; using empty list");
+        Vec::new()
+    });
 
     let mut packets = unread_packets(&notices)?;
     let mut granted: Vec<pt_prop_bag> = Vec::new();

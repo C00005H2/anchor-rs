@@ -31,7 +31,7 @@ use crate::{
     },
     packet::build_server_packet,
     sequence::{TemplateFile, TemplateGroup, TemplateResponse},
-    state::{BattlePendingSkill, ConnectionContext},
+    state::{BattleMonster, BattlePendingSkill, ConnectionContext},
 };
 
 const ENTER_DATA: &str = "battle/enter.json";
@@ -564,32 +564,314 @@ fn remap_battle_response(
     response.payload_hex = Some(to_hex(&raw));
 }
 
-/// Clone the first player action for newly added deployed heroes. This keeps
-/// heroes absent from the recording from standing idle in the replay.
-fn injected_actions(added: &[(i32, i32)], responses: &[TemplateResponse]) -> Vec<Vec<u8>> {
-    let Some(template) = responses.iter().find(|response| response.cmd == 20103) else {
-        return Vec::new();
-    };
-    let Some(decoded) = template.decoded.as_ref() else { return Vec::new() };
-    if decoded.get("side").and_then(Value::as_i64) != Some(1) {
-        return Vec::new();
+/// Find an alive defender monster. Returns the requested target if it is alive;
+/// otherwise picks the first alive defender.
+fn get_living_target(monsters: &[BattleMonster], preferred_target: i32) -> Option<i32> {
+    if let Some(m) = monsters.iter().find(|m| m.id == preferred_target && m.is_alive()) {
+        return Some(m.id);
     }
-    added
-        .iter()
-        .filter_map(|(hero_id, tid)| {
-            let mut decoded = decoded.clone();
-            let object = decoded.as_object_mut()?;
-            object.insert("hero_id".to_owned(), json!(hero_id));
-            object.insert("skill_id".to_owned(), json!(tid.saturating_mul(100).saturating_add(1)));
-            crate::capture_replay::encode_captured_response(&crate::capture_replay::CapturedResponse {
-                cmd: 20103,
-                decoded,
-                raw: None,
-            })
-            .ok()
-            .flatten()
+    monsters.iter().find(|m| m.is_alive()).map(|m| m.id)
+}
+
+/// Retarget all defender targets in a decoded SC_BATTLE_ACTION payload to `target_id`.
+fn retarget_decoded_action(decoded: &mut serde_json::Map<String, Value>, target_id: i32) {
+    if let Some(targets) = decoded.get_mut("target_list").and_then(Value::as_array_mut) {
+        for target in targets {
+            if target.get("side").and_then(Value::as_i64) == Some(2) {
+                if let Some(obj) = target.as_object_mut() {
+                    obj.insert("hero_id".to_owned(), json!(target_id));
+                }
+            }
+        }
+    }
+    if let Some(results) = decoded.get_mut("result_list").and_then(Value::as_array_mut) {
+        for res in results {
+            if let Some(heroes) = res.get_mut("hero_list").and_then(Value::as_array_mut) {
+                for hero in heroes {
+                    if hero.get("side").and_then(Value::as_i64) == Some(2) {
+                        if let Some(obj) = hero.as_object_mut() {
+                            obj.insert("hero_id".to_owned(), json!(target_id));
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Reassign the actor of a defender monster action if the original actor was defeated.
+fn retarget_monster_actor(
+    decoded: &mut serde_json::Map<String, Value>,
+    old_actor: i32,
+    new_actor: i32,
+) {
+    if let Some(targets) = decoded.get_mut("target_list").and_then(Value::as_array_mut) {
+        for target in targets {
+            if target.get("side").and_then(Value::as_i64) == Some(2)
+                && target.get("hero_id").and_then(Value::as_i64) == Some(old_actor as i64)
+            {
+                if let Some(obj) = target.as_object_mut() {
+                    obj.insert("hero_id".to_owned(), json!(new_actor));
+                }
+            }
+        }
+    }
+    if let Some(results) = decoded.get_mut("result_list").and_then(Value::as_array_mut) {
+        for res in results {
+            if let Some(heroes) = res.get_mut("hero_list").and_then(Value::as_array_mut) {
+                for hero in heroes {
+                    if hero.get("side").and_then(Value::as_i64) == Some(2)
+                        && hero.get("hero_id").and_then(Value::as_i64) == Some(old_actor as i64)
+                    {
+                        if let Some(obj) = hero.as_object_mut() {
+                            obj.insert("hero_id".to_owned(), json!(new_actor));
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Simulate dynamic damage against a defender monster, updating its HP,
+/// ensuring damage effects exist, attaching/removing kill effects (type 5),
+/// and marking `is_final_hit` if all defenders are defeated.
+fn simulate_action_damage(
+    decoded_obj: &mut serde_json::Map<String, Value>,
+    target_id: i32,
+    monsters: &mut [BattleMonster],
+) {
+    let Some(target_monster) = monsters.iter_mut().find(|m| m.id == target_id) else {
+        return;
+    };
+
+    let Some(results) = decoded_obj.get_mut("result_list").and_then(Value::as_array_mut) else {
+        return;
+    };
+
+    let mut total_dmg: i64 = 0;
+    for res in results.iter() {
+        if let Some(heroes) = res.get("hero_list").and_then(Value::as_array) {
+            for h in heroes {
+                if h.get("side").and_then(Value::as_i64) == Some(2)
+                    && h.get("hero_id").and_then(Value::as_i64) == Some(target_id as i64)
+                {
+                    if let Some(effects) = h.get("effect_list").and_then(Value::as_array) {
+                        for eff in effects {
+                            if eff.get("type").and_then(Value::as_i64) == Some(17) {
+                                if let Some(c) = eff.get("count").and_then(Value::as_str).and_then(|s| s.parse::<i64>().ok()) {
+                                    total_dmg = total_dmg.saturating_add(c);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if total_dmg == 0 {
+        total_dmg = 1200;
+        if let Some(res) = results.first_mut().and_then(Value::as_object_mut) {
+            let heroes = res.entry("hero_list").or_insert_with(|| json!([]));
+            if let Some(heroes_arr) = heroes.as_array_mut() {
+                let mut found_target = false;
+                for h in heroes_arr.iter_mut() {
+                    if h.get("side").and_then(Value::as_i64) == Some(2)
+                        && h.get("hero_id").and_then(Value::as_i64) == Some(target_id as i64)
+                    {
+                        found_target = true;
+                        if let Some(eff_arr) = h.get_mut("effect_list").and_then(Value::as_array_mut) {
+                            eff_arr.push(json!({
+                                "type": 17,
+                                "priority": 14,
+                                "count": "1200",
+                                "count_list": []
+                            }));
+                        }
+                    }
+                }
+                if !found_target {
+                    heroes_arr.push(json!({
+                        "side": 2,
+                        "hero_id": target_id,
+                        "effect_list": [
+                            { "type": 4, "priority": 15, "count": "25", "count_list": ["401", "0"] },
+                            { "type": 17, "priority": 14, "count": "1200", "count_list": [] },
+                            { "type": 66, "priority": 10, "count": "50", "count_list": ["0"] }
+                        ]
+                    }));
+                }
+            }
+        }
+    }
+
+    let is_kill;
+    if total_dmg >= target_monster.current_hp {
+        target_monster.current_hp = 0;
+        is_kill = true;
+    } else {
+        target_monster.current_hp -= total_dmg;
+        is_kill = false;
+    }
+
+    let all_dead = monsters.iter().all(|m| !m.is_alive());
+
+    for res in results.iter_mut() {
+        if let Some(res_obj) = res.as_object_mut() {
+            if all_dead {
+                res_obj.insert("is_final_hit".to_owned(), json!(1));
+            }
+            if let Some(heroes) = res_obj.get_mut("hero_list").and_then(Value::as_array_mut) {
+                for h in heroes {
+                    if h.get("side").and_then(Value::as_i64) == Some(2)
+                        && h.get("hero_id").and_then(Value::as_i64) == Some(target_id as i64)
+                    {
+                        if let Some(effects) = h.get_mut("effect_list").and_then(Value::as_array_mut) {
+                            if !is_kill {
+                                effects.retain(|e| e.get("type").and_then(Value::as_i64) != Some(5));
+                            } else {
+                                let has_death = effects.iter().any(|e| e.get("type").and_then(Value::as_i64) == Some(5));
+                                if !has_death {
+                                    effects.push(json!({
+                                        "type": 5,
+                                        "priority": 2,
+                                        "count": "9810",
+                                        "count_list": ["1", "1", "1", "2"]
+                                    }));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    info!(
+        monster_id = target_id,
+        damage = total_dmg,
+        remaining_hp = target_monster.current_hp,
+        is_kill,
+        all_monsters_dead = all_dead,
+        "Simulated battle action damage on defender monster"
+    );
+}
+
+/// Discover and calibrate all defender monsters present in a recorded session.
+fn extract_defenders_from_session(session: &BattleSessionData) -> Vec<BattleMonster> {
+    let mut discovered: HashMap<i32, (i32, i64)> = HashMap::new();
+
+    for step in &session.steps {
+        for resp in &step.responses {
+            if resp.cmd == 20103 {
+                if let Some(dec) = resp.decoded.as_ref() {
+                    let side = dec.get("side").and_then(Value::as_i64);
+                    let hero_id = dec.get("hero_id").and_then(Value::as_i64).map(|v| v as i32);
+                    let skill_id = dec.get("skill_id").and_then(Value::as_i64).map(|v| v as i32).unwrap_or(3001);
+                    let target_side = dec.get("target_side").and_then(Value::as_i64);
+                    let target_id = dec.get("target_id").and_then(Value::as_i64).map(|v| v as i32);
+
+                    if side == Some(2) {
+                        if let Some(mid) = hero_id {
+                            let entry = discovered.entry(mid).or_insert((skill_id / 100, 0));
+                            if entry.0 == 0 || entry.0 == 30 {
+                                entry.0 = (skill_id / 100).max(3001);
+                            }
+                        }
+                    }
+
+                    if side == Some(1) && target_side == Some(2) {
+                        if let Some(tid) = target_id {
+                            let entry = discovered.entry(tid).or_insert((3001, 0));
+                            let mut step_dmg: i64 = 0;
+                            if let Some(results) = dec.get("result_list").and_then(Value::as_array) {
+                                for res in results {
+                                    if let Some(heroes) = res.get("hero_list").and_then(Value::as_array) {
+                                        for h in heroes {
+                                            if h.get("side").and_then(Value::as_i64) == Some(2)
+                                                && h.get("hero_id").and_then(Value::as_i64) == Some(tid as i64)
+                                            {
+                                                if let Some(effects) = h.get("effect_list").and_then(Value::as_array) {
+                                                    for eff in effects {
+                                                        if eff.get("type").and_then(Value::as_i64) == Some(17) {
+                                                            if let Some(c) = eff.get("count").and_then(Value::as_str).and_then(|s| s.parse::<i64>().ok()) {
+                                                                step_dmg = step_dmg.saturating_add(c);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            entry.1 = entry.1.saturating_add(step_dmg);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if discovered.is_empty() {
+        return vec![
+            BattleMonster { id: 1, tid: 3001, current_hp: 5000, max_hp: 5000 },
+            BattleMonster { id: 2, tid: 3002, current_hp: 5000, max_hp: 5000 },
+            BattleMonster { id: 3, tid: 3003, current_hp: 5000, max_hp: 5000 },
+        ];
+    }
+
+    let mut list: Vec<BattleMonster> = discovered
+        .into_iter()
+        .map(|(id, (tid, dmg))| {
+            let hp = dmg.max(3000);
+            BattleMonster {
+                id,
+                tid: if tid == 0 || tid == 30 { 3001 } else { tid },
+                current_hp: hp,
+                max_hp: hp,
+            }
         })
-        .collect()
+        .collect();
+    list.sort_by_key(|m| m.id);
+    list
+}
+
+/// Fallback extraction of defender monsters from a template group.
+fn extract_defenders_from_group(group: &TemplateGroup) -> Vec<BattleMonster> {
+    for resp in &group.responses {
+        if resp.cmd == 20101 {
+            if let Some(decoded) = &resp.decoded {
+                if let Some(hero_list) = decoded
+                    .get("def_info")
+                    .and_then(|d| d.get("hero_list"))
+                    .and_then(Value::as_array)
+                {
+                    let mut monsters = Vec::new();
+                    for h in hero_list {
+                        let id = h.get("id").and_then(Value::as_i64).map(|v| v as i32).unwrap_or(1);
+                        let tid = h.get("tid").and_then(Value::as_i64).map(|v| v as i32).unwrap_or(3001);
+                        let hp = h.get("hp").and_then(Value::as_i64).unwrap_or(3000);
+                        monsters.push(BattleMonster {
+                            id,
+                            tid,
+                            current_hp: hp.max(1000),
+                            max_hp: hp.max(1000),
+                        });
+                    }
+                    if !monsters.is_empty() {
+                        return monsters;
+                    }
+                }
+            }
+        }
+    }
+    vec![
+        BattleMonster { id: 1, tid: 3001, current_hp: 5000, max_hp: 5000 },
+        BattleMonster { id: 2, tid: 3002, current_hp: 5000, max_hp: 5000 },
+        BattleMonster { id: 3, tid: 3003, current_hp: 5000, max_hp: 5000 },
+    ]
 }
 
 /// Captures show that a 20120 sync can carry an ordinary player action between
@@ -837,6 +1119,286 @@ async fn encode_group(
         });
     }
 
+    // Phase 5: Defender Monster HP Tracking, Retargeting, Damage Simulation, and Injected Actions
+    {
+        let mut connection = ctx.lock().await;
+        if connection.battle_monsters.is_empty() {
+            if let Some(session) = connection.battle_session_chosen.and_then(load_session) {
+                connection.battle_monsters = extract_defenders_from_session(&session);
+            }
+            if connection.battle_monsters.is_empty() {
+                connection.battle_monsters = vec![
+                    BattleMonster { id: 1, tid: 3001, current_hp: 5000, max_hp: 5000 },
+                    BattleMonster { id: 2, tid: 3002, current_hp: 5000, max_hp: 5000 },
+                    BattleMonster { id: 3, tid: 3003, current_hp: 5000, max_hp: 5000 },
+                ];
+            }
+        }
+
+        for response in &mut group.responses {
+            if response.cmd != 20103 {
+                continue;
+            }
+            let is_player_action = response
+                .decoded
+                .as_ref()
+                .and_then(|decoded| decoded.get("side"))
+                .and_then(Value::as_i64)
+                == Some(1);
+
+            if is_player_action {
+                let target_side = response
+                    .decoded
+                    .as_ref()
+                    .and_then(|d| d.get("target_side"))
+                    .and_then(Value::as_i64)
+                    .unwrap_or(2);
+
+                if target_side == 2 {
+                    let current_target = response
+                        .decoded
+                        .as_ref()
+                        .and_then(|d| d.get("target_id"))
+                        .and_then(Value::as_i64)
+                        .map(|id| id as i32)
+                        .unwrap_or(1);
+
+                    let living_target = get_living_target(&connection.battle_monsters, current_target);
+
+                    if let Some(target_id) = living_target {
+                        let actor_id = response
+                            .decoded
+                            .as_ref()
+                            .and_then(|d| d.get("hero_id"))
+                            .and_then(Value::as_i64)
+                            .map(|id| id as i32)
+                            .unwrap_or(0);
+
+                        if let Some(decoded_obj) = response.decoded.as_mut().and_then(Value::as_object_mut) {
+                            if target_id != current_target {
+                                info!(
+                                    actor = actor_id,
+                                    old_target = current_target,
+                                    new_target = target_id,
+                                    "Player action retargeted from defeated monster to living monster"
+                                );
+                                decoded_obj.insert("target_id".to_owned(), json!(target_id));
+                                retarget_decoded_action(decoded_obj, target_id);
+                            }
+                            simulate_action_damage(decoded_obj, target_id, &mut connection.battle_monsters);
+                            response.payload_hex = None;
+                        }
+                    } else {
+                        info!("All monsters defeated; marking is_final_hit = 1");
+                        if let Some(decoded_obj) = response.decoded.as_mut().and_then(Value::as_object_mut) {
+                            if let Some(results) = decoded_obj.get_mut("result_list").and_then(Value::as_array_mut) {
+                                for res in results {
+                                    if let Some(res_obj) = res.as_object_mut() {
+                                        res_obj.insert("is_final_hit".to_owned(), json!(1));
+                                    }
+                                }
+                            }
+                        }
+                        response.payload_hex = None;
+                    }
+                }
+            } else {
+                let monster_actor = response
+                    .decoded
+                    .as_ref()
+                    .and_then(|d| d.get("hero_id"))
+                    .and_then(Value::as_i64)
+                    .map(|id| id as i32)
+                    .unwrap_or(0);
+
+                let is_alive = connection.battle_monsters.iter().any(|m| m.id == monster_actor && m.is_alive());
+                if !is_alive {
+                    if let Some(living) = connection.battle_monsters.iter().find(|m| m.is_alive()) {
+                        let new_actor = living.id;
+                        info!(
+                            dead_monster = monster_actor,
+                            substitute = new_actor,
+                            "Monster actor was defeated; substituting living monster"
+                        );
+                        if let Some(decoded_obj) = response.decoded.as_mut().and_then(Value::as_object_mut) {
+                            decoded_obj.insert("hero_id".to_owned(), json!(new_actor));
+                            retarget_monster_actor(decoded_obj, monster_actor, new_actor);
+                            response.payload_hex = None;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Added hero injection
+        let has_player_action = group.responses.iter().any(|r| {
+            r.cmd == 20103
+                && r.decoded
+                    .as_ref()
+                    .and_then(|d| d.get("side"))
+                    .and_then(Value::as_i64)
+                    == Some(1)
+        });
+
+        if (has_player_action || request_cmd == Some(20108)) && !added.is_empty() {
+            let current_round = connection.battle_round.max(1);
+            let mut injected_responses = Vec::new();
+
+            for (hero_id, tid) in &added {
+                if connection.battle_monsters.iter().all(|m| !m.is_alive()) {
+                    break;
+                }
+
+                let queued_skill = connection
+                    .battle_pending_skills
+                    .iter()
+                    .position(|s| s.hero_id == *hero_id)
+                    .and_then(|idx| connection.battle_pending_skills.remove(idx));
+
+                let already_acted = connection
+                    .battle_added_heroes_acted_round
+                    .get(hero_id)
+                    == Some(&current_round);
+
+                if queued_skill.is_none() && already_acted {
+                    continue;
+                }
+
+                let Some(target) = connection.battle_monsters.iter_mut().find(|m| m.is_alive()) else {
+                    break;
+                };
+
+                let target_id = target.id;
+                let (skill_id, base_dmg) = match queued_skill {
+                    Some(ref s) => (s.skill_id, 1200i64),
+                    None => (tid.saturating_mul(100).saturating_add(1), 500i64),
+                };
+
+                let is_kill;
+                let dmg_dealt;
+                if base_dmg >= target.current_hp {
+                    dmg_dealt = target.current_hp;
+                    target.current_hp = 0;
+                    is_kill = true;
+                    info!(
+                        hero_id = *hero_id,
+                        monster_id = target_id,
+                        damage = dmg_dealt,
+                        is_manual_skill = queued_skill.is_some(),
+                        "Added hero attack defeated defender monster"
+                    );
+                } else {
+                    dmg_dealt = base_dmg;
+                    target.current_hp -= dmg_dealt;
+                    is_kill = false;
+                    info!(
+                        hero_id = *hero_id,
+                        monster_id = target_id,
+                        damage = dmg_dealt,
+                        remaining_hp = target.current_hp,
+                        is_manual_skill = queued_skill.is_some(),
+                        "Added hero attack damaged defender monster"
+                    );
+                }
+
+                connection.battle_added_heroes_acted_round.insert(*hero_id, current_round);
+
+                let all_dead = connection.battle_monsters.iter().all(|m| !m.is_alive());
+                let is_final = if all_dead { 1 } else { 0 };
+
+                let mut monster_effects = vec![
+                    json!({
+                        "type": 4,
+                        "priority": 15,
+                        "count": "25",
+                        "count_list": ["401", "0"]
+                    }),
+                    json!({
+                        "type": 17,
+                        "priority": 14,
+                        "count": dmg_dealt.to_string(),
+                        "count_list": []
+                    }),
+                    json!({
+                        "type": 66,
+                        "priority": 10,
+                        "count": "50",
+                        "count_list": ["0"]
+                    }),
+                ];
+                if is_kill {
+                    monster_effects.push(json!({
+                        "type": 5,
+                        "priority": 2,
+                        "count": "9810",
+                        "count_list": ["1", "1", "1", "2"]
+                    }));
+                }
+
+                let action_decoded = json!({
+                    "side": 1,
+                    "hero_id": *hero_id,
+                    "skill_id": skill_id,
+                    "target_side": 2,
+                    "target_id": target_id,
+                    "target_list": [
+                        { "side": 1, "hero_id": *hero_id, "effect_list": [] },
+                        { "side": 2, "hero_id": target_id, "effect_list": [] }
+                    ],
+                    "is_extra_skill": 0,
+                    "skill_soul": 0,
+                    "rage": 0,
+                    "hero_list": [],
+                    "result_list": [
+                        {
+                            "has_extra_call": 0,
+                            "is_final_hit": is_final,
+                            "qte_val": 0,
+                            "hero_list": [
+                                {
+                                    "side": 2,
+                                    "hero_id": target_id,
+                                    "effect_list": monster_effects
+                                },
+                                {
+                                    "side": 1,
+                                    "hero_id": *hero_id,
+                                    "effect_list": [
+                                        { "type": 9, "priority": 1, "count": "0", "count_list": [] }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "sync_word": 0
+                });
+
+                injected_responses.push(TemplateResponse {
+                    cmd: 20103,
+                    decoded: Some(action_decoded),
+                    payload_hex: None,
+                });
+            }
+
+            if let Some(pos) = group.responses.iter().position(|r| {
+                r.cmd == 20103
+                    && r.decoded
+                        .as_ref()
+                        .and_then(|d| d.get("side"))
+                        .and_then(Value::as_i64)
+                        == Some(1)
+            }) {
+                let mut insert_idx = pos + 1;
+                for injected in injected_responses {
+                    group.responses.insert(insert_idx, injected);
+                    insert_idx += 1;
+                }
+            } else if !injected_responses.is_empty() {
+                group.responses.extend(injected_responses);
+            }
+        }
+    }
+
     // Handle post-battle completion progression if SC_BATTLE_RESULT is present.
     let has_result = group.responses.iter().any(|r| r.cmd == 20106);
     if has_result {
@@ -993,29 +1555,7 @@ async fn encode_group(
         }
     }
 
-    let mut packets = group.encode(&cursor)?;
-    let extra_actions = injected_actions(&added, &group.responses);
-    let mut insert_at = packets
-        .iter()
-        .position(|packet| {
-            packet.len() >= 6
-                && u32::from_be_bytes([packet[2], packet[3], packet[4], packet[5]]) == 20103
-        })
-        .map(|index| index + 1)
-        .unwrap_or(packets.len());
-    for mut packet in extra_actions {
-        let new_sync = {
-            let mut connection = ctx.lock().await;
-            connection.battle_sync_word = connection.battle_sync_word.wrapping_add(1);
-            connection.battle_sync_word
-        };
-        if packet.len() >= 10 {
-            let len = packet.len();
-            packet[len - 4..len].copy_from_slice(&new_sync.to_be_bytes());
-        }
-        packets.insert(insert_at, packet);
-        insert_at += 1;
-    }
+    let packets = group.encode(&cursor)?;
     {
         let mut connection = ctx.lock().await;
         absorb_attr_updates(&mut connection, &group);
@@ -1069,6 +1609,69 @@ async fn take_step(
     }
     let chosen = connection.battle_session_chosen?;
     let session = load_session(chosen)?;
+
+    // If all defender monsters have been defeated, advance directly to the victory result step
+    let all_monsters_dead = !connection.battle_monsters.is_empty()
+        && connection.battle_monsters.iter().all(|m| !m.is_alive());
+
+    if all_monsters_dead && request_cmd == 20104 {
+        if let Some((result_idx, result_step)) = session
+            .steps
+            .iter()
+            .enumerate()
+            .find(|(_, step)| step.responses.iter().any(|r| r.cmd == 20106))
+        {
+            let already_consumed = connection
+                .battle_step_consumed
+                .get(result_idx)
+                .copied()
+                .unwrap_or(false);
+            if !already_consumed {
+                for flag in connection.battle_step_consumed.iter_mut().take(result_idx + 1) {
+                    *flag = true;
+                }
+                info!(
+                    result_step_idx = result_idx,
+                    "All defender monsters defeated; advancing immediately to battle victory result"
+                );
+                let mut step = result_step.clone();
+                step.responses.retain(|r| {
+                    if r.cmd == 20103 {
+                        r.decoded
+                            .as_ref()
+                            .and_then(|d| d.get("side"))
+                            .and_then(Value::as_i64)
+                            != Some(2)
+                    } else {
+                        true
+                    }
+                });
+                return Some(step);
+            }
+        }
+        if let Some(flag) = connection.battle_step_consumed.get_mut(index) {
+            *flag = true;
+        }
+        if step.responses.is_empty() {
+            continue;
+        }
+        let remaining = connection
+            .battle_step_consumed
+            .iter()
+            .filter(|c| !**c)
+            .count();
+        info!(
+            step_index = index,
+            total_steps = session.steps.len(),
+            remaining_steps = remaining,
+            step_req_cmd = step.request_cmd,
+            caller_req_cmd = request_cmd,
+            responses_in_step = step.responses.len(),
+            "Taking battle script step"
+        );
+        return Some(step.clone());
+    }
+
     for (index, step) in session.steps.iter().enumerate() {
         let consumed = connection
             .battle_step_consumed
@@ -1175,12 +1778,15 @@ pub async fn handle_battle_field_enter(
         connection.battle_script_index = 0;
         connection.battle_added_heroes = Vec::new();
         connection.battle_current_field_id = Some(request.battle_field_id.clone());
+        connection.battle_monsters = extract_defenders_from_session(&session);
         info!(
             battle_type = request.battle_type,
             battle_field_id = %request.battle_field_id,
             recorded_field_id = ?session.field_id.as_deref(),
             session = index + 1,
             steps = session.steps.len(),
+            defenders_count = connection.battle_monsters.len(),
+            defenders = ?connection.battle_monsters.iter().map(|m| (m.id, m.tid, m.current_hp)).collect::<Vec<_>>(),
             "Battle field entered (session)"
         );
         let group = session.enter.clone().unwrap_or_default();
@@ -1264,6 +1870,7 @@ async fn handle_legacy_field_enter(
         connection.battle_session_chosen = None;
         connection.battle_auto_served = false;
         connection.battle_current_field_id = Some(request.battle_field_id.clone());
+        connection.battle_monsters = extract_defenders_from_group(&group);
         (
             connection.formation.clone(),
             connection.formation_received,
@@ -2947,11 +3554,22 @@ mod tests {
             .await
             .expect("video-end must serve");
             for packet in &packets {
-                if packet_cmd(packet) != 20103 || packet.len() < 9 || packet[0] != 1 {
+                if packet_cmd(packet) != 20103 {
                     continue;
                 }
-                let hero = i32::from_be_bytes([packet[1], packet[2], packet[3], packet[4]]);
-                let skill = i32::from_be_bytes([packet[5], packet[6], packet[7], packet[8]]);
+                let (hero, skill) = if packet.len() >= 15 && packet[6] == 1 {
+                    (
+                        i32::from_be_bytes([packet[7], packet[8], packet[9], packet[10]]),
+                        i32::from_be_bytes([packet[11], packet[12], packet[13], packet[14]]),
+                    )
+                } else if packet.len() >= 9 && packet[0] == 1 {
+                    (
+                        i32::from_be_bytes([packet[1], packet[2], packet[3], packet[4]]),
+                        i32::from_be_bytes([packet[5], packet[6], packet[7], packet[8]]),
+                    )
+                } else {
+                    continue;
+                };
                 if hero == 3 {
                     if skill == 120201 {
                         saw_own_skill = true;
@@ -3049,5 +3667,203 @@ mod tests {
             .await
             .expect("post-battle video end must succeed");
         assert!(end_packets.is_empty());
+    }
+
+    #[test]
+    fn test_monster_retargeting_when_defender_dies() {
+        let mut monsters = vec![
+            BattleMonster {
+                id: 1,
+                tid: 3001,
+                current_hp: 500,
+                max_hp: 500,
+            },
+            BattleMonster {
+                id: 2,
+                tid: 3002,
+                current_hp: 1000,
+                max_hp: 1000,
+            },
+        ];
+
+        // Monster 1 is alive: preferred target 1 returns 1
+        assert_eq!(get_living_target(&monsters, 1), Some(1));
+
+        // Damage Monster 1 to death
+        let mut action1 = json!({
+            "side": 1,
+            "hero_id": 1,
+            "skill_id": 111001,
+            "target_side": 2,
+            "target_id": 1,
+            "target_list": [{"side": 2, "hero_id": 1}],
+            "result_list": [
+                {
+                    "is_final_hit": 0,
+                    "hero_list": [
+                        {
+                            "side": 2,
+                            "hero_id": 1,
+                            "effect_list": [
+                                {"type": 17, "count": "600", "priority": 14}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+
+        simulate_action_damage(action1.as_object_mut().unwrap(), 1, &mut monsters);
+        assert_eq!(monsters[0].current_hp, 0);
+        assert!(!monsters[0].is_alive());
+        assert!(monsters[1].is_alive());
+
+        // Now Monster 1 is dead: preferred target 1 retargets to living Monster 2
+        let target = get_living_target(&monsters, 1);
+        assert_eq!(target, Some(2));
+
+        // Action targeting Monster 1 is retargeted to Monster 2
+        let mut action2 = json!({
+            "side": 1,
+            "hero_id": 1,
+            "skill_id": 111001,
+            "target_side": 2,
+            "target_id": 1,
+            "target_list": [{"side": 2, "hero_id": 1}],
+            "result_list": [
+                {
+                    "is_final_hit": 0,
+                    "hero_list": [
+                        {
+                            "side": 2,
+                            "hero_id": 1,
+                            "effect_list": [
+                                {"type": 17, "count": "400", "priority": 14}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+        retarget_decoded_action(action2.as_object_mut().unwrap(), 2);
+        simulate_action_damage(action2.as_object_mut().unwrap(), 2, &mut monsters);
+
+        assert_eq!(monsters[1].current_hp, 600);
+        assert!(monsters[1].is_alive());
+
+        // Death effect 5 must NOT be on Monster 2 because it's still alive with 600 HP
+        let effects = &action2["result_list"][0]["hero_list"][0]["effect_list"];
+        assert!(!effects.as_array().unwrap().iter().any(|e| e["type"] == 5));
+    }
+
+    #[tokio::test]
+    async fn test_injected_hero_attacks_living_monsters_and_deals_damage() {
+        let mut connection = ConnectionContext::new("injected_test".to_owned());
+        connection.battle_active = true;
+        connection.battle_round = 1;
+        connection.battle_active_heroes = vec![(1, 1110, 1), (5, 1305, 3)];
+        connection.battle_actor_map.insert(1, (1, 1110, 1110));
+        connection.battle_added_heroes = vec![(5, 1305)];
+        connection.battle_monsters = vec![
+            BattleMonster {
+                id: 1,
+                tid: 3001,
+                current_hp: 0, // already dead!
+                max_hp: 500,
+            },
+            BattleMonster {
+                id: 2,
+                tid: 3002,
+                current_hp: 1000,
+                max_hp: 1000,
+            },
+        ];
+        let ctx = Arc::new(Mutex::new(connection));
+
+        let group = TemplateGroup {
+            responses: vec![
+                TemplateResponse {
+                    cmd: 20103,
+                    decoded: Some(json!({
+                        "side": 1,
+                        "hero_id": 1,
+                        "skill_id": 111001,
+                        "target_side": 2,
+                        "target_id": 2,
+                        "target_list": [{"side": 2, "hero_id": 2}],
+                        "result_list": [
+                            {
+                                "is_final_hit": 0,
+                                "hero_list": [
+                                    {
+                                        "side": 2,
+                                        "hero_id": 2,
+                                        "effect_list": [
+                                            {"type": 17, "count": "300", "priority": 14}
+                                        ]
+                                    }
+                                ]
+                            }
+                        ],
+                        "sync_word": 100
+                    })),
+                    payload_hex: None,
+                }
+            ],
+        };
+
+        let packets = encode_group(&ctx, group, Some(20104))
+            .await
+            .expect("encode_group must succeed");
+
+        // There should be 2 action packets: hero 1's action + hero 5's injected action
+        assert_eq!(packets.len(), 2);
+
+        // Check hero 5's injected action targeting living monster 2
+        let action_hero5 = crate::messages::SC_BATTLE_ACTION::decode(&packets[1][6..]);
+        assert_eq!(action_hero5.hero_id, 5);
+        assert_eq!(action_hero5.target_id, 2, "Added hero must target living monster 2, not dead monster 1");
+
+        // Monster 2 took 300 damage from Hero 1 + 500 damage from Hero 5 = 800 total, 200 HP remaining
+        let conn = ctx.lock().await;
+        assert_eq!(conn.battle_monsters[1].current_hp, 200);
+        assert!(conn.battle_monsters[1].is_alive());
+    }
+
+    #[test]
+    fn test_manual_skill_deals_full_damage_and_retargets() {
+        let mut monsters = vec![
+            BattleMonster {
+                id: 1,
+                tid: 3001,
+                current_hp: 2000,
+                max_hp: 2000,
+            },
+        ];
+
+        // An action with missing/empty damage in result list (e.g. from an unmodeled skill)
+        let mut skill_action = json!({
+            "side": 1,
+            "hero_id": 1,
+            "skill_id": 120201,
+            "target_side": 2,
+            "target_id": 1,
+            "target_list": [{"side": 2, "hero_id": 1}],
+            "result_list": [
+                {
+                    "is_final_hit": 0,
+                    "hero_list": []
+                }
+            ]
+        });
+
+        simulate_action_damage(skill_action.as_object_mut().unwrap(), 1, &mut monsters);
+
+        // Ensure default 1200 damage was injected and monster HP reduced
+        assert_eq!(monsters[0].current_hp, 800);
+        let heroes = &skill_action["result_list"][0]["hero_list"];
+        let damage_eff = &heroes[0]["effect_list"][1];
+        assert_eq!(damage_eff["type"], 17);
+        assert_eq!(damage_eff["count"], "1200");
     }
 }

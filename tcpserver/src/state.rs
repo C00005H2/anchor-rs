@@ -36,6 +36,21 @@ pub struct BattlePendingSkill {
     pub skill_id: i32,
 }
 
+/// A defender monster in battle with live HP and death state.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BattleMonster {
+    pub id: i32,
+    pub tid: i32,
+    pub current_hp: i64,
+    pub max_hp: i64,
+}
+
+impl BattleMonster {
+    pub fn is_alive(&self) -> bool {
+        self.current_hp > 0
+    }
+}
+
 pub struct ConnectionContext {
     pub player_id: Option<i64>,
     pub session_id: String,
@@ -80,6 +95,10 @@ pub struct ConnectionContext {
     pub battle_result_served: bool,
     /// Current round, updated from SC_BATTLE_ACTION_END.
     pub battle_round: i8,
+    /// Defender monsters in the current battle, tracking live HP and death state.
+    pub battle_monsters: Vec<BattleMonster>,
+    /// Round during which each added hero last performed a basic turn action.
+    pub battle_added_heroes_acted_round: HashMap<i32, i8>,
     /// Whether this connection has reported its formation at least once.
     pub formation_received: bool,
     /// The team selected by CS_SET_READY, when one has been selected.
@@ -140,6 +159,8 @@ impl ConnectionContext {
             battle_pending_skills: VecDeque::new(),
             battle_result_served: false,
             battle_round: 0,
+            battle_monsters: Vec::new(),
+            battle_added_heroes_acted_round: HashMap::new(),
             formation_received: false,
             ready_team_id: None,
             recruit_prepare_index: 0,
@@ -173,6 +194,8 @@ impl ConnectionContext {
         self.battle_pending_skills.clear();
         self.battle_result_served = true;
         self.battle_round = 0;
+        self.battle_monsters.clear();
+        self.battle_added_heroes_acted_round.clear();
         self.battle_sync_word = 0;
         self.battle_auto_resume_sync_word = None;
         self.battle_current_field_id = None;

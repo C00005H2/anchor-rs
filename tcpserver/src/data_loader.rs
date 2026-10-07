@@ -248,7 +248,25 @@ impl GameDataLoader {
             _ => "shop/shop_type_default.json",
         };
 
-        load_packet!(SC_SHOP_TYPE_DATA, json_path, 17010, packets);
+        match Self::build_packet::<SC_SHOP_TYPE_DATA>(json_path, 17010) {
+            Ok(packet) => packets.push(packet),
+            Err(e) => {
+                tracing::warn!(error = %e, shop_type, "Failed to load shop type file, synthesizing default response");
+                packets.push(build_server_packet(
+                    17010,
+                    &SC_SHOP_TYPE_DATA {
+                        shop_type,
+                        next_refresh_time: 0,
+                        had_refresh: 0,
+                        refresh_limit: 0,
+                        cost_pay: 0,
+                        cost_item: 0,
+                        cost_num: 0,
+                    }
+                    .encode(),
+                )?);
+            }
+        }
         Ok(packets)
     }
 

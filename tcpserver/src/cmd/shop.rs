@@ -40,7 +40,7 @@ pub async fn handle_direct_gift_buy(
     ctx: Arc<Mutex<ConnectionContext>>,
     request: CS_DIRECT_GIFT_BUY,
 ) -> Result<Vec<Vec<u8>>, anyhow::Error> {
-    let table: GiftTable = GameDataLoader::load_struct(GIFT_TABLE_DATA)?;
+    let table: GiftTable = GameDataLoader::load_struct(GIFT_TABLE_DATA).unwrap_or_default();
     let goods = table
         .goods
         .iter()
